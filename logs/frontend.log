@@ -1,0 +1,39 @@
+
+> sukran-dashboard-test@0.0.0 dev
+> vite
+
+
+  VITE v8.1.0  ready in 290 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+  ➜  press h + enter to show help
+19:27:28 [vite] (client) page reload index.html
+19:28:34 [vite] (client) hmr update /src/pages/AdminActiveOrders/AdminActiveOrders.jsx, /src/pages/AdminLayout/AdminLayout.css, /src/pages/AdminDashboard/AdminDashboard.css, /src/pages/SuperAdminLayout/SuperAdminLayout.css, /src/pages/KitchenLayout/KitchenLayout.css
+19:28:34 [vite] (client) hmr update /src/pages/AdminCategories/AdminCategories.jsx, /src/pages/AdminLayout/AdminLayout.css, /src/pages/AdminDashboard/AdminDashboard.css, /src/pages/SuperAdminLayout/SuperAdminLayout.css, /src/pages/KitchenLayout/KitchenLayout.css
+19:28:34 [vite] (client) hmr update /src/pages/AdminTables/AdminTables.jsx, /src/pages/AdminLayout/AdminLayout.css, /src/pages/AdminDashboard/AdminDashboard.css, /src/pages/SuperAdminLayout/SuperAdminLayout.css, /src/pages/KitchenLayout/KitchenLayout.css
+19:28:34 [vite] (client) hmr update /src/pages/KitchenPanel/KitchenPanel.jsx, /src/pages/AdminLayout/AdminLayout.css, /src/pages/AdminDashboard/AdminDashboard.css, /src/pages/SuperAdminLayout/SuperAdminLayout.css, /src/pages/KitchenLayout/KitchenLayout.css
+19:28:34 [vite] (client) hmr update /src/pages/KitchenProducts/KitchenProducts.jsx, /src/pages/AdminLayout/AdminLayout.css, /src/pages/AdminDashboard/AdminDashboard.css, /src/pages/SuperAdminLayout/SuperAdminLayout.css, /src/pages/KitchenLayout/KitchenLayout.css
+19:28:34 [vite] (client) hmr update /src/pages/KitchenTables/KitchenTables.jsx, /src/pages/AdminLayout/AdminLayout.css, /src/pages/AdminDashboard/AdminDashboard.css, /src/pages/SuperAdminLayout/SuperAdminLayout.css, /src/pages/KitchenLayout/KitchenLayout.css
+19:28:34 [vite] (client) hmr update /src/pages/ProductManagement/ProductManagement.jsx, /src/pages/AdminLayout/AdminLayout.css, /src/pages/AdminDashboard/AdminDashboard.css, /src/pages/SuperAdminLayout/SuperAdminLayout.css, /src/pages/KitchenLayout/KitchenLayout.css
+19:28:34 [vite] (client) hmr update /src/pages/SuperAdminComplaints/SuperAdminComplaints.jsx, /src/pages/AdminLayout/AdminLayout.css, /src/pages/AdminDashboard/AdminDashboard.css, /src/pages/SuperAdminLayout/SuperAdminLayout.css, /src/pages/KitchenLayout/KitchenLayout.css
+19:28:34 [vite] (client) hmr update /src/pages/SuperAdminRestaurant/SuperAdminRestaurant.jsx, /src/pages/AdminLayout/AdminLayout.css, /src/pages/AdminDashboard/AdminDashboard.css, /src/pages/SuperAdminLayout/SuperAdminLayout.css, /src/pages/KitchenLayout/KitchenLayout.css
+19:28:34 [vite] (client) hmr update /src/pages/SuperAdminSupport/SuperAdminSupport.jsx, /src/pages/AdminLayout/AdminLayout.css, /src/pages/AdminDashboard/AdminDashboard.css, /src/pages/SuperAdminLayout/SuperAdminLayout.css, /src/pages/KitchenLayout/KitchenLayout.css
+19:29:53 [vite] (client) hmr update /src/pages/AdminTransactions/AdminTransactions.jsx, /src/pages/AdminLayout/AdminLayout.css, /src/pages/AdminDashboard/AdminDashboard.css, /src/pages/SuperAdminLayout/SuperAdminLayout.css, /src/pages/KitchenLayout/KitchenLayout.css
+19:29:53 [vite] (client) hmr update /src/pages/SuperAdminAuditLogs/SuperAdminAuditLogs.jsx, /src/pages/AdminLayout/AdminLayout.css, /src/pages/AdminDashboard/AdminDashboard.css, /src/pages/SuperAdminLayout/SuperAdminLayout.css, /src/pages/KitchenLayout/KitchenLayout.css
+19:29:53 [vite] (client) hmr update /src/pages/SuperAdminAuditLogs/SuperAdminAuditLogs.jsx, /src/pages/AdminLayout/AdminLayout.css, /src/pages/AdminDashboard/AdminDashboard.css, /src/pages/SuperAdminLayout/SuperAdminLayout.css, /src/pages/KitchenLayout/KitchenLayout.css
+19:32:37 [vite] (client) hmr update /src/pages/SuperAdminAuditLogs/SuperAdminAuditLogs.jsx, /src/pages/AdminLayout/AdminLayout.css, /src/pages/AdminDashboard/AdminDashboard.css, /src/pages/SuperAdminLayout/SuperAdminLayout.css, /src/pages/KitchenLayout/KitchenLayout.css
+19:32:40 [vite] (client) hmr update /src/pages/AdminTransactions/AdminTransactions.jsx, /src/pages/AdminLayout/AdminLayout.css, /src/pages/AdminDashboard/AdminDashboard.css, /src/pages/SuperAdminLayout/SuperAdminLayout.css, /src/pages/KitchenLayout/KitchenLayout.css
+19:32:47 [vite] (client) hmr update /src/pages/SuperAdminLayout/SuperAdminLayout.jsx, /src/pages/AdminLayout/AdminLayout.css, /src/pages/AdminDashboard/AdminDashboard.css, /src/pages/SuperAdminLayout/SuperAdminLayout.css, /src/pages/KitchenLayout/KitchenLayout.css
+19:32:51 [vite] (client) hmr update /src/pages/SuperAdminLayout/SuperAdminLayout.jsx, /src/pages/AdminLayout/AdminLayout.css, /src/pages/AdminDashboard/AdminDashboard.css, /src/pages/SuperAdminLayout/SuperAdminLayout.css, /src/pages/KitchenLayout/KitchenLayout.css
+19:34:12 [vite] (client) page reload index.html
+19:35:38 [vite] (client) hmr update /src/pages/SuperAdminComplaints/SuperAdminComplaints.jsx, /src/pages/AdminLayout/AdminLayout.css, /src/pages/AdminDashboard/AdminDashboard.css, /src/pages/SuperAdminLayout/SuperAdminLayout.css, /src/pages/KitchenLayout/KitchenLayout.css
+19:35:45 [vite] (client) hmr update /src/pages/SuperAdminSupport/SuperAdminSupport.jsx, /src/pages/AdminLayout/AdminLayout.css, /src/pages/AdminDashboard/AdminDashboard.css, /src/pages/SuperAdminLayout/SuperAdminLayout.css, /src/pages/KitchenLayout/KitchenLayout.css
+19:35:48 [vite] (client) hmr update /src/pages/SuperAdminSupport/SuperAdminSupport.jsx, /src/pages/AdminLayout/AdminLayout.css, /src/pages/AdminDashboard/AdminDashboard.css, /src/pages/SuperAdminLayout/SuperAdminLayout.css, /src/pages/KitchenLayout/KitchenLayout.css
+19:36:20 [vite] (client) hmr update /src/pages/AdminSubscription/AdminSubscription.jsx, /src/pages/AdminLayout/AdminLayout.css, /src/pages/AdminDashboard/AdminDashboard.css, /src/pages/SuperAdminLayout/SuperAdminLayout.css, /src/pages/KitchenLayout/KitchenLayout.css
+19:38:24 [vite] (client) hmr update /src/pages/Home/Home.jsx, /src/pages/AdminLayout/AdminLayout.css, /src/pages/AdminDashboard/AdminDashboard.css, /src/pages/SuperAdminLayout/SuperAdminLayout.css, /src/pages/KitchenLayout/KitchenLayout.css
+19:38:24 [vite] (client) hmr update /src/pages/Services/Services.jsx, /src/pages/AdminLayout/AdminLayout.css, /src/pages/AdminDashboard/AdminDashboard.css, /src/pages/SuperAdminLayout/SuperAdminLayout.css, /src/pages/KitchenLayout/KitchenLayout.css
+19:38:24 [vite] (client) hmr update /src/pages/About/About.jsx, /src/pages/AdminLayout/AdminLayout.css, /src/pages/AdminDashboard/AdminDashboard.css, /src/pages/SuperAdminLayout/SuperAdminLayout.css, /src/pages/KitchenLayout/KitchenLayout.css
+19:38:24 [vite] (client) hmr update /src/pages/Login/Login.jsx, /src/pages/AdminLayout/AdminLayout.css, /src/pages/AdminDashboard/AdminDashboard.css, /src/pages/SuperAdminLayout/SuperAdminLayout.css, /src/pages/KitchenLayout/KitchenLayout.css
+19:40:45 [vite] (client) hmr update /src/pages/Home/Home.jsx, /src/pages/AdminLayout/AdminLayout.css, /src/pages/AdminDashboard/AdminDashboard.css, /src/pages/SuperAdminLayout/SuperAdminLayout.css, /src/pages/KitchenLayout/KitchenLayout.css
+19:41:06 [vite] (client) hmr update /src/pages/Services/Services.jsx, /src/pages/AdminLayout/AdminLayout.css, /src/pages/AdminDashboard/AdminDashboard.css, /src/pages/SuperAdminLayout/SuperAdminLayout.css, /src/pages/KitchenLayout/KitchenLayout.css

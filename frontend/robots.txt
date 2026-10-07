@@ -1,0 +1,81 @@
+# ==========================================
+# 1. TUM BOTLAR ICIN GENEL KURALLAR
+# ==========================================
+User-agent: *
+
+# Arama ve Filtreleme Sayfalarini Engelle (Kopya Icerik Yaratmamak Icin)
+Disallow: /search/
+Disallow: /arama/
+Disallow: /*?q=*
+Disallow: /*?sort=*
+Disallow: /*?filter=*
+
+# Sistem ve Veritabani Dosyalarini Engelle (Guvenlik Onlemi)
+Disallow: /*.sql$
+Disallow: /*.env$
+Disallow: /*.log$
+Disallow: /*.tar.gz$
+
+# CSS, JS ve Gorsellere Izin Ver (Google'in sayfayi dogru render etmesi icin sarttir)
+Allow: /*.js$
+Allow: /*.css$
+Allow: /*.png$
+Allow: /*.jpg$
+Allow: /*.jpeg$
+Allow: /*.gif$
+Allow: /*.webp$
+
+# ==========================================
+# 2. SADECE GOOGLE GORSEL BOTU ICIN (Googlebot-Image)
+# ==========================================
+User-agent: Googlebot-Image
+# Tema ikonlarinin veya ozel logolarin Google Gorsellerde cikmasini engelle
+Disallow: /assets/icons/
+Disallow: /images/private/
+Allow: /images/public/
+
+# ==========================================
+# 3. YAPAY ZEKA VE SCRAPER (VERI KAZIYICI) BOTLARI ENGELLE
+# (Iceriklerinin izinsiz egitilmesini istemiyorsan)
+# ==========================================
+User-agent: GPTBot
+Disallow: /
+
+User-agent: ChatGPT-User
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: anthropic-ai
+Disallow: /
+
+# ==========================================
+# 4. SUNUCUYU YORAN SEO BOTLARINI ENGELLE (Opsiyonel)
+# (Eger rakiplerinin Ahrefs/Semrush uzerinden siteni analiz etmesini istemiyorsan)
+# ==========================================
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+# ==========================================
+# 5. YANDEX VE BING GIBI DIGER MOTORLAR ICIN TARAMA GECIKMESI
+# (Sunucuna saniyede onlarca istek atip yormamalari icin)
+# Not: Google bu komutu dikkate almaz, Google Search Console'dan ayarlanir.
+# ==========================================
+User-agent: Yandex
+Crawl-delay: 5
+
+User-agent: bingbot
+Crawl-delay: 5

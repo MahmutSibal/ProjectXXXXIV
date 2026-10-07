@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ŞABLON — doğrudan sunucuya YÜKLENMEZ.
+
+  scripts/publish-whatsapp.ps1 bu dosyayı okur, servis jetonunu yerleştirir ve
+  yayın klasörüne "web.config" olarak yazar. Jeton depoda tutulmaz.
+
+  MonsterASP (IIS) Node uygulamalarını httpPlatformHandler ile çalıştırır: süreci
+  başlatır, dinleyeceği portu bildirir ve önüne ters vekil olur.
+
+  DİKKAT — buradaki öznitelik listesi bilerek kısadır:
+  startupRetryCount ve requestTimeout eklendiğinde IIS yapılandırmayı reddetti ve
+  site 500 döndü; Node süreci hiç başlatılmadığı için log bile oluşmadı. Aşağıdaki
+  küme MonsterASP'ta çalıştığı doğrulanmış olandır. Yeni öznitelik eklerken
+  /status ucunun hâlâ 200 döndüğünü mutlaka sınayın.
+-->
+<configuration>
+  <system.webServer>
+    <handlers>
+      <add name="httpPlatformHandler" path="*" verb="*" modules="httpPlatformHandler" resourceType="Unspecified" />
+    </handlers>
+    <httpPlatform processPath="node" arguments=".\server.js" startupTimeLimit="20" stdoutLogEnabled="true" stdoutLogFile=".\logs\node">
+      <environmentVariables>
+        <!-- Handler her başlatmada boş bir port seçer. Süreç BU portu dinlemezse
+             IIS uygulamaya hiç ulaşamaz. -->
+        <environmentVariable name="PORT" value="%HTTP_PLATFORM_PORT%" />
+        <environmentVariable name="NODE_ENV" value="production" />
+        <!-- Backend'deki SUKRAN_WHATSAPP_TOKEN ile AYNI olmalı. -->
+        <environmentVariable name="WHATSAPP_SERVICE_TOKEN" value="__WHATSAPP_SERVICE_TOKEN__" />
+      </environmentVariables>
+    </httpPlatform>
+  </system.webServer>
+</configuration>

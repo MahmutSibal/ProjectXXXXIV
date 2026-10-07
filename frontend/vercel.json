@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "rewrites": [
+    {
+      "comment": "SPA yönlendirmesi: /giris-yap gibi istemci tarafı yollar doğrudan açıldığında sunucuda böyle bir dosya yoktur. Bu kural olmadan yenileme veya doğrudan bağlantı 404 verir. Rewrite'lar dosya sisteminden SONRA çalışır, bu yüzden dist içindeki gerçek dosyalar (js, css, görseller) bundan etkilenmez.",
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+@AppSukran.API_HostAddress = http://localhost:5021
+
+GET {{AppSukran.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,24 @@
+.product-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.product-status-active {
+  background: #06402b;
+  color: #77ac90;
+}
+
+.product-status-passive {
+  background: #e7e8e9;
+  color: #404943;
+}
+
+.product-status-soldout {
+  background: #ffdad6;
+  color: #ba1a1a;
+}

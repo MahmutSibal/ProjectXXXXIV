@@ -1,0 +1,365 @@
+.customer-menu-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f7f7f5;
+  font-family: 'Inter', sans-serif;
+  color: #191c1d;
+}
+
+.customer-menu-loading {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #404943;
+  text-align: center;
+  padding: 24px;
+}
+
+.customer-menu-header {
+  background: #06402b;
+  color: #fff;
+  padding: 20px 20px 16px;
+}
+
+.customer-menu-header h1 {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.customer-menu-header p {
+  margin: 4px 0 0;
+  opacity: 0.85;
+  font-size: 13px;
+}
+
+.customer-menu-tabs {
+  display: flex;
+  overflow-x: auto;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e2e2;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.customer-menu-tabs button {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 14px;
+  border: none;
+  background: none;
+  font-size: 11px;
+  color: #6b756f;
+  position: relative;
+  cursor: pointer;
+}
+
+.customer-menu-tabs button.active {
+  color: #06402b;
+  font-weight: 700;
+}
+
+.customer-menu-tabs button .badge {
+  position: absolute;
+  top: 4px;
+  right: 12px;
+  background: #06402b;
+  color: #fff;
+  border-radius: 999px;
+  font-size: 10px;
+  padding: 1px 6px;
+}
+
+.customer-menu-content {
+  flex: 1;
+  padding: 16px;
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.customer-menu-list section {
+  margin-bottom: 24px;
+}
+
+.customer-menu-list h2 {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0 0 10px;
+  color: #06402b;
+}
+
+.customer-product-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.customer-product-card {
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e6e6e2;
+  display: flex;
+}
+
+.customer-product-card img {
+  width: 88px;
+  height: 88px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.customer-product-info {
+  padding: 10px 12px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.customer-product-info h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.customer-product-info p {
+  margin: 0;
+  font-size: 11px;
+  color: #8a938d;
+}
+
+.customer-product-footer {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.customer-product-footer span {
+  font-weight: 700;
+  color: #06402b;
+}
+
+.customer-product-footer button {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: #06402b;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.customer-cart-line,
+.customer-order-card ul li,
+.customer-bill ul li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #e6e6e2;
+}
+
+.customer-cart-line .name {
+  margin: 0;
+  font-weight: 600;
+}
+
+.customer-cart-line .price {
+  margin: 0;
+  font-size: 12px;
+  color: #8a938d;
+}
+
+.qty-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.qty-control button {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid #d5d5d0;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.customer-cart-total,
+.customer-order-total {
+  display: flex;
+  justify-content: space-between;
+  padding: 14px 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.customer-primary-btn {
+  width: 100%;
+  background: #06402b;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 14px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.customer-primary-btn:disabled {
+  opacity: 0.6;
+}
+
+.customer-empty {
+  text-align: center;
+  color: #8a938d;
+  padding: 40px 0;
+}
+
+.customer-error {
+  color: #ba1a1a;
+  font-size: 13px;
+  margin: 8px 0;
+}
+
+.customer-order-card,
+.customer-bill {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e6e6e2;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+.customer-order-card ul,
+.customer-bill ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.customer-order-card .status {
+  font-size: 11px;
+  color: #06402b;
+  font-weight: 700;
+}
+
+.customer-review-form {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e6e6e2;
+  padding: 14px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.star-picker {
+  display: flex;
+  gap: 4px;
+}
+
+.star-picker button {
+  border: none;
+  background: none;
+  color: #d5d5d0;
+  cursor: pointer;
+}
+
+.star-picker button.filled {
+  color: #f5b301;
+}
+
+.customer-review-form textarea {
+  border: 1px solid #d5d5d0;
+  border-radius: 8px;
+  padding: 8px;
+  font-family: inherit;
+  resize: none;
+}
+
+.customer-review-item {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e6e6e2;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+
+.customer-review-item .stars {
+  color: #f5b301;
+  font-size: 14px;
+}
+
+.customer-review-item p {
+  margin: 6px 0;
+}
+
+.customer-review-item span {
+  font-size: 11px;
+  color: #8a938d;
+}
+
+/* Ödeme kartı formu (QR müşterisi) */
+.customer-card-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.customer-card-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.customer-card-form label > span {
+  font-size: 12px;
+  color: #404943;
+}
+
+.customer-card-form input {
+  padding: 12px;
+  font-size: 16px; /* 16px altı iOS'ta odaklanınca sayfayı yakınlaştırır */
+  border: 1px solid #c4c9c5;
+  border-radius: 10px;
+  outline: none;
+  background: #ffffff;
+}
+
+.customer-card-form input:focus {
+  border-color: #06402b;
+  box-shadow: 0 0 0 1px #06402b;
+}
+
+.customer-card-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+.customer-card-note {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #404943;
+  opacity: 0.85;
+}

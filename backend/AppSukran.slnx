@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AppSukran.API/AppSukran.API.csproj" />
+    <Project Path="src/AppSukran.Application/AppSukran.Application.csproj" />
+    <Project Path="src/AppSukran.Domain/AppSukran.Domain.csproj" />
+    <Project Path="src/AppSukran.Infrastructure/AppSukran.Infrastructure.csproj" />
+  </Folder>
+</Solution>

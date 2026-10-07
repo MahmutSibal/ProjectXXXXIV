@@ -1,0 +1,38 @@
+# .NET
+bin/
+obj/
+*.user
+.vs/
+
+# Sırlar — asla depoya girmemeli
+.env
+.env.local
+.env.production
+*.pfx
+appsettings.*.local.json
+
+# Yüklenen dosyalar (kullanıcı içeriği, depoda tutulmaz)
+backend/src/AppSukran.API/wwwroot/uploads/
+
+# Node
+node_modules/
+dist/
+
+# Yedekler
+backups/
+*.bak
+
+# WhatsApp (wppconnect) oturum verisi — hesabınıza erişim sağlar, DEPOYA GİRMEMELİ
+services/whatsapp/tokens/
+# Uretilen web.config servis jetonunu ACIK METIN tasir (sablon depoda kalir)
+services/whatsapp/web.config
+services/whatsapp/node_modules/
+
+# Yayın çıktısı — publish-monsterasp.ps1 üretilen web.config'e bağlantı dizesini,
+# JWT anahtarını ve iyzico anahtarlarını AÇIK METİN yazar. DEPOYA GİRMEMELİ.
+publish/
+publish-whatsapp/
+
+# Backend'in üretilen web.config'i (sır içerir). Frontend'inki (frontend/public/web.config)
+# yalnızca IIS yönlendirme kuralıdır, sır içermez ve depoda tutulur.
+backend/**/web.config

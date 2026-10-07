@@ -1,0 +1,17 @@
+{
+  "name": "Şükran App — Restoran Yönetim Sistemi",
+  "short_name": "Şükran App",
+  "description": "QR menü, masa siparişi ve ödeme yönetimini tek panelden yürüten restoran çözümü.",
+  "lang": "tr",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#182912",
+  "theme_color": "#182912",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}
