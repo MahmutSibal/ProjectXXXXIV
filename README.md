@@ -311,7 +311,6 @@ anahtarları kullanmayın. Depoda bulunan `test_login.json` ve
 │       ├── AppSukran.Domain/
 │       └── AppSukran.Infrastructure/
 ├── frontend/
-├── Yeni_Frontend/
 ├── services/
 │   └── whatsapp/
 ├── scripts/
