@@ -43,7 +43,7 @@ personeli siparişleri, mutfak akışını ve ödemeleri yönetebilir.
 ```text
 Tarayıcı
    │
-   ├── frontend/ veya Yeni_Frontend/ (React + Vite)
+   ├── frontend/ veya / (React + Vite)
    │       ├── /api        ─────┐
    │       ├── /hubs       ─────┤ Vite proxy (geliştirme)
    │       └── /uploads    ─────┘
@@ -60,17 +60,6 @@ Tarayıcı
 Backend katmanları `Domain`, `Application`, `Infrastructure` ve `API` olarak
 ayrılmıştır. `services/whatsapp`, Baileys kullanan bağımsız Node.js servisidir;
 WhatsApp oturumunu backend'den ayrı tutar.
-
-### Frontend seçenekleri
-
-Depoda iki React/Vite frontend klasörü bulunur:
-
-- `frontend/`: ana geliştirme ve dağıtım frontend'i
-- `Yeni_Frontend/`: alternatif/güncel frontend çalışma alanı
-
-Çalıştırmadan veya deploy etmeden önce hangi klasörün kullanılacağını netleştirin.
-İki frontend aynı bağımlılık ve script yapısını kullanır; aşağıdaki frontend
-komutlarında varsayılan olarak `frontend` kullanılmıştır.
 
 ## Gereksinimler
 
