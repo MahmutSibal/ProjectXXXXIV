@@ -17,6 +17,13 @@
     $env:JWT_SIGNING_KEY = [Convert]::ToBase64String((1..48 | ForEach-Object { Get-Random -Max 256 }))
     $env:SUKRAN_SUPERADMIN_PASSWORD = "..."
     .\scripts\publish-monsterasp.ps1 -SiteHost "sukran.runasp.net" -FrontendOrigin "https://sukran.runasp.net"
+
+.EXAMPLE
+    # Ana + yedek sunucu. Aynı oturumda, AYNI ortam değişkenleriyle iki kez çalıştırın:
+    # iki sunucu aynı veritabanını ve aynı JWT anahtarını kullanmak ZORUNDADIR
+    # (aksi hâlde yedeğe geçen kullanıcının oturumu düşer, iyzico anahtarları çözülemez).
+    .\scripts\publish-monsterasp.ps1 -SiteHost "mahmutapp.tryasp.net" -FrontendOrigin "https://sukranapp.runasp.net" -InstanceName "primary" -OutputPath .\publish\primary
+    .\scripts\publish-monsterasp.ps1 -SiteHost "mahmutapp.runasp.net" -FrontendOrigin "https://sukranapp.runasp.net" -InstanceName "backup"  -OutputPath .\publish\backup
 #>
 [CmdletBinding()]
 param(
@@ -41,9 +48,9 @@ param(
     # Verilirse doğrulama açılır; WHATSAPP_SERVICE_TOKEN ortam değişkeni de gerekir.
     [string]$WhatsAppBaseUrl,
 
-    # Swagger arayüzünü üretimde açar. Tüm uç noktaları, parametreleri ve şemaları
-    # herkese listeler; yalnızca test ortamında kullanın.
-    [switch]$EnableSwagger,
+    # Sunucunun adı (ör. "primary", "backup"). /api/health yanıtında görünür;
+    # frontend'in o an hangi sunucuya bağlı olduğunu anlamak için.
+    [string]$InstanceName,
 
     # İlk kurulumda açın: hatalar wwwroot dışındaki .\logs\stdout dosyasına yazılır.
     # Sorun çözüldükten sonra kapatın (log dosyası büyür ve ayrıntı sızdırır).
@@ -130,8 +137,8 @@ if ($IyzicoSandbox) {
     $vars['Payment__Iyzico__BaseUrl'] = 'https://sandbox-api.iyzipay.com'
 }
 
-if ($EnableSwagger) {
-    $vars['Swagger__Enabled'] = 'true'
+if (-not [string]::IsNullOrWhiteSpace($InstanceName)) {
+    $vars['Instance__Name'] = $InstanceName
 }
 
 if (-not [string]::IsNullOrWhiteSpace($WhatsAppBaseUrl)) {

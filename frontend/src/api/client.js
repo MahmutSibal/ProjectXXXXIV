@@ -1,4 +1,5 @@
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5021/api';
+import { fetchApi } from './endpoints.js';
+
 const STORAGE_KEY = 'sukran_auth';
 
 export class ApiError extends Error {
@@ -75,7 +76,7 @@ async function refreshAccessToken() {
   }
 
   if (!refreshPromise) {
-    refreshPromise = fetch(`${BASE_URL}/auth/refresh`, {
+    refreshPromise = fetchApi('/auth/refresh', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refreshToken: tokens.refreshToken }),
@@ -107,7 +108,7 @@ export async function apiRequest(path, { method = 'GET', body, auth = true, isFo
   }
 
   const doFetch = () =>
-    fetch(`${BASE_URL}${path}`, {
+    fetchApi(path, {
       method,
       headers,
       body: body === undefined ? undefined : isFormData ? body : JSON.stringify(body),

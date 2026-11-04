@@ -235,9 +235,10 @@ if (!app.Environment.IsDevelopment())
 // DİKKAT: Swagger, SecurityHeadersMiddleware'den ÖNCE olmalı. Aşağı alınırsa
 // CSP "default-src 'none'" Swagger UI'ın kendi JS/CSS'ini engeller ve arayüz
 // boş sayfa olarak açılır. Swagger yalnızca Development'ta açıktır.
-// Swagger üretimde varsayılan olarak KAPALIDIR: tüm uç noktaları, parametreleri ve
-// veri şemalarını herkese listeler. Test için bilinçli olarak Swagger:Enabled ile açılır.
-if (app.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("Swagger:Enabled"))
+// Swagger üretimde KESİNLİKLE KAPALIDIR: tüm uç noktaları, parametreleri ve veri
+// şemalarını herkese listeler. Eskiden Swagger:Enabled ile açılabiliyordu; canlıda
+// açık unutulduğu için bu anahtar kaldırıldı ve artık hiçbir ayarla açılamaz.
+if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();

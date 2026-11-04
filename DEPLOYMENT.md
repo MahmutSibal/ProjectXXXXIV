@@ -708,6 +708,99 @@ Refresh token yanıt **gövdesinden** okunur, çerezden değil — farklı alan 
 sorun çıkarmaz. Sunucunun yazdığı `Secure; SameSite=Strict` çerez çapraz origin'de
 kullanılmaz; frontend ona bakmaz.
 
+## 4.1. Yedek backend (otomatik geçiş / failover)
+
+Backend iki ayrı MonsterASP sitesinde, **farklı fiziksel sunucularda** çalışır.
+Ana sunucu çöker, durdurulur ya da bozuk yayın alırsa frontend kendiliğinden
+yedeğe geçer; ana sunucu düzelince geri döner.
+
+| | Site | Alan adı | Sunucu |
+|---|---|---|---|
+| Ana API | `site84512` | `mahmutapp.tryasp.net` | W14 |
+| Yedek API | `site104923` | `mahmutapp.runasp.net` | W17 |
+| Frontend | `site84631` | `sukranapp.runasp.net` | W14 |
+
+Bu bir RAID gibi "iki kopya veri" değildir: **veritabanı tektir**, iki backend
+de ona bağlanır. Kopyalanan şey uygulama sunucusudur. Veritabanı düşerse ikisi
+de çalışmaz (veritabanı yedeği için bkz. bölüm 6).
+
+### Yayına alma
+
+Aynı PowerShell oturumunda, **aynı** ortam değişkenleriyle (bkz. 3.1) iki kez:
+
+```powershell
+.\scripts\publish-monsterasp.ps1 -SiteHost "mahmutapp.tryasp.net" -FrontendOrigin "https://sukranapp.runasp.net" -InstanceName "primary" -OutputPath .\publish\primary
+.\scripts\publish-monsterasp.ps1 -SiteHost "mahmutapp.runasp.net" -FrontendOrigin "https://sukranapp.runasp.net" -InstanceName "backup"  -OutputPath .\publish\backup
+```
+
+Her klasörü kendi sitesine gönderin. Yedek sitede de panelden **HTTPS** açılmalı.
+
+Frontend'in `.env.production` dosyasına yedek eklenir ve frontend yeniden derlenir:
+
+```
+VITE_API_BASE_URL=https://mahmutapp.tryasp.net/api
+VITE_API_FALLBACK_URLS=https://mahmutapp.runasp.net/api
+```
+
+### İki sunucuda AYNI olması zorunlu olanlar
+
+| Değer | Farklı olursa |
+|---|---|
+| `SUKRAN_DB_CONNECTION` (aynı veritabanı) | Yedekteki siparişler ana sunucuda görünmez; veriler ayrışır |
+| `JWT_SIGNING_KEY` | Yedeğe geçen herkesin oturumu düşer; işletmelerin iyzico anahtarları çözülemez (anahtar bundan türetilir) |
+| `SUKRAN_SUPERADMIN_PASSWORD` | Her sunucu açılışta parolayı kendi değerine çevirir; parola sürekli değişir |
+
+> **Veritabanı adresi.** İç ad (`dbXXXXX.databaseasp.net`) yalnızca MonsterASP iç
+> ağından erişilir. Yedek başka bir sunucuda olduğu için yayından sonra
+> `https://mahmutapp.runasp.net/api/health/ready` adresini açın; 503 dönerse
+> yedekte genel adı (`dbXXXXX.public.databaseasp.net`, `Encrypt=True`) kullanın.
+
+### Nasıl çalışır
+
+- Frontend her zaman ana sunucuyu tercih eder (`frontend/src/api/endpoints.js`).
+- Bir istek ulaşamazsa (bağlantı hatası, zaman aşımı, IIS'in 502/503 sayfası)
+  adresler `/api/health` ile yoklanır ve ayakta olan ilkine geçilir.
+- Yedekteyken ana sunucu 30 sn'de bir yoklanır; cevap verince geri dönülür.
+  Bütün tarayıcılar aynı kuralı izlediği için kısa sürede hepsi aynı sunucuda
+  buluşur. Bu önemlidir: canlı sipariş bildirimi (SignalR) yalnızca aynı sunucuya
+  bağlı ekranlara ulaşır; geçişte mutfak ekranının bağlantısı da yeni sunucuya taşınır
+  ve liste baştan çekilir.
+- **Veri değiştiren istekler (sipariş, ödeme...) tekrar gönderilmez.** Bağlantı
+  istek sırasında koptuysa ana sunucu onu işlemiş olabilir; yedekte tekrar
+  göndermek çift sipariş / çift ödeme demektir. Kullanıcı "bağlantı koptu, kontrol
+  edip tekrar deneyin" mesajı görür; sonraki istekler zaten yedeğe gider.
+  Okuma istekleri ve giriş/token yenileme otomatik olarak yedekte tekrarlanır.
+- SuperAdmin'in "sunucuyu kapat" ayarı veritabanında tutulur ve iki sunucuda da
+  geçerlidir; bu 503 yedeğe geçişi tetiklemez.
+
+### Arka plan işleri
+
+Abonelik yenileme ve süre kontrolü iki sunucuda da çalışır, ama her tur SQL
+Server uygulama kilidi (`sp_getapplock`) alır: aynı anda yalnızca biri çalışır,
+diğeri o turu atlar. Kilit olmadan iki sunucu aynı aboneliğin kartını iki kez
+çekebilirdi. Ana sunucu düşerse işleri yedek sürdürür. Kilit bağlantıya bağlıdır;
+süreç çökerse SQL Server kilidi kendiliğinden bırakır.
+
+### Sınırlar
+
+1. **Yüklenen görseller sunucunun kendi diskindedir** (`wwwroot/uploads`). Ana
+   sunucuya yüklenen menü görseli ana sunucu kapalıyken görünmez; yedekteyken
+   yüklenen görsel yalnızca yedekte durur.
+2. **Frontend ana API ile aynı fiziksel sunucuda (W14).** Uygulama çökmesi, havuz
+   durması, bozuk yayın gibi durumlarda geçiş çalışır; ama W14 makinesinin
+   kendisi düşerse frontend de düşer. Buna karşı frontend'in ikinci bir kopyası
+   (ör. Vercel — `vercel.json` hazır) gerekir.
+3. Yedek de ücretsiz plandadır ve uykuya geçer. Keep-alive iş akışı onu da
+   uyandırır; aksi hâlde ilk geçiş soğuk başlangıcı bekler.
+
+### Doğrulama
+
+1. `https://mahmutapp.tryasp.net/api/health` → `"instance":"primary"`,
+   `https://mahmutapp.runasp.net/api/health` → `"instance":"backup"`.
+2. Panelden ana siteyi **Stop** ile durdurun, frontend'de bir sayfayı yenileyin.
+   Tarayıcının ağ sekmesinde isteklerin `mahmutapp.runasp.net`'e gittiğini görün.
+3. Ana siteyi **Start** ile başlatın; en geç ~30 sn sonra istekler ana sunucuya döner.
+
 ## 5. HTTPS
 
 - Uygulama production'da HSTS gönderir; sertifika olmadan yayına almayın.

@@ -12,7 +12,7 @@ namespace AppSukran.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [AllowAnonymous]
-public sealed class HealthController(AppSukranDbContext dbContext) : ControllerBase
+public sealed class HealthController(AppSukranDbContext dbContext, IConfiguration configuration) : ControllerBase
 {
     /// <summary>
     /// Hafif canlılık kontrolü — veritabanına dokunmaz.
@@ -26,6 +26,9 @@ public sealed class HealthController(AppSukranDbContext dbContext) : ControllerB
     public IActionResult Get() => Ok(new
     {
         status = "ok",
+        // Ana/yedek ayrımı: frontend'in o an hangi sunucuya bağlı olduğunu
+        // tarayıcıdan bakarak doğrulamak için (bkz. DEPLOYMENT.md, yedek sunucu).
+        instance = configuration["Instance:Name"],
         utc = DateTime.UtcNow,
     });
 

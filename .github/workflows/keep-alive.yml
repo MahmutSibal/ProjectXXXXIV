@@ -33,6 +33,10 @@ jobs:
           - ad: API
             url: https://mahmutapp.tryasp.net/api/health
             beklenen: '200'
+          # Yedek uyursa, ana sunucu düştüğü anda ilk geçiş soğuk başlangıcı bekler.
+          - ad: Yedek API
+            url: https://mahmutapp.runasp.net/api/health
+            beklenen: '200'
           # WhatsApp servisi jeton ister; jetonu buraya koymuyoruz (depoya sır
           # yazılmaz). Kimliksiz istek 401 döner — bu da süreci uyandırmak için
           # yeterlidir, çünkü isteği yanıtlayan zaten Node sürecidir.

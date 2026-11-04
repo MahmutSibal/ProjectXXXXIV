@@ -47,6 +47,14 @@ public sealed class SubscriptionExpiryWorker(
         using var scope = scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<AppSukranDbContext>();
 
+        // Ana ve yedek sunucu aynı anda tararsa hata sayacı iki kez artardı.
+        await using var sweepLock = await SqlApplicationLock.TryAcquireAsync(
+            context, "AppSukran.SubscriptionExpiry", cancellationToken);
+        if (sweepLock is null)
+        {
+            return;
+        }
+
         var now = DateTime.UtcNow;
         var graceCutoff = now.AddDays(-Subscription.PastDueGraceDays);
 
