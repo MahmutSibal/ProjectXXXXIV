@@ -63,6 +63,16 @@ public sealed class SubscriptionRenewalWorker(
         var context = scope.ServiceProvider.GetRequiredService<AppSukranDbContext>();
         var gateway = scope.ServiceProvider.GetRequiredService<IPaymentGateway>();
 
+        // Ana ve yedek sunucu aynı veritabanını kullanır. Kilit olmadan ikisi aynı
+        // aboneliği aynı anda yenileyip kartı iki kez çekebilirdi.
+        await using var renewalLock = await SqlApplicationLock.TryAcquireAsync(
+            context, "AppSukran.SubscriptionRenewal", cancellationToken);
+        if (renewalLock is null)
+        {
+            logger.LogInformation("[Renewal] Tur başka bir sunucuda sürüyor; bu sunucuda atlandı.");
+            return;
+        }
+
         var now = DateTime.UtcNow;
 
         // Dönemi bitmiş, otomatik yenilemesi açık ve saklı kartı olan abonelikler.

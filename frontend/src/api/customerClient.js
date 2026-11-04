@@ -1,4 +1,5 @@
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5021/api';
+import { fetchApi } from './endpoints.js';
+
 const STORAGE_KEY = 'sukran_qr_session';
 
 // Müşteri QR oturumu, personel/işletme sahibi girişinden tamamen ayrı bir token
@@ -58,7 +59,7 @@ export async function customerRequest(path, { method = 'GET', body } = {}) {
     headers.Authorization = `Bearer ${session.accessToken}`;
   }
 
-  const response = await fetch(`${BASE_URL}${path}`, {
+  const response = await fetchApi(path, {
     method,
     headers,
     body: body === undefined ? undefined : JSON.stringify(body),
