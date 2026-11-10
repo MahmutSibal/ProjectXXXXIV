@@ -27,6 +27,8 @@ export default function SuperAdminRestaurantDetail() {
   const [staffCount, setStaffCount] = useState(0);
   const [tableCount, setTableCount] = useState(0);
   const [reviews, setReviews] = useState([]);
+  // İşletmenin girdiği ödeme hesabı (IBAN, hesap sahibi); okunamazsa null.
+  const [paymentSettings, setPaymentSettings] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState('');
@@ -42,8 +44,9 @@ export default function SuperAdminRestaurantDetail() {
       usersApi.getAll({ restaurantId, pageSize: MAX_PAGE_SIZE }),
       tablesApi.getAll(restaurantId).catch(() => []),
       reviewsApi.getByRestaurant(restaurantId).catch(() => []),
+      restaurantsApi.getPaymentSettings(restaurantId).catch(() => null),
     ])
-      .then(([restaurantData, usersData, tables, reviewsData]) => {
+      .then(([restaurantData, usersData, tables, reviewsData, paymentData]) => {
         if (cancelled) return;
         if (!restaurantData) {
           setNotFound(true);
@@ -55,6 +58,7 @@ export default function SuperAdminRestaurantDetail() {
         setStaffCount(users.filter((user) => user.role === ROLES.Kitchen || user.role === ROLES.Waiter).length);
         setTableCount(tables.length);
         setReviews(reviewsData);
+        setPaymentSettings(paymentData);
       })
       .catch((err) => !cancelled && setError(err instanceof ApiError ? err.message : 'Restoran yüklenemedi.'))
       .finally(() => !cancelled && setIsLoading(false));
@@ -128,13 +132,24 @@ export default function SuperAdminRestaurantDetail() {
       <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-md ambient-shadow">
         <h3 className="font-headline-sm text-headline-sm text-on-background flex items-center gap-2 mb-1">
           <span className="material-symbols-outlined text-primary">security</span>
-          Ödeme Entegrasyonu
+          Ödeme ve IBAN Bilgileri
         </h3>
 
-        <p className="font-body-sm text-body-sm text-on-surface-variant">
-          Restoran bazlı iyzico entegrasyon ayarları henüz eklenmedi — bu özellik
-          ayrı bir işte ele alınacak (bkz. proje planı).
-        </p>
+        {paymentSettings?.iban ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-y-3 gap-x-8 mt-3">
+            <InfoItem icon="account_balance" text={`IBAN: ${paymentSettings.iban}`} />
+            <InfoItem icon="storefront" text={`Hesap sahibi işletme: ${paymentSettings.accountHolderBusinessName}`} />
+            <InfoItem icon="person" text={`Hesap sahibi: ${paymentSettings.accountHolderFullName}`} />
+            <InfoItem
+              icon="credit_card"
+              text={paymentSettings.onlinePaymentEnabled ? 'Masada kartla ödeme: açık' : 'Masada kartla ödeme: kapalı'}
+            />
+          </div>
+        ) : (
+          <p className="font-body-sm text-body-sm text-on-surface-variant">
+            İşletme henüz IBAN bilgilerini girmedi. İşletme sahibi bunu İşletme Profili sayfasından girer.
+          </p>
+        )}
       </section>
 
       <section className="flex flex-col gap-md">

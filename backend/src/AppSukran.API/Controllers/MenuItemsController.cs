@@ -28,7 +28,7 @@ public sealed class MenuItemsController(IMediator mediator) : ControllerBase
     [Authorize(Roles = "RestaurantOwner")]
     public async Task<IActionResult> Update(string menuItemId, [FromBody] UpdateMenuItemRequest request, CancellationToken cancellationToken)
     {
-        await mediator.Send(new UpdateMenuItemCommand(menuItemId, request.Category, request.Name, request.ImageUrl, request.Ingredients, request.Recipe, request.AveragePreparationTime, request.Price, request.IsAvailable), cancellationToken);
+        await mediator.Send(new UpdateMenuItemCommand(menuItemId, request.Category, request.Name, request.ImageUrl, request.Ingredients, request.Recipe, request.AveragePreparationTime, request.Price, request.IsAvailable, request.IngredientPrices, request.Calories, request.StockQuantity), cancellationToken);
         return NoContent();
     }
 
@@ -50,5 +50,5 @@ public sealed class MenuItemsController(IMediator mediator) : ControllerBase
     }
 }
 
-public sealed record UpdateMenuItemRequest(string Category, string Name, string ImageUrl, IReadOnlyCollection<string> Ingredients, string? Recipe, int AveragePreparationTime, long Price, bool IsAvailable);
+public sealed record UpdateMenuItemRequest(string Category, string Name, string ImageUrl, IReadOnlyCollection<string> Ingredients, string? Recipe, int AveragePreparationTime, long Price, bool IsAvailable, IReadOnlyCollection<long?>? IngredientPrices = null, int? Calories = null, int? StockQuantity = null);
 public sealed record SetMenuItemAvailabilityRequest(bool IsAvailable);

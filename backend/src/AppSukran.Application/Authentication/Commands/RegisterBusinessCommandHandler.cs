@@ -58,6 +58,9 @@ public sealed class RegisterBusinessCommandHandler(
                 PasswordHash = passwordHashingService.HashPassword(request.Password),
                 Role = UserRole.RestaurantOwner,
                 IsActive = true,
+                // Kayıtta girilen telefon saklanır; fatura bilgileri gibi formlar bunu
+                // yeniden sormaz. (Eskiden yalnızca denetim kaydına yazılıp kayboluyordu.)
+                Phone = PhoneNumber.Normalize(request.Phone),
             };
             await userRepository.InsertAsync(user, cancellationToken);
 

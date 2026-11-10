@@ -26,7 +26,27 @@ internal static class ConfigurationExtensions
 
         builder.HasConversion(
             list => JsonSerializer.Serialize(list ?? new List<string>(), (JsonSerializerOptions?)null),
-            json => JsonSerializer.Deserialize<List<string>>(json, (JsonSerializerOptions?)null) ?? new List<string>());
+            // Boş metin, sütun sonradan eklendiğinde eski satırlarda kalmış olabilir; boş liste sayılır.
+            json => string.IsNullOrWhiteSpace(json)
+                ? new List<string>()
+                : JsonSerializer.Deserialize<List<string>>(json, (JsonSerializerOptions?)null) ?? new List<string>());
+        builder.Metadata.SetValueComparer(comparer);
+        return builder;
+    }
+
+    /// <summary>Basit değer listelerini (ör. malzeme fiyatları) tek bir JSON sütununda saklar.</summary>
+    public static PropertyBuilder<List<T>> HasJsonListConversion<T>(this PropertyBuilder<List<T>> builder)
+    {
+        var comparer = new ValueComparer<List<T>>(
+            (left, right) => (left ?? new()).SequenceEqual(right ?? new()),
+            list => list.Aggregate(0, (hash, item) => HashCode.Combine(hash, item)),
+            list => list.ToList());
+
+        builder.HasConversion(
+            list => JsonSerializer.Serialize(list ?? new List<T>(), (JsonSerializerOptions?)null),
+            json => string.IsNullOrWhiteSpace(json)
+                ? new List<T>()
+                : JsonSerializer.Deserialize<List<T>>(json, (JsonSerializerOptions?)null) ?? new List<T>());
         builder.Metadata.SetValueComparer(comparer);
         return builder;
     }

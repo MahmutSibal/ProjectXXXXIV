@@ -15,6 +15,6 @@ public sealed class GetCurrentUserQueryHandler(IUnitOfWork unitOfWork, ICurrentU
         var user = await unitOfWork.Repository<User>().GetByIdAsync(userId, cancellationToken)
             ?? throw new InvalidOperationException("Kullanıcı bulunamadı.");
 
-        return new UserResponse(user.Id, user.Name, user.Email, user.Role, user.RestaurantId, user.IsActive);
+        return new UserResponse(user.Id, user.Name, user.Email, user.Role, user.RestaurantId, user.IsActive, user.Phone, user.Address, user.MarketingConsent);
     }
 }

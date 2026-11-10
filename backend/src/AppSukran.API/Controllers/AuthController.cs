@@ -26,7 +26,9 @@ public sealed class AuthController(IMediator mediator) : ControllerBase
     [HttpPost("register")]
     public async Task<ActionResult<TokenResponse>> Register([FromBody] RegisterUserRequest request, CancellationToken cancellationToken)
     {
-        var result = await mediator.Send(new RegisterUserCommand(request.Name, request.Email, request.Password, request.Role, request.RestaurantId), cancellationToken);
+        var result = await mediator.Send(
+            new RegisterUserCommand(request.Name, request.Email, request.Password, request.Phone, request.Address, request.MarketingConsent),
+            cancellationToken);
         SetRefreshCookie(result.RefreshToken, result.RefreshTokenExpiresAt);
         return Ok(result);
     }
@@ -114,7 +116,8 @@ public sealed class AuthController(IMediator mediator) : ControllerBase
     }
 }
 
-public sealed record RegisterUserRequest(string Name, string Email, string Password, AppSukran.Domain.Enums.UserRole Role, string? RestaurantId = null);
+// Rol ve restoran alanları kaldırıldı: herkese açık kayıt yalnızca müşteri hesabı açar.
+public sealed record RegisterUserRequest(string Name, string Email, string Password, string? Phone = null, string? Address = null, bool MarketingConsent = false);
 public sealed record RegisterBusinessRequest(
     string OwnerName, string Email, string Password, string BusinessName,
     string Phone, string Address, double Longitude, double Latitude,

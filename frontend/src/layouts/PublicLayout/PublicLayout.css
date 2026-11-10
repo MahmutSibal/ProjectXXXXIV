@@ -71,7 +71,11 @@
   font-family: 'Inter', sans-serif;
 }
 
-.public-layout a {
+/* :where() önceliği sıfırlar: bu genel kural, buton gibi sınıf verilmiş bağlantıların
+   kendi rengini ezmemeli. Aksi hâlde ".public-layout a" (sınıf + etiket) önceliği
+   ".public-button--primary"yi geçiyor ve "Kayıt Ol" yazısı koyu yeşil zeminde
+   koyu renkte, yani görünmez kalıyordu. */
+:where(.public-layout) a {
   color: inherit;
   text-decoration: none;
 }
@@ -218,8 +222,8 @@
 }
 
 .public-brand__logo {
-  width: 54px;
-  height: 54px;
+  width: 80px;
+  height: 80px;
   display: block;
   object-fit: contain;
 }
@@ -517,8 +521,8 @@
 }
 
 .public-footer__logo {
-  width: 50px;
-  height: 50px;
+  width: 150px;
+  height: 150px;
   display: block;
   object-fit: contain;
 }
@@ -688,8 +692,8 @@
   }
 
   .public-brand__logo {
-    width: 44px;
-    height: 44px;
+    width: 64px;
+    height: 64px;
   }
 
   .public-brand__name {

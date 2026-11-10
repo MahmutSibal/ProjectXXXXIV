@@ -12,6 +12,20 @@ public sealed class SignalROrderRealtimePublisher(IHubContext<OrderHub> hubConte
     public Task PublishOrderUpdatedAsync(Order order, CancellationToken cancellationToken = default)
         => YayinlaAsync("orderUpdated", order, cancellationToken);
 
+    // Yalnızca kimlik ve durum gönderilir: IBAN gibi kişisel veriler hub üzerinden yayılmaz,
+    // ekranlar listeyi API'den yeniden çeker.
+    public Task PublishRefundRequestChangedAsync(RefundRequest refundRequest, CancellationToken cancellationToken = default)
+    {
+        var payload = new { refundRequest.Id, refundRequest.TableNo, refundRequest.Status };
+        return Task.WhenAll(
+            hubContext.Clients
+                .Group(OrderGroups.Restaurant(refundRequest.RestaurantId))
+                .SendAsync("refundRequestChanged", payload, cancellationToken),
+            hubContext.Clients
+                .Group(OrderGroups.Table(refundRequest.RestaurantId, refundRequest.TableNo))
+                .SendAsync("refundRequestChanged", payload, cancellationToken));
+    }
+
     /// <summary>
     /// Olayı iki gruba birden gönderir: restoranın personeline ve yalnızca ilgili
     /// masadaki müşteriye.

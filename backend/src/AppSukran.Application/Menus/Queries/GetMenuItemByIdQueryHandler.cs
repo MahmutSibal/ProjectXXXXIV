@@ -14,5 +14,5 @@ public sealed class GetMenuItemByIdQueryHandler(IUnitOfWork unitOfWork) : IReque
     }
 
     private static MenuItemResponse Map(MenuItem menuItem)
-        => new(menuItem.Id, menuItem.RestaurantId, menuItem.Category, menuItem.Name, menuItem.ImageUrl, menuItem.Ingredients, menuItem.Recipe, menuItem.AveragePreparationTime, menuItem.Price, menuItem.IsAvailable);
+        => new(menuItem.Id, menuItem.RestaurantId, menuItem.Category, menuItem.Name, menuItem.ImageUrl, menuItem.Ingredients, menuItem.Recipe, menuItem.AveragePreparationTime, menuItem.Price, menuItem.IsAvailable, menuItem.IngredientPrices, menuItem.Calories, menuItem.StockQuantity);
 }

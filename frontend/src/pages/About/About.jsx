@@ -61,7 +61,7 @@ const operationalProblems = [
     description:
       'Hesap isteme ve ödeme bekleme süreci müşterinin restoran deneyimini olumsuz etkiler.',
     solution:
-      'iyzico entegrasyonu ile masada hızlı ve güvenli ödeme gerçekleştirilir.',
+      'Güvenli online ödeme altyapısıyla masada hızlı ödeme yapılır.',
     size: 'small',
     dark: true,
   },
@@ -356,7 +356,7 @@ function About() {
             Basit bir dijital menü fikriyle yola çıktık; ancak
             gerçek çözümün birbirinden kopuk araçlar değil,
             birleşik bir sistem olduğunu gördük. Bugün Şükran
-            App; QR siparişten iyzico entegreli ödemeye, mutfak
+            App; QR siparişten online ödemeye, mutfak
             ekranlarından gelişmiş yönetim panellerine kadar
             büyüyen bir restoran ekosistemine dönüştü.
           </p>

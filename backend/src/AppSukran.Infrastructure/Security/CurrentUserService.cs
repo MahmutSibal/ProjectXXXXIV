@@ -10,6 +10,7 @@ public sealed class CurrentUserService(IHttpContextAccessor httpContextAccessor)
     public string? Email => httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.Email);
     public string? Role => httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.Role);
     public string? RestaurantId => httpContextAccessor.HttpContext?.User?.FindFirstValue("restaurantId");
+    public int? TableNo => int.TryParse(httpContextAccessor.HttpContext?.User?.FindFirstValue("tableNo"), out var tableNo) ? tableNo : null;
     public string? IpAddress => httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString();
     public bool IsAuthenticated => httpContextAccessor.HttpContext?.User?.Identity?.IsAuthenticated == true;
     public bool IsInRole(string role) => httpContextAccessor.HttpContext?.User?.IsInRole(role) == true;

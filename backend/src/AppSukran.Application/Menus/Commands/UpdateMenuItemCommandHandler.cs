@@ -19,7 +19,11 @@ public sealed class UpdateMenuItemCommandHandler(IUnitOfWork unitOfWork, IRestau
         menuItem.Category = request.Category.Trim();
         menuItem.Name = request.Name.Trim();
         menuItem.ImageUrl = request.ImageUrl.Trim();
-        menuItem.Ingredients = request.Ingredients.Select(ingredient => ingredient.Trim()).Where(ingredient => !string.IsNullOrWhiteSpace(ingredient)).ToList();
+        var ingredients = MenuItemIngredients.Normalize(request.Ingredients, request.IngredientPrices);
+        menuItem.Ingredients = ingredients.Names;
+        menuItem.IngredientPrices = ingredients.Prices;
+        menuItem.Calories = request.Calories;
+        menuItem.StockQuantity = request.StockQuantity;
         menuItem.Recipe = string.IsNullOrWhiteSpace(request.Recipe) ? null : request.Recipe.Trim();
         menuItem.AveragePreparationTime = request.AveragePreparationTime;
         menuItem.Price = request.Price;

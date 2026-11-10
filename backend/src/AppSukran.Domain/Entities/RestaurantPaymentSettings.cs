@@ -3,17 +3,14 @@ using AppSukran.Domain.Common;
 namespace AppSukran.Domain.Entities;
 
 /// <summary>
-/// İşletmenin masa ödemeleri için kendi iyzico üye iş yeri ayarları. Platform
-/// işletmenin cirosuna dokunmaz: QR ile kart ödemesi yalnızca işletme bu ayarı
-/// açıp kendi anahtarlarını girdiyse alınır (varsayılan kapalı).
+/// İşletmenin ödeme ayarları: QR ile masadan kart ödemesi alınıp alınmayacağı
+/// (varsayılan kapalı) ve ödemelerin aktarılacağı banka hesabı.
 ///
-/// HASSAS VERİ: API/gizli anahtarlar şifreli saklanır (<see cref="ApiKeyProtected"/>,
-/// <see cref="SecretKeyProtected"/>); API yanıtlarında asla açık dönmez.
+/// Banka bilgileri PayTR'nin işletmeye para aktarımı için istediği bilgilerdir:
+/// IBAN ve hesap sahibi (işletme unvanı + yetkili ad soyad).
 /// </summary>
 public sealed class RestaurantPaymentSettings : AggregateRoot
 {
-    public const string IyzicoProvider = "iyzico";
-
     public RestaurantPaymentSettings()
     {
     }
@@ -28,13 +25,22 @@ public sealed class RestaurantPaymentSettings : AggregateRoot
 
     public bool OnlinePaymentEnabled { get; set; }
 
-    public string Provider { get; set; } = IyzicoProvider;
+    /// <summary>Boşluksuz, büyük harfli Türkiye IBAN'ı (TR + 24 rakam). Boşsa girilmemiştir.</summary>
+    public string Iban { get; set; } = string.Empty;
 
-    public string ApiKeyProtected { get; set; } = string.Empty;
+    /// <summary>Hesabın sahibi işletme/şirket unvanı (banka kaydındaki gibi).</summary>
+    public string AccountHolderBusinessName { get; set; } = string.Empty;
 
-    public string SecretKeyProtected { get; set; } = string.Empty;
+    /// <summary>Hesap sahibinin (işletme yetkilisinin) adı soyadı.</summary>
+    public string AccountHolderFullName { get; set; } = string.Empty;
 
-    public string BaseUrl { get; set; } = string.Empty;
+    // --- Platform tarafı (yalnızca SuperAdmin değiştirir) -----------------------
+
+    /// <summary>Ödemenin işletmeye aktarılmasına kadar geçen gün (valör). null = belirlenmedi.</summary>
+    public int? PayoutSettlementDays { get; set; }
+
+    /// <summary>Platformun masa ödemelerinden aldığı komisyon (%). null = belirlenmedi.</summary>
+    public decimal? CommissionPercent { get; set; }
 
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

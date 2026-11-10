@@ -8,4 +8,7 @@ public sealed record UserResponse(
     string Email,
     UserRole Role,
     string? RestaurantId,
-    bool IsActive);
+    bool IsActive,
+    string? Phone = null,
+    string? Address = null,
+    bool MarketingConsent = false);

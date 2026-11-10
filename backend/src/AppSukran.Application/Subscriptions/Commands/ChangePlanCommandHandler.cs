@@ -1,5 +1,4 @@
 using AppSukran.Application.Abstractions.Logging;
-using AppSukran.Application.Abstractions.Payments;
 using AppSukran.Application.Abstractions.Persistence;
 using AppSukran.Application.Abstractions.Security;
 using AppSukran.Application.Common.Security;
@@ -12,10 +11,8 @@ namespace AppSukran.Application.Subscriptions.Commands;
 
 public sealed class ChangePlanCommandHandler(
     IUnitOfWork unitOfWork,
-    IPaymentGateway paymentGateway,
     IAuditLogService auditLogService,
     ICurrentUserService currentUserService,
-    ICardNumberProtectionService cardProtectionService,
     IRestaurantAccessGuard restaurantAccessGuard) : IRequestHandler<ChangePlanCommand, Unit>
 {
     public async Task<Unit> Handle(ChangePlanCommand request, CancellationToken cancellationToken)
@@ -27,7 +24,7 @@ public sealed class ChangePlanCommandHandler(
             throw new InvalidOperationException("Deneme paketi doğrudan seçilemez; yalnızca kayıt sırasında verilir.");
         }
 
-        // Enterprise'ın sabit fiyatı yoktur; otomatik tahsilatla satın alınamaz.
+        // Enterprise'ın sabit fiyatı yoktur; doğrudan seçilemez.
         if (PlanCatalog.Get(request.Plan).IsQuoteOnly)
         {
             throw new InvalidOperationException(
@@ -45,9 +42,6 @@ public sealed class ChangePlanCommandHandler(
         // gönderse bile kullanılmaz.
         var quote = PlanCatalog.Quote(request.Plan, request.BillingPeriodMonths);
         var amount = quote.Total;
-
-        // Tahsilatı önce al; başarısızsa aboneliğe hiç dokunma.
-        var chargeResult = await ChargeAsync(request, subscription, amount, cancellationToken);
 
         var now = DateTime.UtcNow;
         // Süresi henüz dolmamışsa kalan süre kaybolmasın: mevcut dönem sonundan devam et.
@@ -69,8 +63,8 @@ public sealed class ChangePlanCommandHandler(
         {
             Amount = amount,
             PaidAt = now,
-            TransactionId = chargeResult?.TransactionId,
-            Provider = chargeResult?.Provider ?? "Manual",
+            // Ödeme uygulama dışında (havale; ileride PayTR) alınır.
+            Provider = "Manual",
             PeriodEnd = periodEnd,
             PriceVersion = quote.PriceVersion,
         });
@@ -78,62 +72,9 @@ public sealed class ChangePlanCommandHandler(
         await repository.ReplaceAsync(subscription, cancellationToken);
         await auditLogService.RecordAsync(
             "SubscriptionPlanChanged", nameof(Subscription), subscription.Id,
-            $"{PlanCatalog.Get(request.Plan).DisplayName} paketi, {request.BillingPeriodMonths} ay. tx={chargeResult?.TransactionId ?? "-"}",
+            $"{PlanCatalog.Get(request.Plan).DisplayName} paketi, {request.BillingPeriodMonths} ay.",
             currentUserService.UserId, cancellationToken);
 
         return Unit.Value;
-    }
-
-    private async Task<ChargeResult?> ChargeAsync(
-        ChangePlanCommand request, Subscription subscription, long amount, CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(request.CustomerCardId) || string.IsNullOrWhiteSpace(request.CardNumber))
-        {
-            // Kart verilmediyse ödeme dışarıda (havale/elden) alınmış kabul edilir.
-            return null;
-        }
-
-        var card = await unitOfWork.Repository<CustomerCard>().GetByIdAsync(request.CustomerCardId, cancellationToken)
-            ?? throw new InvalidOperationException("Kart bulunamadı.");
-
-        if (card.UserId != currentUserService.UserId)
-        {
-            throw new UnauthorizedAccessException("Bu kart size ait değil.");
-        }
-
-        if (!card.IsActive || !cardProtectionService.VerifyCardNumber(request.CardNumber, card.CardHash))
-        {
-            throw new InvalidOperationException("Kart doğrulaması başarısız.");
-        }
-
-        var result = await paymentGateway.ChargeAsync(
-            new ChargeRequest(
-                subscription.Id,
-                subscription.RestaurantId,
-                0,
-                amount,
-                currentUserService.UserId ?? card.UserId,
-                new PaymentCard(
-                    card.CardholderName,
-                    cardProtectionService.NormalizeCardNumber(request.CardNumber),
-                    card.ExpiryMonth,
-                    card.ExpiryYear,
-                    request.Cvc,
-                    card.Brand,
-                    card.Last4)),
-            cancellationToken);
-
-        if (!result.Success)
-        {
-            // Başarısız denemeyi aboneliğe yaz: gecikme takibi ve hatırlatma
-            // kararları bu bilgiye dayanır. Abonelik durumu değiştirilmez —
-            // kullanıcı hâlâ mevcut dönemini kullanıyor olabilir.
-            subscription.MarkPaymentFailed(DateTime.UtcNow, result.ErrorMessage ?? "Ödeme reddedildi.");
-            await unitOfWork.Repository<Subscription>().ReplaceAsync(subscription, cancellationToken);
-
-            throw new InvalidOperationException($"Abonelik ödemesi başarısız: {result.ErrorMessage}");
-        }
-
-        return result;
     }
 }

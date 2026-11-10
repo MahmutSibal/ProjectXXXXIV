@@ -8,6 +8,7 @@ const menuItems = [
   ['table_restaurant', 'Masalar', '/kitchen/tables'],
   ['inventory_2', 'Ürünler', '/kitchen/products'],
   ['history', 'Sipariş Geçmişi', '/kitchen/order-history'],
+  ['support_agent', 'Destek', '/kitchen/support'],
 ];
 
 function SidebarMenu({ onNavigate }) {

@@ -27,56 +27,6 @@ export default function AdminSubscription() {
   const [billingMonths, setBillingMonths] = useState(1);
   const [busyPlan, setBusyPlan] = useState(null);
 
-  // Otomatik yenileme kartı. Kart numarası sunucuda saklanmaz; iyzico'ya
-  // gönderilip dönen referanslar aboneliğe yazılır.
-  const [card, setCard] = useState({ holder: '', number: '', month: '', year: '' });
-  const [isSavingCard, setIsSavingCard] = useState(false);
-  const [cardError, setCardError] = useState('');
-  const [cardSuccess, setCardSuccess] = useState('');
-
-  const handleSaveCard = async (event) => {
-    event.preventDefault();
-    setCardError('');
-    setCardSuccess('');
-
-    const digits = card.number.replace(/\D/g, '');
-    if (card.holder.trim().length < 3) {
-      setCardError('Kart üzerindeki ismi girin.');
-      return;
-    }
-    if (digits.length < 15) {
-      setCardError('Kart numarasını eksiksiz girin.');
-      return;
-    }
-    const month = Number(card.month);
-    if (!Number.isInteger(month) || month < 1 || month > 12) {
-      setCardError('Son kullanma ayı 01-12 arasında olmalı.');
-      return;
-    }
-    if (!/^\d{4}$/.test(card.year)) {
-      setCardError('Son kullanma yılını 4 haneli girin (örn. 2030).');
-      return;
-    }
-
-    setIsSavingCard(true);
-    try {
-      const updated = await subscriptionsApi.saveCard(user.restaurantId, {
-        cardHolderName: card.holder.trim(),
-        cardNumber: digits,
-        expiryMonth: month,
-        expiryYear: Number(card.year),
-      });
-
-      setSubscription(updated);
-      setCard({ holder: '', number: '', month: '', year: '' });
-      setCardSuccess('Kart kaydedildi. Dönem sonunda otomatik tahsilat yapılacak.');
-    } catch (err) {
-      setCardError(err instanceof ApiError ? err.message : 'Kart kaydedilemedi.');
-    } finally {
-      setIsSavingCard(false);
-    }
-  };
-
   const load = () =>
     Promise.all([
       subscriptionsApi.getByRestaurant(user.restaurantId).catch(() => null),
@@ -208,131 +158,6 @@ export default function AdminSubscription() {
         </section>
       )}
 
-      {subscription && (
-        <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-md ambient-shadow flex flex-col gap-md">
-          <div>
-            <h3 className="font-headline-sm text-headline-sm text-on-background mb-1">Ödeme Yöntemi</h3>
-            <p className="font-body-md text-body-md text-on-surface-variant">
-              Dönem sonunda ücret bu karttan otomatik tahsil edilir. Kart bilgileriniz
-              bizde saklanmaz; ödeme altyapısında (iyzico) tutulur.
-            </p>
-          </div>
-
-          {subscription.paymentMethodLast4 ? (
-            <div className="flex flex-wrap items-center gap-3 bg-surface-container-low rounded-lg p-3">
-              <span className="material-symbols-outlined text-primary-container">credit_card</span>
-              <span className="font-label-lg text-label-lg text-on-background">
-                •••• •••• •••• {subscription.paymentMethodLast4}
-              </span>
-              {subscription.paymentMethodBrand && (
-                <span className="text-body-sm text-on-surface-variant">{subscription.paymentMethodBrand}</span>
-              )}
-              <span
-                className={`ml-auto px-3 py-1 rounded-full text-[11px] font-bold ${
-                  subscription.autoRenew
-                    ? 'bg-primary-container text-on-primary-container'
-                    : 'bg-surface-container-high text-on-surface-variant'
-                }`}
-              >
-                {subscription.autoRenew ? 'Otomatik yenileme açık' : 'Otomatik yenileme kapalı'}
-              </span>
-            </div>
-          ) : (
-            <div className="flex items-start gap-2 bg-secondary-container text-on-secondary-container rounded-lg p-3">
-              <span className="material-symbols-outlined">info</span>
-              <p className="text-body-sm">
-                Kayıtlı kart yok. Kart tanımlamazsanız dönem sonunda tahsilat yapılamaz ve
-                hizmetiniz duraklar.
-              </p>
-            </div>
-          )}
-
-          {cardError && (
-            <p className="flex items-center gap-2 text-error text-body-sm">
-              <span className="material-symbols-outlined text-[18px]">error</span>
-              {cardError}
-            </p>
-          )}
-
-          {cardSuccess && (
-            <p className="flex items-center gap-2 text-primary-container text-body-sm">
-              <span className="material-symbols-outlined text-[18px]">check_circle</span>
-              {cardSuccess}
-            </p>
-          )}
-
-          <form onSubmit={handleSaveCard} className="grid grid-cols-1 md:grid-cols-2 gap-md">
-            <label className="flex flex-col gap-1 md:col-span-2">
-              <span className="font-label-md text-label-md text-on-surface-variant">Kart Üzerindeki İsim</span>
-              <input
-                type="text"
-                autoComplete="cc-name"
-                value={card.holder}
-                onChange={(event) => setCard((prev) => ({ ...prev, holder: event.target.value }))}
-                placeholder="Ad Soyad"
-                className="bg-surface-container-lowest border border-outline-variant rounded-lg py-2.5 px-3 text-body-md outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container"
-              />
-            </label>
-
-            <label className="flex flex-col gap-1 md:col-span-2">
-              <span className="font-label-md text-label-md text-on-surface-variant">Kart Numarası</span>
-              <input
-                type="text"
-                inputMode="numeric"
-                autoComplete="cc-number"
-                maxLength={19}
-                value={card.number}
-                onChange={(event) => setCard((prev) => ({ ...prev, number: event.target.value }))}
-                placeholder={subscription.paymentMethodLast4 ? 'Değiştirmek için yeni kartı girin' : '•••• •••• •••• ••••'}
-                className="bg-surface-container-lowest border border-outline-variant rounded-lg py-2.5 px-3 text-body-md outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container"
-              />
-            </label>
-
-            <label className="flex flex-col gap-1">
-              <span className="font-label-md text-label-md text-on-surface-variant">Son Kullanma Ayı</span>
-              <input
-                type="text"
-                inputMode="numeric"
-                maxLength={2}
-                autoComplete="cc-exp-month"
-                value={card.month}
-                onChange={(event) => setCard((prev) => ({ ...prev, month: event.target.value }))}
-                placeholder="12"
-                className="bg-surface-container-lowest border border-outline-variant rounded-lg py-2.5 px-3 text-body-md outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container"
-              />
-            </label>
-
-            <label className="flex flex-col gap-1">
-              <span className="font-label-md text-label-md text-on-surface-variant">Son Kullanma Yılı</span>
-              <input
-                type="text"
-                inputMode="numeric"
-                maxLength={4}
-                autoComplete="cc-exp-year"
-                value={card.year}
-                onChange={(event) => setCard((prev) => ({ ...prev, year: event.target.value }))}
-                placeholder="2030"
-                className="bg-surface-container-lowest border border-outline-variant rounded-lg py-2.5 px-3 text-body-md outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container"
-              />
-            </label>
-
-            <div className="md:col-span-2 flex items-center justify-between gap-md">
-              <p className="text-[11px] text-on-surface-variant opacity-80">
-                Kart tanımlarken tahsilat yapılmaz. İlk ücret dönem sonunda alınır.
-              </p>
-
-              <button
-                type="submit"
-                disabled={isSavingCard}
-                className="bg-primary-container text-on-primary-container font-label-md text-label-md px-6 py-2.5 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
-              >
-                {isSavingCard ? 'Kaydediliyor...' : subscription.paymentMethodLast4 ? 'Kartı Değiştir' : 'Kartı Kaydet'}
-              </button>
-            </div>
-          </form>
-        </section>
-      )}
-
       <section className="flex flex-col gap-md">
         <div className="flex flex-wrap items-center justify-between gap-md">
           <h3 className="font-headline-sm text-headline-sm text-on-background">Paketler</h3>
@@ -449,8 +274,8 @@ export default function AdminSubscription() {
         </div>
 
         <p className="text-[11px] text-on-surface-variant">
-          Kartla otomatik tahsilat henüz devrede değil; paket seçiminiz kaydedilir ve ödeme
-          bilgileri için ekibimiz sizinle iletişime geçer.
+          Paket seçiminiz kaydedilir; ödeme bilgileri (havale/EFT ya da online ödeme)
+          için ekibimiz sizinle iletişime geçer.
         </p>
       </section>
     </div>

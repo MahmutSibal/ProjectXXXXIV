@@ -18,6 +18,7 @@ public sealed class AppSukranDbContext(DbContextOptions<AppSukranDbContext> opti
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<Event> Events => Set<Event>();
     public DbSet<SupportRequest> SupportRequests => Set<SupportRequest>();
+    public DbSet<RefundRequest> RefundRequests => Set<RefundRequest>();
     public DbSet<Complaint> Complaints => Set<Complaint>();
     public DbSet<PhoneVerification> PhoneVerifications => Set<PhoneVerification>();
     public DbSet<BillingProfile> BillingProfiles => Set<BillingProfile>();

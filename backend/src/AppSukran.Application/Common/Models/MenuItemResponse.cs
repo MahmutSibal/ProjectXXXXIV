@@ -10,4 +10,7 @@ public sealed record MenuItemResponse(
     string? Recipe,
     int AveragePreparationTime,
     long Price,
-    bool IsAvailable);
+    bool IsAvailable,
+    IReadOnlyCollection<long?> IngredientPrices,
+    int? Calories,
+    int? StockQuantity);

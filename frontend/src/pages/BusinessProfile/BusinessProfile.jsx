@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { restaurantsApi } from '../../api/restaurants.js';
 import { reviewsApi } from '../../api/reviews.js';
 import { ApiError } from '../../api/client.js';
+import PaymentAccountSection from './PaymentAccountSection.jsx';
 import './BusinessProfile.css';
 
 function renderStars(count) {
@@ -28,8 +29,16 @@ export default function BusinessProfile() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const [businessInfo, setBusinessInfo] = useState({ name: '', address: '', mapsUrl: '', locationDescription: '' });
+  const [businessInfo, setBusinessInfo] = useState({ name: '', address: '' });
   const [isSaving, setIsSaving] = useState(false);
+  // Haritada aranan adres. Her tuş vuruşunda harita yeniden yüklenmesin diye
+  // yazmaya ara verildikten sonra güncellenir.
+  const [mapQuery, setMapQuery] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => setMapQuery(businessInfo.address.trim()), 700);
+    return () => clearTimeout(timer);
+  }, [businessInfo.address]);
 
   useEffect(() => {
     if (!user?.restaurantId) {
@@ -40,7 +49,7 @@ export default function BusinessProfile() {
     Promise.all([restaurantsApi.getById(user.restaurantId), reviewsApi.getByRestaurant(user.restaurantId)])
       .then(([restaurantData, reviewsData]) => {
         setRestaurant(restaurantData);
-        setBusinessInfo({ name: restaurantData.name, address: restaurantData.address, mapsUrl: '', locationDescription: '' });
+        setBusinessInfo({ name: restaurantData.name, address: restaurantData.address });
         setReviews(reviewsData);
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : 'İşletme bilgileri yüklenemedi.'))
@@ -85,19 +94,17 @@ export default function BusinessProfile() {
   };
 
   const handleOpenMap = () => {
-    const activeAddress = businessInfo.address;
-    const activeMapUrl = businessInfo.mapsUrl;
-
-    if (!activeAddress.trim() && !activeMapUrl.trim()) {
-      toast.warning('Haritada açmak için adres veya Google Haritalar linki girin.');
+    const address = businessInfo.address.trim();
+    if (!address) {
+      toast.warning('Haritada açmak için işletme adresini girin.');
       return;
     }
 
-    const targetUrl = activeMapUrl.trim()
-      ? activeMapUrl.trim()
-      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activeAddress.trim())}`;
-
-    window.open(targetUrl, '_blank', 'noopener,noreferrer');
+    window.open(
+      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`,
+      '_blank',
+      'noopener,noreferrer',
+    );
   };
 
   if (isLoading) {
@@ -112,8 +119,8 @@ export default function BusinessProfile() {
         </h2>
 
         <p className="font-body-lg text-body-lg text-on-surface-variant">
-          İşletme bilgilerinizi, adresinizi, harita bağlantınızı ve müşteri
-          yorumlarınızı buradan yönetebilirsiniz.
+          İşletme bilgilerinizi, adresinizi ve müşteri yorumlarınızı buradan
+          yönetebilirsiniz. Adresiniz haritada otomatik olarak gösterilir.
         </p>
       </section>
 
@@ -177,24 +184,6 @@ export default function BusinessProfile() {
               />
             </div>
 
-            <div className="flex flex-col gap-1">
-              <label className="text-label-sm text-on-surface-variant">
-                Google Haritalar Linki
-              </label>
-
-              <input
-                name="mapsUrl"
-                value={businessInfo.mapsUrl}
-                onChange={handleChange}
-                className="w-full bg-surface-container-low border border-outline-variant rounded-lg py-2 px-4 text-body-sm focus:border-primary-container focus:ring-1 focus:ring-primary-container outline-none"
-                placeholder="Google Maps bağlantısını ekleyin"
-                type="text"
-              />
-              <p className="text-[11px] text-on-surface-variant opacity-70">
-                Bu link yalnızca "Haritada Aç" için kullanılır, kaydedilmez.
-              </p>
-            </div>
-
             <button
               type="button"
               onClick={handleUpdateBusiness}
@@ -211,21 +200,31 @@ export default function BusinessProfile() {
             Harita Önizleme
           </h3>
 
-          <div className="flex-1 bg-surface-container-low rounded-lg border border-outline-variant border-dashed flex flex-col items-center justify-center p-lg text-center gap-3 min-h-[260px]">
-            <span className="material-symbols-outlined text-[48px] text-on-surface-variant opacity-40">
-              map
-            </span>
-
-            <div>
-              <p className="font-bold text-on-background">
-                {businessInfo.name || 'Harita Önizlemesi'}
-              </p>
-
+          {mapQuery ? (
+            // Yazılan adres Google Haritalar'da aranır ve bulunan konum gösterilir
+            // (gömülü harita; API anahtarı gerektirmez).
+            <iframe
+              key={mapQuery}
+              title={`${businessInfo.name || 'İşletme'} konumu`}
+              src={`https://maps.google.com/maps?q=${encodeURIComponent(mapQuery)}&z=16&output=embed`}
+              className="flex-1 w-full min-h-[260px] rounded-lg border border-outline-variant"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
+          ) : (
+            <div className="flex-1 bg-surface-container-low rounded-lg border border-outline-variant border-dashed flex flex-col items-center justify-center p-lg text-center gap-3 min-h-[260px]">
+              <span className="material-symbols-outlined text-[48px] text-on-surface-variant opacity-40">
+                map
+              </span>
               <p className="text-body-sm text-on-surface-variant max-w-[300px] mx-auto">
-                {businessInfo.address || 'Adres eklendiğinde işletme konumu burada görüntülenecek.'}
+                Adres girdiğinizde işletme konumu burada görüntülenecek.
               </p>
             </div>
-          </div>
+          )}
+
+          <p className="mt-2 text-[11px] text-on-surface-variant">
+            Konum yanlış görünüyorsa adrese mahalle, ilçe ve il ekleyin.
+          </p>
 
           <button
             type="button"
@@ -236,6 +235,14 @@ export default function BusinessProfile() {
           </button>
         </section>
       </div>
+
+      {user?.restaurantId && restaurant && (
+        <PaymentAccountSection
+          restaurantId={user.restaurantId}
+          defaultBusinessName={restaurant.name}
+          defaultFullName={user.name}
+        />
+      )}
 
       <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-md ambient-shadow">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-md mb-lg">

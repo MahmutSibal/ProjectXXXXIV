@@ -54,5 +54,5 @@ public sealed class GetOrdersByRestaurantQueryHandler(IUnitOfWork unitOfWork, IR
         => new(order.Id, order.RestaurantId, order.TableNo, order.SessionStatus, order.Items.Select(MapItem).ToList(), order.TotalAmount, order.RemainingAmount, order.CreatedAt);
 
     private static OrderItemResponse MapItem(OrderItem item)
-        => new(item.OrderItemId, item.MenuItemId, item.Name, item.Price, item.OrderedBy, item.Status, item.PaymentStatus);
+        => new(item.OrderItemId, item.MenuItemId, item.Name, item.Price, item.OrderedBy, item.Status, item.PaymentStatus, item.Extras);
 }

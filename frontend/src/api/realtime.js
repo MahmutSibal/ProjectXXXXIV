@@ -41,6 +41,7 @@ export function connectOrderHub({
   getAccessToken = () => getTokens()?.accessToken ?? '',
   onOrderCreated,
   onOrderUpdated,
+  onRefundRequestChanged,
   onReconnected,
   onStatusChange,
 } = {}) {
@@ -71,6 +72,8 @@ export function connectOrderHub({
 
     if (onOrderCreated) created.on('orderCreated', onOrderCreated);
     if (onOrderUpdated) created.on('orderUpdated', onOrderUpdated);
+    // İade talebi açıldı/sonuçlandı; olay yalnızca kimlik ve durum taşır, liste API'den çekilir.
+    if (onRefundRequestChanged) created.on('refundRequestChanged', onRefundRequestChanged);
 
     created.onreconnecting(() => {
       if (!isCurrent()) return;
@@ -131,6 +134,7 @@ export function connectOrderHub({
       unsubscribe();
       connection?.off('orderCreated');
       connection?.off('orderUpdated');
+      connection?.off('refundRequestChanged');
       connection?.stop().catch(() => {});
     },
   };

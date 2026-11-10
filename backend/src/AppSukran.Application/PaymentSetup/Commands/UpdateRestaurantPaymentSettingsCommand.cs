@@ -1,34 +1,30 @@
 using AppSukran.Application.Abstractions.Logging;
-using AppSukran.Application.Abstractions.Payments;
 using AppSukran.Application.Abstractions.Persistence;
 using AppSukran.Application.Abstractions.Security;
 using AppSukran.Application.Common.Security;
+using AppSukran.Domain.Common;
 using AppSukran.Domain.Entities;
 using MediatR;
 
 namespace AppSukran.Application.PaymentSetup.Commands;
 
-/// <param name="ApiKey">Boş/null ise kayıtlı değer korunur.</param>
-/// <param name="SecretKey">Boş/null ise kayıtlı değer korunur.</param>
-/// <param name="BaseUrl">Boş/null ise kayıtlı (yoksa varsayılan) adres korunur.</param>
+/// <param name="Iban">Boşluklu ya da boşluksuz girilebilir; TR + 24 rakam, mod-97 doğrulanır.</param>
+/// <param name="AccountHolderBusinessName">Hesap sahibi işletme/şirket unvanı.</param>
+/// <param name="AccountHolderFullName">Hesap sahibi yetkilinin adı soyadı.</param>
 public sealed record UpdateRestaurantPaymentSettingsCommand(
     string RestaurantId,
     bool OnlinePaymentEnabled,
-    string? ApiKey,
-    string? SecretKey,
-    string? BaseUrl) : IRequest<Unit>;
+    string? Iban,
+    string? AccountHolderBusinessName,
+    string? AccountHolderFullName) : IRequest<Unit>;
 
 public sealed class UpdateRestaurantPaymentSettingsCommandHandler(
     IUnitOfWork unitOfWork,
     IRestaurantAccessGuard restaurantAccessGuard,
-    ISecretProtectionService secretProtection,
-    IPaymentPlatformInfo platformInfo,
     IAuditLogService auditLogService,
     ICurrentUserService currentUserService)
     : IRequestHandler<UpdateRestaurantPaymentSettingsCommand, Unit>
 {
-    private const int MaxKeyLength = 200;
-
     public async Task<Unit> Handle(UpdateRestaurantPaymentSettingsCommand request, CancellationToken cancellationToken)
     {
         restaurantAccessGuard.EnsureCanAccess(request.RestaurantId);
@@ -36,63 +32,39 @@ public sealed class UpdateRestaurantPaymentSettingsCommandHandler(
         _ = await unitOfWork.Repository<Restaurant>().GetByIdAsync(request.RestaurantId, cancellationToken)
             ?? throw new InvalidOperationException("İşletme bulunamadı.");
 
+        var iban = TurkishIban.Normalize(request.Iban);
+        var businessName = (request.AccountHolderBusinessName ?? string.Empty).Trim();
+        var fullName = (request.AccountHolderFullName ?? string.Empty).Trim();
+
+        if (iban.Length > 0 && !TurkishIban.IsValid(iban))
+        {
+            throw new InvalidOperationException("Geçerli bir IBAN girin (TR ile başlayan 26 karakter).");
+        }
+
+        if (iban.Length > 0 && (businessName.Length == 0 || fullName.Length == 0))
+        {
+            throw new InvalidOperationException("IBAN girildiğinde işletme adı ve hesap sahibinin adı soyadı zorunludur.");
+        }
+
+        if (businessName.Length > 200 || fullName.Length > 150)
+        {
+            throw new InvalidOperationException("İşletme adı en fazla 200, ad soyad en fazla 150 karakter olabilir.");
+        }
+
+        // Ödemelerin aktarılacağı hesap olmadan kart ödemesi açılamaz.
+        if (request.OnlinePaymentEnabled && iban.Length == 0)
+        {
+            throw new InvalidOperationException("Online ödemeyi açmak için önce IBAN bilgilerinizi girin.");
+        }
+
         var repository = unitOfWork.Repository<RestaurantPaymentSettings>();
         var existing = await repository.GetByIdAsync(request.RestaurantId, cancellationToken);
 
-        var newApiKey = (request.ApiKey ?? string.Empty).Trim();
-        var newSecretKey = (request.SecretKey ?? string.Empty).Trim();
-
-        if (newApiKey.Length > MaxKeyLength || newSecretKey.Length > MaxKeyLength)
-        {
-            throw new InvalidOperationException($"Anahtarlar en fazla {MaxKeyLength} karakter olabilir.");
-        }
-
-        string baseUrl;
-        if (string.IsNullOrWhiteSpace(request.BaseUrl))
-        {
-            baseUrl = string.IsNullOrWhiteSpace(existing?.BaseUrl)
-                ? RestaurantPaymentCredentials.DefaultBaseUrl(platformInfo.DefaultIyzicoBaseUrl)
-                : existing.BaseUrl;
-        }
-        else
-        {
-            baseUrl = RestaurantPaymentCredentials.NormalizeBaseUrl(request.BaseUrl)
-                ?? throw new InvalidOperationException(
-                    "iyzico adresi geçersiz. Yalnızca https://api.iyzipay.com veya https://sandbox-api.iyzipay.com kullanılabilir.");
-        }
-
-        // Boş gelen anahtar kayıtlı değeri korur (yanıtta maskeli döndüğü için
-        // işletme sahibi her kaydedişte yeniden yazmak zorunda kalmaz).
-        var protectedApiKey = newApiKey.Length > 0
-            ? secretProtection.Protect(newApiKey)
-            : existing?.ApiKeyProtected ?? string.Empty;
-        var protectedSecretKey = newSecretKey.Length > 0
-            ? secretProtection.Protect(newSecretKey)
-            : existing?.SecretKeyProtected ?? string.Empty;
-
-        if (request.OnlinePaymentEnabled && !platformInfo.GlobalProviderIsFake)
-        {
-            // Birleştirme sonrası iki anahtar da bulunmalı ve çözülebilmeli
-            // (JWT anahtarı değiştiyse eski şifreli değerler okunamaz).
-            var merged = new RestaurantPaymentSettings
-            {
-                ApiKeyProtected = protectedApiKey,
-                SecretKeyProtected = protectedSecretKey,
-            };
-
-            if (RestaurantPaymentCredentials.TryDecrypt(merged, secretProtection) is null)
-            {
-                throw new InvalidOperationException(
-                    "Online ödemeyi açmak için iyzico API anahtarı ve gizli anahtarını girin.");
-            }
-        }
-
         var settings = existing ?? new RestaurantPaymentSettings(request.RestaurantId);
         settings.OnlinePaymentEnabled = request.OnlinePaymentEnabled;
-        settings.Provider = RestaurantPaymentSettings.IyzicoProvider;
-        settings.ApiKeyProtected = protectedApiKey;
-        settings.SecretKeyProtected = protectedSecretKey;
-        settings.BaseUrl = baseUrl;
+        settings.Iban = iban;
+        settings.AccountHolderBusinessName = businessName;
+        settings.AccountHolderFullName = fullName;
         settings.UpdatedAt = DateTime.UtcNow;
 
         if (existing is null)
@@ -104,11 +76,11 @@ public sealed class UpdateRestaurantPaymentSettingsCommandHandler(
             await repository.ReplaceAsync(settings, cancellationToken);
         }
 
-        // Denetim kaydına anahtar değerleri YAZILMAZ.
+        // Denetim kaydına IBAN yalnızca maskeli yazılır.
         await auditLogService.RecordAsync(
             "RestaurantPaymentSettingsUpdated", nameof(RestaurantPaymentSettings), settings.Id,
-            $"Online ödeme ayarları güncellendi. Açık: {(settings.OnlinePaymentEnabled ? "evet" : "hayır")}, " +
-            $"anahtar değişti: {(newApiKey.Length > 0 || newSecretKey.Length > 0 ? "evet" : "hayır")}",
+            $"Ödeme ayarları güncellendi. Online ödeme: {(settings.OnlinePaymentEnabled ? "açık" : "kapalı")}, " +
+            $"IBAN: {(iban.Length > 0 ? TurkishIban.Mask(iban) : "-")}",
             currentUserService.UserId, cancellationToken);
 
         return Unit.Value;

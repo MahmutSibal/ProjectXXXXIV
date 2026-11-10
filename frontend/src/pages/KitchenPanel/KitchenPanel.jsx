@@ -3,6 +3,8 @@ import { matchesSearch } from '../../lib/text.js';
 import { useToast } from '../../context/ToastContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useOrderRealtime } from '../../hooks/useOrderRealtime.js';
+import { useRefundRequests } from '../../hooks/useRefundRequests.js';
+import { RefundRequestStatus } from '../../api/refunds.js';
 import RealtimeStatus from '../../components/RealtimeStatus.jsx';
 import { ordersApi } from '../../api/orders.js';
 import { OrderSessionStatus, OrderItemStatus, formatKurus } from '../../api/enums.js';
@@ -28,6 +30,17 @@ export default function KitchenPanel() {
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [busyOrderId, setBusyOrderId] = useState(null);
+  const [activePanel, setActivePanel] = useState('orders');
+  // Bekleyen iade talepleri sunucudan gelir; canlı güncelleme sipariş hub'ı üzerinden.
+  const { refunds, reload: reloadRefunds, resolve: resolveRefund } = useRefundRequests(user?.restaurantId);
+
+  const handleResolveRefund = async (id, status) => {
+    try {
+      await resolveRefund(id, status);
+    } catch (err) {
+      toast.error(err.message ?? 'İade talebi güncellenemedi.');
+    }
+  };
 
   // Mutfak yalnızca açık siparişleri görür; durum süzgeci sunucuda uygulanır.
   // Açık siparişler masa sayısıyla sınırlı olduğu için tek sayfa yeterlidir.
@@ -57,6 +70,7 @@ export default function KitchenPanel() {
   const { status: realtimeStatus } = useOrderRealtime({
     enabled: Boolean(user?.restaurantId),
     onChange: loadOrders,
+    onRefundChange: reloadRefunds,
   });
 
   const filteredOrders = useMemo(
@@ -128,6 +142,97 @@ export default function KitchenPanel() {
         </div>
       </section>
 
+<div className="flex flex-wrap gap-2" aria-label="Mutfak ekranları">
+  <button
+    type="button"
+    aria-pressed={activePanel === 'orders'}
+    onClick={() => setActivePanel('orders')}
+    className={`min-h-11 rounded-xl border px-4 py-2 text-sm font-semibold ${
+      activePanel === 'orders'
+        ? 'border-primary-container bg-primary-container text-on-primary-container'
+        : 'border-outline-variant bg-surface-container-lowest text-on-background'
+    }`}
+  >
+    Aktif Siparişler
+  </button>
+
+  <button
+    type="button"
+    aria-pressed={activePanel === 'refunds'}
+    onClick={() => setActivePanel('refunds')}
+    className={`inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold ${
+      refunds.length > 0
+        ? 'border-[#F3AA5C] bg-[#F3AA5C] text-[#2D1909]'
+        : activePanel === 'refunds'
+          ? 'border-primary-container bg-primary-container text-on-primary-container'
+          : 'border-outline-variant bg-surface-container-lowest text-on-background'
+    }`}
+  >
+    Müşteri İade
+    <span
+      aria-live="polite"
+      aria-label={`${refunds.length} iade talebi`}
+      className="min-w-6 rounded-full bg-black/10 px-2 py-0.5 text-center tabular-nums"
+    >
+      {refunds.length}
+    </span>
+  </button>
+</div>
+
+{activePanel === 'refunds' && (
+  <section className="flex flex-col gap-md" aria-labelledby="kitchen-refund-title">
+    <div>
+      <h3 id="kitchen-refund-title" className="font-headline-sm text-headline-sm text-on-background">
+        Müşteri İade Talepleri
+      </h3>
+      <p className="mt-1 text-sm text-on-surface-variant">
+        Masalardan iletilen talepler ve tercih edilen iade yöntemleri.
+      </p>
+    </div>
+
+    {refunds.length === 0 ? (
+      <p className="rounded-xl border border-outline-variant bg-surface-container-lowest p-md text-on-surface-variant">
+        Bekleyen iade talebi yok.
+      </p>
+    ) : (
+      refunds.map((request) => (
+        <article
+          key={request.id}
+          className="rounded-xl border border-outline-variant bg-surface-container-lowest p-md ambient-shadow"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h4 className="font-bold text-on-background">Masa {request.tableNo}</h4>
+            <span className="rounded-full bg-[#F3AA5C]/25 px-3 py-1 text-xs font-bold text-[#67370E]">
+              İade yöntemi · {request.methodLabel}
+            </span>
+          </div>
+          <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-relaxed text-on-surface-variant">
+            {request.content}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => handleResolveRefund(request.id, RefundRequestStatus.Completed)}
+              className="min-h-10 rounded-lg bg-primary-container px-4 text-sm font-semibold text-on-primary-container"
+            >
+              İade Yapıldı
+            </button>
+            <button
+              type="button"
+              onClick={() => handleResolveRefund(request.id, RefundRequestStatus.Rejected)}
+              className="min-h-10 rounded-lg border border-outline-variant px-4 text-sm font-semibold text-on-background"
+            >
+              Reddet
+            </button>
+          </div>
+        </article>
+      ))
+    )}
+  </section>
+)}
+
+<div className={activePanel === 'orders' ? 'contents' : 'hidden'}>
+
       <section className="relative w-full">
         <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">
           search
@@ -172,6 +277,7 @@ export default function KitchenPanel() {
           </div>
         )}
       </section>
+      </div>
     </div>
   );
 }

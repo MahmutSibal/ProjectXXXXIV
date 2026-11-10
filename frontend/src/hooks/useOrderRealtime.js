@@ -14,9 +14,11 @@ import { connectOrderHub } from '../api/realtime.js';
  * @param {boolean} secenekler.enabled Kullanıcı bir restorana bağlı değilse bağlanma.
  * @param {() => Promise<any>|void} secenekler.onChange Listeyi yeniden yükleyen işlev.
  * @param {() => string} [secenekler.getAccessToken] Token kaynağı; QR müşterisi için gerekir.
+ * @param {() => Promise<any>|void} [secenekler.onRefundChange] İade talepleri listesini
+ *   yeniden yükleyen işlev; aynı hub bağlantısı kullanılır, ikinci bağlantı açılmaz.
  * @returns {{ status: 'connected'|'reconnecting'|'disconnected' }}
  */
-export function useOrderRealtime({ enabled, onChange, getAccessToken }) {
+export function useOrderRealtime({ enabled, onChange, getAccessToken, onRefundChange }) {
   const [status, setStatus] = useState('disconnected');
 
   // Callback'i ref'te tutuyoruz: her render'da yeni bir işlev gelse bile
@@ -25,6 +27,11 @@ export function useOrderRealtime({ enabled, onChange, getAccessToken }) {
   useEffect(() => {
     onChangeRef.current = onChange;
   }, [onChange]);
+
+  const onRefundChangeRef = useRef(onRefundChange);
+  useEffect(() => {
+    onRefundChangeRef.current = onRefundChange;
+  }, [onRefundChange]);
 
   const tokenRef = useRef(getAccessToken);
   useEffect(() => {
@@ -50,9 +57,15 @@ export function useOrderRealtime({ enabled, onChange, getAccessToken }) {
       ...(tokenRef.current ? { getAccessToken: () => tokenRef.current() } : {}),
       onOrderCreated: yenidenYukle,
       onOrderUpdated: yenidenYukle,
+      onRefundRequestChanged: () => {
+        Promise.resolve(onRefundChangeRef.current?.()).catch(() => {});
+      },
       // Bağlantının koptuğu sürede yayınlanan olaylar geri gelmez; yeniden
       // bağlanınca listeyi baştan çekmek tek doğru telafi.
-      onReconnected: yenidenYukle,
+      onReconnected: () => {
+        yenidenYukle();
+        Promise.resolve(onRefundChangeRef.current?.()).catch(() => {});
+      },
       onStatusChange: setStatus,
     });
 

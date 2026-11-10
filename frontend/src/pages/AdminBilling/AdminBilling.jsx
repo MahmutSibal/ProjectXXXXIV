@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { billingProfileApi } from '../../api/billingProfile.js';
+import { restaurantsApi } from '../../api/restaurants.js';
 import { ApiError } from '../../api/client.js';
 
+// Ad soyad, e-posta ve ülke SORULMAZ: ad ve e-posta işletme sahibinin hesabından,
+// ülke "Türkiye" olarak sunucuda doldurulur. Telefon da kayıtta alındığı için
+// yalnızca hesapta yoksa (eski hesaplar) sorulur.
 const emptyForm = {
-  contactName: '',
-  email: '',
   phone: '',
   nationalId: '',
   mersisNumber: '',
   addressLine: '',
   city: '',
-  country: 'Türkiye',
   postalCode: '',
 };
 
@@ -53,28 +54,30 @@ export default function AdminBilling() {
       return;
     }
 
-    billingProfileApi
-      .get(user.restaurantId)
-      .then((data) => {
-        if (!data) return;
-        setProfile(data);
+    Promise.all([
+      billingProfileApi.get(user.restaurantId),
+      restaurantsApi.getById(user.restaurantId).catch(() => null),
+    ])
+      .then(([data, restaurant]) => {
+        if (data) setProfile(data);
         // Kimlik numaraları maskeli geldiği için forma DOLDURULMAZ; boş bırakılırsa
-        // sunucu mevcut değeri korur.
+        // sunucu mevcut değeri korur. Fatura adresi ilk kez giriliyorsa işletme
+        // adresi önerilir.
         setForm({
-          contactName: data.contactName ?? '',
-          email: data.email ?? '',
-          phone: data.phone ?? '',
+          phone: '',
           nationalId: '',
           mersisNumber: '',
-          addressLine: data.addressLine ?? '',
-          city: data.city ?? '',
-          country: data.country ?? 'Türkiye',
-          postalCode: data.postalCode ?? '',
+          addressLine: data?.addressLine || restaurant?.address || '',
+          city: data?.city ?? '',
+          postalCode: data?.postalCode ?? '',
         });
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : 'Fatura bilgileri yüklenemedi.'))
       .finally(() => setIsLoading(false));
   }, [user?.restaurantId]);
+
+  // Telefon hesapta ya da kayıtlı fatura bilgisinde varsa yeniden sorulmaz.
+  const needsPhone = !user?.phone && !profile?.phone;
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -88,9 +91,13 @@ export default function AdminBilling() {
     setIsSaving(true);
 
     try {
-      const saved = await billingProfileApi.save(user.restaurantId, form);
+      const saved = await billingProfileApi.save(user.restaurantId, {
+        ...form,
+        // Boş gönderilen iletişim bilgileri sunucuda hesaptan doldurulur.
+        phone: needsPhone ? form.phone : null,
+      });
       setProfile(saved);
-      setForm((previous) => ({ ...previous, nationalId: '', mersisNumber: '' }));
+      setForm((previous) => ({ ...previous, phone: '', nationalId: '', mersisNumber: '' }));
       setSuccess('Fatura bilgileriniz kaydedildi.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Kaydedilemedi. Lütfen tekrar deneyin.');
@@ -138,15 +145,20 @@ export default function AdminBilling() {
         onSubmit={handleSubmit}
         className="bg-surface-container-lowest border border-outline-variant rounded-xl p-md ambient-shadow flex flex-col gap-md"
       >
+        <div className="flex items-start gap-2 rounded-lg bg-surface-container-low p-3 text-body-sm text-on-surface-variant">
+          <span className="material-symbols-outlined text-[18px]">person</span>
+          <p>
+            Fatura <strong className="text-on-background">{profile?.contactName || user?.name}</strong> adına
+            düzenlenir ve <strong className="text-on-background">{profile?.email || user?.email}</strong> adresine
+            gönderilir. Bu bilgiler hesabınızdan alınır.
+          </p>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
-          <Field label="Ad Soyad" name="contactName" value={form.contactName} onChange={handleChange}
-            placeholder="Fatura muhatabının adı soyadı" required />
-
-          <Field label="E-posta" name="email" type="email" value={form.email} onChange={handleChange}
-            placeholder="fatura@isletmeniz.com" required />
-
-          <Field label="Telefon" name="phone" type="tel" inputMode="tel" value={form.phone} onChange={handleChange}
-            placeholder="05XX XXX XX XX" required />
+          {needsPhone && (
+            <Field label="Telefon" name="phone" type="tel" inputMode="tel" value={form.phone} onChange={handleChange}
+              placeholder="05XX XXX XX XX" required />
+          )}
 
           <Field
             label="T.C. Kimlik Numarası"
@@ -173,18 +185,16 @@ export default function AdminBilling() {
               : 'Şahıs işletmelerinde zorunlu değildir.'}
           />
 
-          <Field label="Posta Kodu" name="postalCode" inputMode="numeric" value={form.postalCode}
-            onChange={handleChange} placeholder="34710" required />
-
           <Field label="İl" name="city" value={form.city} onChange={handleChange}
             placeholder="İstanbul" required />
 
-          <Field label="Ülke" name="country" value={form.country} onChange={handleChange}
-            placeholder="Türkiye" required />
+          <Field label="Posta Kodu" name="postalCode" inputMode="numeric" value={form.postalCode}
+            onChange={handleChange} placeholder="34710" required />
         </div>
 
         <Field label="Fatura Adresi" name="addressLine" value={form.addressLine} onChange={handleChange}
-          placeholder="Mahalle, cadde, no / ilçe" required />
+          placeholder="Mahalle, cadde, no / ilçe" required
+          hint="İşletme adresinizle aynıysa değiştirmeniz gerekmez." />
 
         <div className="flex items-center justify-between gap-md pt-2 border-t border-outline-variant">
           <p className="text-[11px] text-on-surface-variant opacity-80">

@@ -11,8 +11,9 @@ export const ROLES = {
 export const authApi = {
   login: (email, password) =>
     api.post('/auth/login', { email, password }, { auth: false }),
-  register: (name, email, password, role, restaurantId = null) =>
-    api.post('/auth/register', { name, email, password, role, restaurantId }, { auth: false }),
+  // Herkese açık kayıt yalnızca müşteri hesabı açar; rol/restoran sunucuda yok sayılır.
+  register: ({ name, email, password, phone = null, address = null, marketingConsent = false }) =>
+    api.post('/auth/register', { name, email, password, phone, address, marketingConsent }, { auth: false }),
   /** Self-servis işletme kaydı: hesap + restoran + deneme aboneliği tek adımda. */
   registerBusiness: (payload) => api.post('/auth/register-business', payload, { auth: false }),
   logout: (refreshToken) => api.post('/auth/logout', { refreshToken }),

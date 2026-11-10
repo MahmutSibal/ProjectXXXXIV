@@ -10,6 +10,14 @@ export const restaurantsApi = {
     api.get(`/restaurants/${restaurantId}/tables/${tableNo}/session?token=${encodeURIComponent(token)}`, { auth: false }),
   create: (payload) => api.post('/restaurants', payload),
   update: (restaurantId, payload) => api.put(`/restaurants/${restaurantId}`, payload),
+  // Ödemelerin aktarılacağı banka hesabı (IBAN, hesap sahibi) ve masada kart ödemesi.
+  getPaymentSettings: (restaurantId) => api.get(`/restaurants/${restaurantId}/payment-settings`),
+  updatePaymentSettings: (restaurantId, payload) => api.put(`/restaurants/${restaurantId}/payment-settings`, payload),
+  // SuperAdmin: valör (gün) ve platform komisyonu (%).
+  updatePayoutTerms: (restaurantId, settlementDays, commissionPercent) =>
+    api.put(`/restaurants/${restaurantId}/payout-terms`, { settlementDays, commissionPercent }),
+  // Son N günün sipariş adedi, brüt, komisyon ve net tutarı (kuruş).
+  getEarnings: (restaurantId, days = 15) => api.get(`/restaurants/${restaurantId}/earnings?days=${days}`),
 };
 
 export const tablesApi = {

@@ -21,7 +21,7 @@
 .EXAMPLE
     # Ana + yedek sunucu. Aynı oturumda, AYNI ortam değişkenleriyle iki kez çalıştırın:
     # iki sunucu aynı veritabanını ve aynı JWT anahtarını kullanmak ZORUNDADIR
-    # (aksi hâlde yedeğe geçen kullanıcının oturumu düşer, iyzico anahtarları çözülemez).
+    # (aksi hâlde yedeğe geçen kullanıcının oturumu düşer).
     .\scripts\publish-monsterasp.ps1 -SiteHost "mahmutapp.tryasp.net" -FrontendOrigin "https://sukranapp.runasp.net" -InstanceName "primary" -OutputPath .\publish\primary
     .\scripts\publish-monsterasp.ps1 -SiteHost "mahmutapp.runasp.net" -FrontendOrigin "https://sukranapp.runasp.net" -InstanceName "backup"  -OutputPath .\publish\backup
 #>
@@ -39,10 +39,6 @@ param(
     [string[]]$FrontendOrigin,
 
     [string]$OutputPath = (Join-Path $PSScriptRoot "..\publish"),
-
-    # Sandbox anahtarlarıyla test ederken bunu kullanın. appsettings.Production.json
-    # canlı iyzico adresini içerir; sandbox anahtarı canlı adrese karşı çalışmaz.
-    [switch]$IyzicoSandbox,
 
     # WhatsApp doğrulama servisinin adresi (ör. https://sukranwa.runasp.net).
     # Verilirse doğrulama açılır; WHATSAPP_SERVICE_TOKEN ortam değişkeni de gerekir.
@@ -90,12 +86,6 @@ if ([Environment]::GetEnvironmentVariable('JWT_SIGNING_KEY').Length -lt 32) {
     throw "JWT_SIGNING_KEY 32 karakterden kısa. Uygulama production'da bu anahtarla açılmaz."
 }
 
-$iyzicoKey    = [Environment]::GetEnvironmentVariable('SUKRAN_IYZICO_API_KEY')
-$iyzicoSecret = [Environment]::GetEnvironmentVariable('SUKRAN_IYZICO_SECRET_KEY')
-if ([string]::IsNullOrWhiteSpace($iyzicoKey) -or [string]::IsNullOrWhiteSpace($iyzicoSecret)) {
-    Write-Warning "iyzico anahtarları yok. Ödeme uçları hata verecek (sahte başarı DÖNMEZ)."
-}
-
 # --- Yayın ----------------------------------------------------------------
 
 if (Test-Path $OutputPath) {
@@ -122,19 +112,15 @@ $vars = [ordered]@{
     'SUKRAN_SUPERADMIN_PASSWORD'   = [Environment]::GetEnvironmentVariable('SUKRAN_SUPERADMIN_PASSWORD')
     # AllowedHosts yanlışsa her istek 400 döner — MonsterASP alan adı buraya yazılmalı.
     'AllowedHosts'                 = $SiteHost
+    # Gerçek ödeme sağlayıcısı (PayTR) bağlanana kadar kart tahsilatı kapalı; "Fake"
+    # canlıda ASLA kullanılmamalı (her kartı kabul eder, para alınmadan "ödendi" görünür).
+    'Payment__Provider'            = 'None'
 }
 
 # CORS kaynakları dizidir; ASP.NET Core bunları Cors__AllowedOrigins__0, __1 ...
 # biçiminde okur. Tek bir değişkene virgülle yazmak ÇALIŞMAZ.
 for ($i = 0; $i -lt $FrontendOrigin.Count; $i++) {
     $vars["Cors__AllowedOrigins__$i"] = $FrontendOrigin[$i]
-}
-
-if (-not [string]::IsNullOrWhiteSpace($iyzicoKey))    { $vars['SUKRAN_IYZICO_API_KEY'] = $iyzicoKey }
-if (-not [string]::IsNullOrWhiteSpace($iyzicoSecret)) { $vars['SUKRAN_IYZICO_SECRET_KEY'] = $iyzicoSecret }
-
-if ($IyzicoSandbox) {
-    $vars['Payment__Iyzico__BaseUrl'] = 'https://sandbox-api.iyzipay.com'
 }
 
 if (-not [string]::IsNullOrWhiteSpace($InstanceName)) {
@@ -194,6 +180,3 @@ foreach ($key in $vars.Keys) {
 Write-Host ""
 Write-Host "Sonraki adım: bu klasörün İÇERİĞİNİ MonsterASP'ta wwwroot altına yükleyin." -ForegroundColor Yellow
 Write-Host "Ardından doğrulayın:  https://$SiteHost/api/health/ready"
-if (-not $IyzicoSandbox) {
-    Write-Host "UYARI: canlı iyzico adresi kullanılacak. Sandbox anahtarıyla test ediyorsanız -IyzicoSandbox ekleyin." -ForegroundColor Yellow
-}

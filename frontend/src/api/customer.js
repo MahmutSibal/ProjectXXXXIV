@@ -38,6 +38,9 @@ export const customerCardsApi = {
 };
 
 export const customerPaymentsApi = {
+  // İşletme kartla ödeme alıyor mu? Kapalıysa ödeme formu hiç gösterilmez.
+  getOnlinePaymentStatus: (restaurantId) =>
+    apiRequest(`/restaurants/${restaurantId}/online-payment`, { auth: false }),
   splitEqually: (payload) => customerApi.post('/payments/split-equally', payload),
   paySpecificItems: (payload) => customerApi.post('/payments/specific-items', payload),
 };

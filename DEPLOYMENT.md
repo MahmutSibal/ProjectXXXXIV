@@ -31,7 +31,25 @@ setx JWT_SIGNING_KEY "buraya-uretilen-anahtar" /M
 
 > Not: `setx` ile tanımlanan değişkenler yalnızca yeni açılan süreçlerde görünür; IIS/servis yeniden başlatılmalıdır.
 
-## 1.1. iyzico (ödeme sağlayıcısı)
+## 1.0. Ödeme sağlayıcısı — GÜNCEL DURUM (iyzico kaldırıldı)
+
+> **iyzico projeden kaldırıldı; yerine PayTR (pazaryeri) entegre edilecek.** Aşağıdaki
+> 1.1 ve 1.7.1 bölümlerindeki iyzico ayrıntıları yalnızca geçmiş kayıt içindir.
+
+| `Payment:Provider` | Davranış | Nerede |
+|---|---|---|
+| `None` | Gerçek sağlayıcı yok; her kart tahsilatı **reddedilir**, QR menü kart formunu göstermez | Production (`appsettings.Production.json` ve yayın betiği) |
+| `Fake` | Simülasyon; her geçerli kartı kabul eder | Yalnızca geliştirme. **Canlıda asla** — para alınmadan adisyon "ödendi" görünür |
+
+- Masa ödemesinde müşteriden ad soyad, e-posta, adres ve telefon alınır (PayTR zorunlu tutar).
+- İşletmenin ödeme aktarım hesabı: İşletme Profili → "Ödeme ve IBAN Bilgileri" (IBAN, hesap
+  sahibi unvanı ve ad soyad). Valör ve komisyonu SuperAdmin → Transfer İşlemi'nden belirler.
+- Sipariş ve adisyon tutarları **sunucuda** hesaplanır; istemcinin gönderdiği fiyat ve
+  ödeme durumu yok sayılır.
+- Migration `RemoveIyzicoAddPayoutAndSupportReply` iyzico sütunlarını **siler** (geri alınamaz).
+  Canlıya geçmeden önce MonsterASP panelinden veritabanı yedeği alın.
+
+## 1.1. iyzico (ödeme sağlayıcısı) — KALDIRILDI, geçmiş kayıt
 
 Sağlayıcı `Payment:Provider` ile seçilir: `Fake` (yerleşik simülasyon, varsayılan) veya `Iyzico`.
 

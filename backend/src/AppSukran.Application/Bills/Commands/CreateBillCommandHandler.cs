@@ -28,22 +28,43 @@ public sealed class CreateBillCommandHandler(IUnitOfWork unitOfWork, IAuditLogSe
             throw new InvalidOperationException("Invalid or expired table session.");
         }
 
-        var bill = new Bill
-        {
-            RestaurantId = request.RestaurantId,
-            TableNo = request.TableNo,
-            Items = request.Items.Select(item => new OrderItem
+        // Hesap, masanın açık siparişlerinden çıkarılır. "Orders" tablosu hesapları da
+        // tuttuğu için (TPH) yalnızca gerçek sipariş kayıtları alınır.
+        var activeOrders = (await unitOfWork.Repository<Order>().FindAsync(
+                order => order.RestaurantId == request.RestaurantId
+                    && order.TableNo == request.TableNo
+                    && order.SessionStatus == OrderSessionStatus.Active,
+                cancellationToken))
+            .Where(order => order.GetType() == typeof(Order))
+            .ToList();
+
+        var items = activeOrders
+            .SelectMany(order => order.Items)
+            .Select(item => new OrderItem
             {
                 MenuItemId = item.MenuItemId,
                 Name = item.Name,
                 Price = item.Price,
+                Extras = item.Extras.ToList(),
                 OrderedBy = item.OrderedBy,
                 Status = item.Status,
-                PaymentStatus = item.PaymentStatus
-            }).ToList(),
+                PaymentStatus = item.PaymentStatus,
+            })
+            .ToList();
+
+        if (items.Count == 0)
+        {
+            throw new InvalidOperationException("Bu masada hesabı çıkarılacak açık sipariş yok.");
+        }
+
+        var bill = new Bill
+        {
+            RestaurantId = request.RestaurantId,
+            TableNo = request.TableNo,
+            Items = items,
             SessionStatus = OrderSessionStatus.Active,
-            TotalAmount = request.Items.Sum(item => item.Price),
-            RemainingAmount = request.Items.Where(item => item.PaymentStatus != PaymentStatus.Paid).Sum(item => item.Price)
+            TotalAmount = items.Sum(item => item.Price),
+            RemainingAmount = items.Where(item => item.PaymentStatus != PaymentStatus.Paid).Sum(item => item.Price)
         };
 
         await unitOfWork.Repository<Bill>().InsertAsync(bill, cancellationToken);

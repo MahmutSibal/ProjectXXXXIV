@@ -75,7 +75,7 @@ const advantages = [
     icon: 'security',
     title: 'Güvenli Ödeme Altyapısı',
     description:
-      'Ödeme işlemlerini iyzico altyapısıyla güvenle gerçekleştirin.',
+      'Ödeme işlemlerini güvenli online ödeme altyapısıyla gerçekleştirin.',
   },
   {
     icon: 'support_agent',

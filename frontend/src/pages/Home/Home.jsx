@@ -115,7 +115,7 @@ const faqItems = [
     id: 'payment',
     question: 'Müşteri ödemeleri güvenli mi?',
     answer:
-      'Evet. Ödeme işlemleri iyzico altyapısı üzerinden gerçekleştirilir. Hassas kart bilgileri doğrudan ödeme sağlayıcısı tarafından güvenli şekilde işlenir.',
+      'Evet. Kartlı ödemeler lisanslı bir ödeme kuruluşunun altyapısı üzerinden, 3D Secure ile alınır.',
   },
   {
     id: 'menu-update',
@@ -254,7 +254,7 @@ function Home() {
             <p className="home-hero__description">
               Şükran App ile müşterileriniz QR menüye saniyeler
               içinde ulaşır, siparişlerini kolayca oluşturur ve
-              ödemelerini iyzico güvencesiyle tamamlar. Siz de
+              ödemelerini güvenle tamamlar. Siz de
               siparişleri, masaları ve tüm operasyon sürecini tek
               panelden yönetirsiniz.
             </p>
@@ -282,7 +282,7 @@ function Home() {
                   verified_user
                 </span>
 
-                <span>iyzico ile güvenli ödeme</span>
+                <span>Güvenli online ödeme</span>
               </div>
 
               <div className="home-hero__trust-item">
@@ -426,10 +426,10 @@ function Home() {
               Ödeme Güvencesi
             </span>
 
-            <h3>iyzico ile Güvenli Tahsilat</h3>
+            <h3>Güvenli Online Tahsilat</h3>
 
             <p>
-              Ödemeler iyzico altyapısı üzerinden güvenli, hızlı
+              Ödemeler lisanslı ödeme altyapısı üzerinden güvenli, hızlı
               ve sorunsuz şekilde tamamlanır.
             </p>
           </article>

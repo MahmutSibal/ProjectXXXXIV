@@ -163,7 +163,12 @@ export default function SuperAdminSupport() {
                       </td>
 
                       <td className="py-4 px-6 text-on-surface-variant leading-relaxed">
-                        {request.content}
+                        {request.topic && (
+                          <span className="mb-1 inline-block rounded-full bg-surface-container px-2 py-0.5 text-[11px] font-bold text-on-background">
+                            {request.topic}
+                          </span>
+                        )}
+                        <span className="block">{request.content}</span>
                       </td>
 
                       <td className="py-4 px-6">{request.phone}</td>

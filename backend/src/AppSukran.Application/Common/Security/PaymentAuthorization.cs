@@ -15,6 +15,23 @@ public static class PaymentAuthorization
     /// QR ile masadan bağlanan MÜŞTERİ için değildir — aksi hâlde QR bağlantısına
     /// erişen herkes adisyonu hiç ödeme yapmadan kapatabilir.
     /// </summary>
+    /// <summary>
+    /// Adisyona erişim: personel yalnızca kendi restoranının, QR müşterisi yalnızca kendi
+    /// masasının adisyonunu ödeyebilir. Eskiden bu kontrol yoktu; bir restoranın personeli
+    /// başka bir restoranın adisyonunu kapatabiliyordu.
+    /// </summary>
+    public static void EnsureCanAccessBill(
+        string billRestaurantId, int billTableNo,
+        IRestaurantAccessGuard restaurantAccessGuard, ICurrentUserService currentUserService)
+    {
+        restaurantAccessGuard.EnsureCanAccess(billRestaurantId);
+
+        if (currentUserService.IsInRole(nameof(UserRole.Customer)) && currentUserService.TableNo != billTableNo)
+        {
+            throw new UnauthorizedAccessException("Bu adisyon masanıza ait değil.");
+        }
+    }
+
     public static void EnsureCanSettleWithoutCharge(ICurrentUserService currentUserService)
     {
         var isStaff =

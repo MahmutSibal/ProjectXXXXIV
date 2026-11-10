@@ -6,6 +6,12 @@ import {
   Routes,
 } from 'react-router-dom';
 
+import SuperAdminTransfers from '../pages/SuperAdminTransfers/SuperAdminTransfers.jsx';
+
+import LegalPage from '../pages/Legal/LegalPage.jsx';
+
+
+import AdminSupport from '../pages/AdminSupport/AdminSupport.jsx';
 import ProtectedRoute from './ProtectedRoute.jsx';
 import { ROLES } from '../api/auth.js';
 
@@ -63,6 +69,7 @@ import SuperAdminSubscriptions from '../pages/SuperAdminSubscriptions/SuperAdmin
 /* Müşteri (QR menü) sayfası */
 
 import CustomerMenu from '../pages/CustomerMenu/CustomerMenu.jsx';
+import CustomerMenuDesign from '../pages/CustomerMenu/CustomerMenuDesign.jsx';
 
 function NotFound() {
   return (
@@ -163,6 +170,12 @@ export default function AppRouter() {
             path="iletisim"
             element={<Contact />}
           />
+          <Route path="kvkk" element={<LegalPage />} />
+<Route path="gizlilik-politikasi" element={<LegalPage />} />
+<Route path="kullanim-kosullari" element={<LegalPage />} />
+<Route path="mesafeli-satis-sozlesmesi" element={<LegalPage />} />
+<Route path="iptal-ve-iade-politikasi" element={<LegalPage />} />
+<Route path="kampanya-bildirimleri" element={<LegalPage />} />
         </Route>
 
         {/* Navbar ve footer kullanılmayan üyelik sayfaları */}
@@ -170,7 +183,9 @@ export default function AppRouter() {
         <Route
           path="/giris-yap"
           element={<Login />}
+          
         />
+        <Route path="/sifremi-unuttum" element={<Login recovery />} />
 
         <Route
           path="/kayit-ol"
@@ -182,6 +197,13 @@ export default function AppRouter() {
         <Route
           path="/menu/:restaurantId/:tableNo"
           element={<CustomerMenu />}
+        />
+
+        {/* Yeni QR menü tasarımının önizlemesi. Sabit örnek verilerle çalışır, sunucuya
+            bağlı değildir; gerçek veriye bağlanınca /menu rotasının yerini alacak. */}
+        <Route
+          path="/menu-onizleme"
+          element={<CustomerMenuDesign />}
         />
 
         {/* Admin route'ları */}
@@ -257,6 +279,11 @@ export default function AppRouter() {
           />
 
           <Route
+  path="support"
+  element={<AdminSupport />}
+/>
+
+          <Route
             path="events"
             element={<AdminEvents />}
           />
@@ -304,6 +331,7 @@ export default function AppRouter() {
             path="order-history"
             element={<KitchenOrderHistory />}
           />
+          <Route path="support" element={<AdminSupport />} />
         </Route>
         </Route>
 
@@ -363,6 +391,7 @@ export default function AppRouter() {
             path="subscriptions"
             element={<SuperAdminSubscriptions />}
           />
+          <Route path="transfers" element={<SuperAdminTransfers />} />
         </Route>
         </Route>
 

@@ -15,7 +15,8 @@ public sealed class SplitEquallyCommandHandler(
     IPosBridgeService posBridgeService,
     IAuditLogService auditLogService,
     ICurrentUserService currentUserService,
-    ICardNumberProtectionService cardProtectionService)
+    ICardNumberProtectionService cardProtectionService,
+    IRestaurantAccessGuard restaurantAccessGuard)
     : IRequestHandler<SplitEquallyCommand, PaymentResultDto>
 {
     public async Task<PaymentResultDto> Handle(SplitEquallyCommand request, CancellationToken cancellationToken)
@@ -43,6 +44,8 @@ public sealed class SplitEquallyCommandHandler(
             var bill = await repository.GetByIdAsync(request.BillId, cancellationToken)
                 ?? throw new InvalidOperationException("Bill not found.");
 
+            PaymentAuthorization.EnsureCanAccessBill(bill.RestaurantId, bill.TableNo, restaurantAccessGuard, currentUserService);
+
             if (bill.RemainingAmount <= 0)
             {
                 throw new InvalidOperationException("There is no remaining amount to split.");
@@ -61,7 +64,7 @@ public sealed class SplitEquallyCommandHandler(
                 ? null
                 : await gatewayResolver.ResolveAsync(bill.RestaurantId, cancellationToken);
 
-            var chargeResult = await ChargeIfCardAsync(merchantGateway, resolved, request.BillId, bill.RestaurantId, bill.TableNo, share, request.Cvc, cancellationToken);
+            var chargeResult = await ChargeIfCardAsync(merchantGateway, resolved, request.BillId, bill.RestaurantId, bill.TableNo, share, request.Cvc, request.Buyer, cancellationToken);
 
             bill.RemainingAmount = Math.Max(0, bill.RemainingAmount - share);
             await repository.ReplaceAsync(bill, cancellationToken);
@@ -80,7 +83,7 @@ public sealed class SplitEquallyCommandHandler(
         }
     }
 
-    private static async Task<ChargeResult?> ChargeIfCardAsync(IPaymentGateway? paymentGateway, (CustomerCard Card, string Pan)? resolved, string billId, string restaurantId, int tableNo, long amount, string? cvc, CancellationToken cancellationToken)
+    private static async Task<ChargeResult?> ChargeIfCardAsync(IPaymentGateway? paymentGateway, (CustomerCard Card, string Pan)? resolved, string billId, string restaurantId, int tableNo, long amount, string? cvc, PaymentBuyer? buyer, CancellationToken cancellationToken)
     {
         if (resolved is null || paymentGateway is null)
         {
@@ -91,6 +94,7 @@ public sealed class SplitEquallyCommandHandler(
         var result = await paymentGateway.ChargeAsync(
             new ChargeRequest(billId, restaurantId, tableNo, amount, card.UserId,
                 new PaymentCard(card.CardholderName, pan, card.ExpiryMonth, card.ExpiryYear, cvc, card.Brand, card.Last4),
+                Buyer: buyer,
                 UseRestaurantMerchant: true),
             cancellationToken);
 

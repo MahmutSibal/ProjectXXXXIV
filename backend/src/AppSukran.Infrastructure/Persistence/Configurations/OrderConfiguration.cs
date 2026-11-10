@@ -31,6 +31,7 @@ public sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
             item.Property(i => i.MenuItemId).HasMaxLength(32).IsRequired();
             item.Property(i => i.Name).HasMaxLength(200).IsRequired();
             item.Property(i => i.OrderedBy).HasMaxLength(200);
+            item.Property(i => i.Extras).HasJsonStringListConversion();
         });
         builder.Navigation(order => order.Items).AutoInclude();
     }

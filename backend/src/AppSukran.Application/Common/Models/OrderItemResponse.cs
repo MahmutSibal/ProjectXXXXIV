@@ -9,4 +9,5 @@ public sealed record OrderItemResponse(
     long Price,
     string OrderedBy,
     OrderItemStatus Status,
-    PaymentStatus PaymentStatus);
+    PaymentStatus PaymentStatus,
+    IReadOnlyCollection<string>? Extras = null);
