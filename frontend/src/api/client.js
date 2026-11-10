@@ -4,7 +4,9 @@ const STORAGE_KEY = 'sukran_auth';
 
 export class ApiError extends Error {
   constructor(status, body) {
-    super(extractMessage(body) ?? `İstek başarısız oldu (${status}).`);
+    super(extractMessage(body) ?? (status === 429
+      ? 'Çok fazla deneme yapıldı. Lütfen birkaç dakika bekleyip tekrar deneyin.'
+      : `İstek başarısız oldu (${status}).`));
     this.status = status;
     this.body = body;
   }

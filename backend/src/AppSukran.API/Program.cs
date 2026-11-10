@@ -103,14 +103,35 @@ builder.Services.AddRateLimiter(options =>
     });
 
 
-    // Her istek WhatsApp'tan dışarıya mesaj gönderir; dar tutulur.
-    options.AddFixedWindowLimiter("phone-verification", limiterOptions =>
-    {
-        limiterOptions.PermitLimit = 10;
-        limiterOptions.Window = TimeSpan.FromMinutes(10);
-        limiterOptions.QueueLimit = 0;
-        limiterOptions.AutoReplenishment = true;
-    });
+    // Telefon doğrulama. Eskiden TÜM SİTE için tek bir sayaçtı (10 dk'da 10 istek):
+    // birkaç kişinin denemesi herkesi 429 ile kilitliyordu. Artık IP başına ve
+    // gönderme/doğrulama ayrı sayılır.
+    //
+    // Gönderme: her istek WhatsApp'tan mesaj çıkarır, dar tutulur. Aynı numaraya
+    // tekrar gönderim ayrıca uygulamadaki 60 sn bekleme ile sınırlıdır.
+    options.AddPolicy("phone-verification-send", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "bilinmeyen",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(10),
+                QueueLimit = 0,
+                AutoReplenishment = true,
+            }));
+
+    // Doğrulama: mesaj göndermez. Kaba kuvvete karşı asıl koruma kod başına deneme
+    // sınırıdır (PhoneVerification.MaxAttempts); bu sınır yalnızca ek bir emniyet.
+    options.AddPolicy("phone-verification-verify", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "bilinmeyen",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 20,
+                Window = TimeSpan.FromMinutes(10),
+                QueueLimit = 0,
+                AutoReplenishment = true,
+            }));
 
     // Giriş ve kayıt. reCAPTCHA projeden kaldırıldıktan sonra bu uçlardaki tek
     // bot/kaba kuvvet koruması budur.

@@ -15,7 +15,6 @@ namespace AppSukran.API.Controllers;
 [ApiController]
 [Route("api/phone-verification")]
 [AllowAnonymous]
-[EnableRateLimiting("phone-verification")]
 public sealed class PhoneVerificationController(
     IMediator mediator,
     IWhatsAppService whatsAppService) : ControllerBase
@@ -23,18 +22,21 @@ public sealed class PhoneVerificationController(
     /// <summary>
     /// Telefon doğrulaması zorunlu mu? Kayıt ekranı buna göre doğrulama adımını
     /// gösterir; WhatsApp servisi devrede değilken kullanıcıyı boşuna bekletmez.
+    /// Mesaj göndermez, yalnızca bir ayar okur — hız sınırına dahil edilmez.
     /// </summary>
     [HttpGet("status")]
     public ActionResult<PhoneVerificationStatusResponse> GetStatus()
         => Ok(new PhoneVerificationStatusResponse(whatsAppService.IsEnabled));
 
     [HttpPost("send")]
+    [EnableRateLimiting("phone-verification-send")]
     public async Task<ActionResult<SendPhoneVerificationResult>> Send(
         [FromBody] SendPhoneVerificationRequest request, CancellationToken cancellationToken)
         => Ok(await mediator.Send(
             new SendPhoneVerificationCommand(request.Phone), cancellationToken));
 
     [HttpPost("verify")]
+    [EnableRateLimiting("phone-verification-verify")]
     public async Task<ActionResult<VerifyPhoneCodeResult>> Verify(
         [FromBody] VerifyPhoneCodeRequest request, CancellationToken cancellationToken)
         => Ok(await mediator.Send(new VerifyPhoneCodeCommand(request.Phone, request.Code), cancellationToken));
