@@ -115,7 +115,7 @@ const planCopy = {
   },
   pro: {
     description: 'Sipariş sürecini dijitalleştirmek isteyen restoranlar için.',
-    features: ['QR Sipariş ve Ödeme', 'iyzico Entegrasyonu', 'Mutfak ve Garson Panelleri'],
+    features: ['QR Sipariş ve Ödeme', 'Online Ödeme', 'Mutfak ve Garson Panelleri'],
     buttonText: 'Hemen Başla',
     featured: true,
   },
@@ -241,7 +241,7 @@ function Services() {
             </h1>
 
             <p className="services-hero__description">
-              Şükran App; QR menü, iyzico ile güvenli ödeme,
+              Şükran App; QR menü, güvenli online ödeme,
               garson çağırma, mutfak paneli ve admin yönetim
               araçlarıyla işletmenizin ihtiyaç duyduğu tüm
               dijital hizmetleri tek sistemde sunar.

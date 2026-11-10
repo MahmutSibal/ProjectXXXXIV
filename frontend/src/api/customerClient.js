@@ -35,7 +35,7 @@ export function isSessionValid(target = session) {
 
 class CustomerApiError extends Error {
   constructor(status, body) {
-    super(typeof body === 'string' ? body : body?.title ?? body?.message ?? `İstek başarısız oldu (${status}).`);
+    super(typeof body === 'string' ? body : body?.title ?? body?.message ?? (status === 429 ? 'Çok fazla deneme yapıldı. Lütfen birkaç dakika bekleyip tekrar deneyin.' : `İstek başarısız oldu (${status}).`));
     this.status = status;
     this.body = body;
   }

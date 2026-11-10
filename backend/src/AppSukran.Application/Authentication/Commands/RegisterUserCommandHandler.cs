@@ -2,6 +2,7 @@ using AppSukran.Application.Abstractions.Persistence;
 using AppSukran.Application.Abstractions.Security;
 using AppSukran.Application.Common.Models;
 using AppSukran.Domain.Entities;
+using AppSukran.Domain.Enums;
 using MediatR;
 
 namespace AppSukran.Application.Authentication.Commands;
@@ -28,9 +29,14 @@ public sealed class RegisterUserCommandHandler(
             Name = request.Name.Trim(),
             Email = normalizedEmail,
             PasswordHash = passwordHashingService.HashPassword(request.Password),
-            Role = request.Role,
-            RestaurantId = string.IsNullOrWhiteSpace(request.RestaurantId) ? null : request.RestaurantId.Trim(),
-            IsActive = true
+            // Herkese açık kayıt yalnızca müşteri hesabı açar (bkz. RegisterUserCommand).
+            Role = UserRole.Customer,
+            RestaurantId = null,
+            IsActive = true,
+            Phone = string.IsNullOrWhiteSpace(request.Phone) ? null : request.Phone.Trim(),
+            Address = string.IsNullOrWhiteSpace(request.Address) ? null : request.Address.Trim(),
+            MarketingConsent = request.MarketingConsent,
+            MarketingConsentAt = request.MarketingConsent ? DateTime.UtcNow : null,
         };
 
         await userRepository.InsertAsync(user, cancellationToken);

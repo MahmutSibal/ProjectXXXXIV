@@ -44,12 +44,12 @@ function PublicLayout() {
             aria-label="Şükran App ana sayfa"
           >
             <img
-              src="/sukranapp.png"
+              src="/sukranapp.png?v=2"
               alt="Şükran App logosu"
               className="public-brand__logo"
             />
 
-            <span className="public-brand__name">Şükran</span>
+            <span className="public-brand__name">Şükran App</span>
           </Link>
 
           <nav
@@ -173,12 +173,12 @@ function PublicLayout() {
                 aria-label="Şükran App ana sayfa"
               >
                 <img
-                  src="/sukranapp.png"
+                  src="/sukranapp.png?v=2"
                   alt="Şükran App logosu"
                   className="public-footer__logo"
                 />
 
-                <span>Şükran</span>
+                <span>Şükran App</span>
               </Link>
 
               <p className="public-footer__description">
@@ -214,6 +214,9 @@ function PublicLayout() {
               <Link to="/mesafeli-satis-sozlesmesi">
                 Mesafeli Satış Sözleşmesi
               </Link>
+              <Link to="/iptal-ve-iade-politikasi">
+  İptal ve İade Politikası
+</Link>
             </div>
 
             <div className="public-footer__column">
@@ -228,6 +231,11 @@ function PublicLayout() {
               <a href="tel:+900000000000">
                 +90 (000) 000 00 00
               </a>
+              <address className="public-footer__description not-italic">
+  <strong>Örnek adres</strong><br />
+  Örnek Mahallesi, Şükran Sokak No: 12<br />
+  Bergama / İzmir
+</address>
 
               <span className="public-footer__address">
                 İzmir, Türkiye

@@ -8,6 +8,7 @@ const menuItems = [
   ['support_agent', 'Destek Talepleri', '/super-admin/support'],
   ['report', 'İşletme Şikayetleri', '/super-admin/complaints'],
   ['card_membership', 'Abonelikler', '/super-admin/subscriptions'],
+  ['swap_horiz', 'Transfer İşlemi', '/super-admin/transfers'],
   ['group', 'Kullanıcılar', '/super-admin/users'],
   ['chat', 'WhatsApp', '/super-admin/whatsapp'],
   ['history', 'Denetim Kayıtları', '/super-admin/audit-logs'],
@@ -22,7 +23,7 @@ function SidebarMenu({ onNavigate }) {
         className="w-full mb-md overflow-hidden flex-shrink-0 block"
       >
         <img
-          src="/sukranapp.png"
+          src="/sukranapp.png?v=2"
           alt="Şükran App Logo"
           className="w-full h-auto object-cover block cursor-pointer"
         />

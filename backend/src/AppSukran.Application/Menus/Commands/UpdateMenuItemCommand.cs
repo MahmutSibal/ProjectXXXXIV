@@ -11,4 +11,7 @@ public sealed record UpdateMenuItemCommand(
     string? Recipe,
     int AveragePreparationTime,
     long Price,
-    bool IsAvailable) : IRequest<Unit>;
+    bool IsAvailable,
+    IReadOnlyCollection<long?>? IngredientPrices = null,
+    int? Calories = null,
+    int? StockQuantity = null) : IRequest<Unit>;

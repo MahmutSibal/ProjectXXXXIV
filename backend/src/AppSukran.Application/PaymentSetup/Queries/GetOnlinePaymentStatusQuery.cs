@@ -1,6 +1,5 @@
 using AppSukran.Application.Abstractions.Payments;
 using AppSukran.Application.Abstractions.Persistence;
-using AppSukran.Application.Abstractions.Security;
 using AppSukran.Domain.Entities;
 using MediatR;
 
@@ -16,14 +15,19 @@ public sealed record GetOnlinePaymentStatusQuery(string RestaurantId) : IRequest
 
 public sealed class GetOnlinePaymentStatusQueryHandler(
     IUnitOfWork unitOfWork,
-    ISecretProtectionService secretProtection,
     IPaymentPlatformInfo platformInfo)
     : IRequestHandler<GetOnlinePaymentStatusQuery, OnlinePaymentStatusResponse>
 {
     public async Task<OnlinePaymentStatusResponse> Handle(
         GetOnlinePaymentStatusQuery request, CancellationToken cancellationToken)
     {
-        // Platform ana anahtarı kapalıysa işletme ayarına bakılmaksızın kart ödemesi kapalıdır.
+        // Kart tahsil edebilen bir sağlayıcı yoksa ya da platform ana anahtarı kapalıysa
+        // işletme ayarına bakılmaksızın kart ödemesi kapalıdır.
+        if (!platformInfo.CardPaymentsAvailable)
+        {
+            return new OnlinePaymentStatusResponse(false);
+        }
+
         var platform = await unitOfWork.Repository<PlatformPaymentSettings>()
             .GetByIdAsync(PlatformPaymentSettings.SingletonId, cancellationToken);
         if (platform is { CardPaymentsEnabled: false })
@@ -34,10 +38,6 @@ public sealed class GetOnlinePaymentStatusQueryHandler(
         var settings = await unitOfWork.Repository<RestaurantPaymentSettings>()
             .GetByIdAsync(request.RestaurantId, cancellationToken);
 
-        var enabled = settings is { OnlinePaymentEnabled: true }
-            && (platformInfo.GlobalProviderIsFake
-                || RestaurantPaymentCredentials.TryDecrypt(settings, secretProtection) is not null);
-
-        return new OnlinePaymentStatusResponse(enabled);
+        return new OnlinePaymentStatusResponse(settings is { OnlinePaymentEnabled: true });
     }
 }

@@ -19,7 +19,7 @@ const loginFeatures = [
   },
 ];
 
-export default function Login() {
+export default function Login({ recovery = false }) {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -96,7 +96,7 @@ export default function Login() {
         <div className="login-showcase__content">
           <div className="login-showcase__top">
             <Link className="login-brand" to="/" aria-label="Şükran ana sayfa">
-              <img src="/sukranapp.png" alt="Şükran App" />
+              <img src="/sukranapp.png?v=2" alt="Şükran App" />
               <span>Şükran App</span>
             </Link>
 
@@ -160,12 +160,15 @@ export default function Login() {
         <div className="login-form-wrapper">
           <div className="login-mobile-brand">
             <Link className="login-brand" to="/">
-              <img src="/sukranapp.png" alt="Şükran App" />
+              <img src="/sukranapp.png?v=2" alt="Şükran App" />
               <span>Şükran App</span>
             </Link>
           </div>
 
-          <div className="login-form-card">
+          {recovery ? (
+  <PasswordRecoveryCard />
+) : (
+  <div className="login-form-card">
             <header className="login-form-card__header">
               <span>Tekrar hoş geldiniz</span>
 
@@ -360,12 +363,12 @@ export default function Login() {
               </p>
             </div>
 
-            <p className="login-support">
+                        <p className="login-support">
               Giriş yapmakta sorun mu yaşıyorsunuz?
               <Link to="/iletisim">Destek ekibine ulaşın</Link>
             </p>
-
           </div>
+          )}
 
           <div className="login-secure-note">
             <span
@@ -386,6 +389,68 @@ export default function Login() {
           </p>
         </div>
       </section>
-    </main>
+        </main>
+  );
+}
+
+function PasswordRecoveryCard() {
+  const [notice, setNotice] = useState('');
+
+  function handleSubmit(event) {
+    event.preventDefault();
+    // Sunucuda e-posta gönderimi henüz yok; sıfırlama destek ekibi üzerinden yapılır.
+    setNotice(
+      'Otomatik şifre sıfırlama henüz kullanılamıyor. Şifrenizi sıfırlamak için destek ekibimize ulaşın; ' +
+        'işletmenizin personeliyseniz işletme sahibiniz şifrenizi panelden sıfırlayabilir.',
+    );
+  }
+
+  return (
+    <div className="login-form-card">
+      <header className="login-form-card__header">
+        <h1>Şifremi Unuttum</h1>
+        <p>İşletme hesabınıza kayıtlı e-posta adresini girin.</p>
+      </header>
+
+      <form className="login-form" onSubmit={handleSubmit}>
+        <div className="login-field">
+          <label htmlFor="businessRecoveryEmail">E-posta adresi</label>
+          <div className="login-input">
+            <span
+              className="login-input__icon material-symbols-outlined"
+              aria-hidden="true"
+            >
+              mail
+            </span>
+            <input
+              id="businessRecoveryEmail"
+              name="email"
+              type="email"
+              autoComplete="email"
+              placeholder="isletme@sukran.app"
+              required
+              onChange={() => setNotice('')}
+            />
+          </div>
+        </div>
+
+        <button type="submit" className="login-submit">
+          Sıfırlama Bağlantısı İste
+        </button>
+      </form>
+
+      {notice && (
+        <div className="login-role-info" role="status">
+          <span className="material-symbols-outlined" aria-hidden="true">
+            info
+          </span>
+          <p>{notice}</p>
+        </div>
+      )}
+
+      <p className="login-support">
+        <Link to="/giris-yap">← Giriş ekranına dön</Link>
+      </p>
+    </div>
   );
 }

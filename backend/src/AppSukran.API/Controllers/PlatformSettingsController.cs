@@ -41,20 +41,20 @@ public sealed class PlatformSettingsController(IMediator mediator) : ControllerB
         return NoContent();
     }
 
-    /// <summary>iyzico logo bandı ve online kart ödemesi ana anahtarı; giriş gerektirmez.</summary>
+    /// <summary>Online kart ödemesi ana anahtarı; giriş gerektirmez.</summary>
     [HttpGet("payment-options")]
     [AllowAnonymous]
     public async Task<ActionResult<PaymentOptionsResponse>> GetPaymentOptions(CancellationToken cancellationToken)
         => Ok(await mediator.Send(new GetPaymentOptionsQuery(), cancellationToken));
 
-    /// <summary>Banka alanlarına dokunmaz; yalnızca iki ödeme altyapısı anahtarını günceller.</summary>
+    /// <summary>Banka alanlarına dokunmaz; yalnızca online kart ödemesi ana anahtarını günceller.</summary>
     [HttpPut("payment-options")]
     [Authorize(Roles = "SuperAdmin")]
     public async Task<IActionResult> UpdatePaymentOptions(
         [FromBody] UpdatePaymentOptionsRequest request, CancellationToken cancellationToken)
     {
         await mediator.Send(
-            new UpdatePaymentOptionsCommand(request.ShowIyzicoLogos, request.CardPaymentsEnabled),
+            new UpdatePaymentOptionsCommand(request.CardPaymentsEnabled),
             cancellationToken);
         return NoContent();
     }
@@ -84,7 +84,7 @@ public sealed class PlatformSettingsController(IMediator mediator) : ControllerB
 /// <param name="ServerDisabled">Gönderilmezse (null) kayıtlı değer korunur; eski ön yüzlerle uyumluluk için.</param>
 public sealed record UpdatePlatformStatusRequest(bool MaintenanceEnabled, string? Message, bool? ServerDisabled = null);
 
-public sealed record UpdatePaymentOptionsRequest(bool ShowIyzicoLogos, bool CardPaymentsEnabled);
+public sealed record UpdatePaymentOptionsRequest(bool CardPaymentsEnabled);
 
 public sealed record UpdatePlatformPaymentSettingsRequest(
     string? BankName,

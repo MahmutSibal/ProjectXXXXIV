@@ -10,6 +10,5 @@ public sealed class CreateBillCommandValidator : AbstractValidator<CreateBillCom
         RuleFor(x => x.TableNo).GreaterThan(0);
         RuleFor(x => x.TableSessionId).NotEmpty();
         RuleFor(x => x.QrToken).NotEmpty();
-        RuleFor(x => x.Items).NotNull().Must(items => items.Count > 0);
     }
 }

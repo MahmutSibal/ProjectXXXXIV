@@ -24,5 +24,5 @@ public sealed class GetBillByIdQueryHandler(IUnitOfWork unitOfWork, IRestaurantA
         => new(bill.Id, bill.RestaurantId, bill.TableNo, bill.SessionStatus, bill.Items.Select(MapItem).ToList(), bill.TotalAmount, bill.RemainingAmount, bill.CreatedAt);
 
     private static OrderItemResponse MapItem(OrderItem item)
-        => new(item.OrderItemId, item.MenuItemId, item.Name, item.Price, item.OrderedBy, item.Status, item.PaymentStatus);
+        => new(item.OrderItemId, item.MenuItemId, item.Name, item.Price, item.OrderedBy, item.Status, item.PaymentStatus, item.Extras);
 }

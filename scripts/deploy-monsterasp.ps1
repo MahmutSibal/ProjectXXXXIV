@@ -11,7 +11,7 @@
     Sırlar: ortam değişkenleri (bkz. DEPLOYMENT.md 3.1) tanımlı değilse, canlıdaki ana
     sunucunun web.config'inden OKUNUR. Böylece yedek, ana sunucuyla birebir aynı
     veritabanını ve JWT anahtarını kullanır (farklı olursa oturumlar düşer, işletmelerin
-    iyzico anahtarları çözülemez).
+    şifreli değerler çözülemez).
 
     Parolalar panelden indirilen yayın profillerinden (Download publish profile) okunur;
     ekrana yazdırılmaz. Yayın sonrası, sır içeren publish\primary ve publish\backup
@@ -188,7 +188,6 @@ if (-not $SkipDeploy) {
 Write-Step 'Ayarlar'
 
 $whatsAppBaseUrl = $null
-$iyzicoSandbox = $false
 $frontendOrigins = @("https://$FrontendHost")
 
 if ([string]::IsNullOrWhiteSpace($env:SUKRAN_DB_CONNECTION) -or [string]::IsNullOrWhiteSpace($env:JWT_SIGNING_KEY)) {
@@ -197,13 +196,30 @@ if ([string]::IsNullOrWhiteSpace($env:SUKRAN_DB_CONNECTION) -or [string]::IsNull
     Write-Host "Ortam değişkenleri yok; ayarlar canlıdaki ana sunucudan ($PrimaryHost) okunuyor..."
     $live = Get-LiveEnvironment $script:profiles['primary']
 
-    foreach ($name in 'SUKRAN_DB_CONNECTION', 'JWT_SIGNING_KEY', 'SUKRAN_SUPERADMIN_PASSWORD',
-                      'SUKRAN_IYZICO_API_KEY', 'SUKRAN_IYZICO_SECRET_KEY') {
+    # iyzico anahtarları artık okunmaz: iyzico kaldırıldı, yeni web.config'e yazılmaz.
+    foreach ($name in 'SUKRAN_DB_CONNECTION', 'JWT_SIGNING_KEY', 'SUKRAN_SUPERADMIN_PASSWORD') {
         if ($live.Contains($name)) { Set-Item "env:$name" $live[$name] }
     }
     if ($live.Contains('SUKRAN_WHATSAPP_TOKEN')) { $env:WHATSAPP_SERVICE_TOKEN = $live['SUKRAN_WHATSAPP_TOKEN'] }
     if ($live['WhatsApp__Enabled'] -eq 'true') { $whatsAppBaseUrl = $live['WhatsApp__BaseUrl'] }
-    if ($live['Payment__Iyzico__BaseUrl'] -like '*sandbox*') { $iyzicoSandbox = $true }
+
+    # E-posta ayarları canlıdan taşınır; aksi hâlde her deploy e-posta doğrulamasını
+    # kapatırdı. Bu oturumda elle verilmiş bir değer varsa (ilk kurulum) o önceliklidir.
+    if ($live['Email__Enabled'] -eq 'true') {
+        $emailMap = [ordered]@{
+            'SUKRAN_SMTP_PASSWORD'  = 'SUKRAN_SMTP_PASSWORD'
+            'SUKRAN_EMAIL_HOST'     = 'Email__Host'
+            'SUKRAN_EMAIL_PORT'     = 'Email__Port'
+            'SUKRAN_EMAIL_USERNAME' = 'Email__Username'
+            'SUKRAN_EMAIL_FROM'     = 'Email__FromAddress'
+        }
+        foreach ($envName in $emailMap.Keys) {
+            $liveName = $emailMap[$envName]
+            if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($envName)) -and $live.Contains($liveName)) {
+                Set-Item "env:$envName" $live[$liveName]
+            }
+        }
+    }
 
     $liveOrigins = $live.Keys | Where-Object { $_ -like 'Cors__AllowedOrigins__*' } | ForEach-Object { $live[$_] }
     $frontendOrigins = @($frontendOrigins + $liveOrigins | Select-Object -Unique)
@@ -214,12 +230,12 @@ if ([string]::IsNullOrWhiteSpace($env:SUKRAN_DB_CONNECTION) -or [string]::IsNull
 
 Write-Host "  CORS          : $($frontendOrigins -join ', ')"
 Write-Host "  WhatsApp      : $(if ($whatsAppBaseUrl) { $whatsAppBaseUrl } else { 'kapalı' })"
-Write-Host "  iyzico        : $(if ($iyzicoSandbox) { 'sandbox' } else { 'canlı' })"
+Write-Host "  E-posta       : $(if ($env:SUKRAN_SMTP_PASSWORD) { "açık ($(if ($env:SUKRAN_EMAIL_FROM) { $env:SUKRAN_EMAIL_FROM } else { 'gönderici eksik' }))" } else { 'kapalı' })"
+Write-Host "  Kart ödemesi  : kapalı (PayTR bağlanana kadar)"
 Write-Host "  QR adresi     : $PublicAppUrl"
 
 $commonArgs = @{ FrontendOrigin = $frontendOrigins }
 if ($whatsAppBaseUrl) { $commonArgs.WhatsAppBaseUrl = $whatsAppBaseUrl }
-if ($iyzicoSandbox) { $commonArgs.IyzicoSandbox = $true }
 
 try {
     # --- Derleme ------------------------------------------------------------

@@ -15,7 +15,8 @@ public sealed class PayCustomAmountCommandHandler(
     IPosBridgeService posBridgeService,
     IAuditLogService auditLogService,
     ICurrentUserService currentUserService,
-    ICardNumberProtectionService cardProtectionService)
+    ICardNumberProtectionService cardProtectionService,
+    IRestaurantAccessGuard restaurantAccessGuard)
     : IRequestHandler<PayCustomAmountCommand, PaymentResultDto>
 {
     public async Task<PaymentResultDto> Handle(PayCustomAmountCommand request, CancellationToken cancellationToken)
@@ -43,6 +44,8 @@ public sealed class PayCustomAmountCommandHandler(
             var bill = await repository.GetByIdAsync(request.BillId, cancellationToken)
                 ?? throw new InvalidOperationException("Bill not found.");
 
+            PaymentAuthorization.EnsureCanAccessBill(bill.RestaurantId, bill.TableNo, restaurantAccessGuard, currentUserService);
+
             if (request.Amount > bill.RemainingAmount)
             {
                 throw new InvalidOperationException("Amount cannot exceed remaining amount.");
@@ -55,7 +58,7 @@ public sealed class PayCustomAmountCommandHandler(
                 ? null
                 : await gatewayResolver.ResolveAsync(bill.RestaurantId, cancellationToken);
 
-            var chargeResult = await ChargeIfCardAsync(merchantGateway, resolved, request.BillId, bill.RestaurantId, bill.TableNo, request.Amount, request.Cvc, cancellationToken);
+            var chargeResult = await ChargeIfCardAsync(merchantGateway, resolved, request.BillId, bill.RestaurantId, bill.TableNo, request.Amount, request.Cvc, request.Buyer, cancellationToken);
 
             bill.RemainingAmount = Math.Max(0, bill.RemainingAmount - request.Amount);
             await repository.ReplaceAsync(bill, cancellationToken);
@@ -74,7 +77,7 @@ public sealed class PayCustomAmountCommandHandler(
         }
     }
 
-    private static async Task<ChargeResult?> ChargeIfCardAsync(IPaymentGateway? paymentGateway, (CustomerCard Card, string Pan)? resolved, string billId, string restaurantId, int tableNo, long amount, string? cvc, CancellationToken cancellationToken)
+    private static async Task<ChargeResult?> ChargeIfCardAsync(IPaymentGateway? paymentGateway, (CustomerCard Card, string Pan)? resolved, string billId, string restaurantId, int tableNo, long amount, string? cvc, PaymentBuyer? buyer, CancellationToken cancellationToken)
     {
         if (resolved is null || paymentGateway is null)
         {
@@ -85,6 +88,7 @@ public sealed class PayCustomAmountCommandHandler(
         var result = await paymentGateway.ChargeAsync(
             new ChargeRequest(billId, restaurantId, tableNo, amount, card.UserId,
                 new PaymentCard(card.CardholderName, pan, card.ExpiryMonth, card.ExpiryYear, cvc, card.Brand, card.Last4),
+                Buyer: buyer,
                 UseRestaurantMerchant: true),
             cancellationToken);
 

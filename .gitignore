@@ -36,3 +36,10 @@ publish-whatsapp/
 # Backend'in üretilen web.config'i (sır içerir). Frontend'inki (frontend/public/web.config)
 # yalnızca IIS yönlendirme kuralıdır, sır içermez ve depoda tutulur.
 backend/**/web.config
+
+# Veritabanı yedekleri — kullanıcı verisi içerir, DEPOYA GİRMEMELİ
+database_backup/
+*.bacpac
+
+# Kullanılmayan yerel demo verisi
+frontend/src/api/demo.js

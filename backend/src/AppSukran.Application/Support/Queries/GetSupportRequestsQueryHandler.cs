@@ -13,7 +13,7 @@ public sealed class GetSupportRequestsQueryHandler(IUnitOfWork unitOfWork)
         var items = await unitOfWork.Repository<SupportRequest>().GetAllAsync(cancellationToken);
         return items
             .OrderByDescending(x => x.CreatedAt)
-            .Select(x => new SupportRequestResponse(x.Id, x.RestaurantId, x.BusinessName, x.Content, x.Phone, x.IsCalled, x.CreatedAt))
+            .Select(SupportRequestMapping.ToResponse)
             .ToList();
     }
 }

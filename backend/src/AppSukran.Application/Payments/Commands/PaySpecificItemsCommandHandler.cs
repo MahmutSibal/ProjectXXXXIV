@@ -16,7 +16,8 @@ public sealed class PaySpecificItemsCommandHandler(
     IPosBridgeService posBridgeService,
     IAuditLogService auditLogService,
     ICurrentUserService currentUserService,
-    ICardNumberProtectionService cardProtectionService)
+    ICardNumberProtectionService cardProtectionService,
+    IRestaurantAccessGuard restaurantAccessGuard)
     : IRequestHandler<PaySpecificItemsCommand, PaymentResultDto>
 {
     public async Task<PaymentResultDto> Handle(PaySpecificItemsCommand request, CancellationToken cancellationToken)
@@ -44,6 +45,8 @@ public sealed class PaySpecificItemsCommandHandler(
             var repository = unitOfWork.Repository<Bill>();
             var bill = await repository.GetByIdAsync(request.BillId, cancellationToken)
                 ?? throw new InvalidOperationException("Bill not found.");
+
+            PaymentAuthorization.EnsureCanAccessBill(bill.RestaurantId, bill.TableNo, restaurantAccessGuard, currentUserService);
 
             var selectedItems = bill.Items.Where(item => request.ItemIds.Contains(item.OrderItemId)).ToList();
             if (selectedItems.Count == 0)
@@ -88,6 +91,7 @@ public sealed class PaySpecificItemsCommandHandler(
             chargeResult = await merchantGateway!.ChargeAsync(
                 new ChargeRequest(request.BillId, restaurantId, tableNo, reservedAmount, request.PaidByUserId,
                     new PaymentCard(card.CardholderName, pan, card.ExpiryMonth, card.ExpiryYear, request.Cvc, card.Brand, card.Last4),
+                    Buyer: request.Buyer,
                     UseRestaurantMerchant: true),
                 cancellationToken);
 

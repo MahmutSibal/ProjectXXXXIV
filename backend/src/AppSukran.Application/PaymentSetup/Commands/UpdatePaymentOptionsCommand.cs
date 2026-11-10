@@ -8,10 +8,10 @@ using MediatR;
 namespace AppSukran.Application.PaymentSetup.Commands;
 
 /// <summary>
-/// SuperAdmin: ödeme altyapısı anahtarları. Banka alanlarına asla dokunmaz;
+/// SuperAdmin: platform genelinde online kart ödemesi ana anahtarı. Banka alanlarına asla dokunmaz;
 /// satır yoksa boş banka alanları ve kapalı Havale/EFT ile oluşturur.
 /// </summary>
-public sealed record UpdatePaymentOptionsCommand(bool ShowIyzicoLogos, bool CardPaymentsEnabled) : IRequest<Unit>;
+public sealed record UpdatePaymentOptionsCommand(bool CardPaymentsEnabled) : IRequest<Unit>;
 
 public sealed class UpdatePaymentOptionsCommandHandler(
     IUnitOfWork unitOfWork,
@@ -30,7 +30,6 @@ public sealed class UpdatePaymentOptionsCommandHandler(
         var existing = await repository.GetByIdAsync(PlatformPaymentSettings.SingletonId, cancellationToken);
         var settings = existing ?? new PlatformPaymentSettings { BankTransferEnabled = false };
 
-        settings.ShowIyzicoLogos = request.ShowIyzicoLogos;
         settings.CardPaymentsEnabled = request.CardPaymentsEnabled;
         settings.UpdatedAt = DateTime.UtcNow;
 
@@ -45,7 +44,7 @@ public sealed class UpdatePaymentOptionsCommandHandler(
 
         await auditLogService.RecordAsync(
             "PlatformPaymentOptionsUpdated", nameof(PlatformPaymentSettings), settings.Id,
-            $"Ödeme altyapısı ayarları güncellendi. iyzico logoları: {(request.ShowIyzicoLogos ? "gösteriliyor" : "gizli")}, online kart ödemesi: {(request.CardPaymentsEnabled ? "açık" : "kapalı")}",
+            $"Ödeme altyapısı ayarları güncellendi. Online kart ödemesi: {(request.CardPaymentsEnabled ? "açık" : "kapalı")}",
             currentUserService.UserId, cancellationToken);
 
         return Unit.Value;

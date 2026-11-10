@@ -6,9 +6,9 @@ namespace AppSukran.Infrastructure.Payments;
 
 public sealed class PaymentPlatformInfo(IOptions<PaymentSettings> options) : IPaymentPlatformInfo
 {
-    // DependencyInjection'daki IPaymentGateway seçimiyle aynı kural: "Iyzico" dışı her şey simülasyondur.
-    public bool GlobalProviderIsFake
-        => !string.Equals(options.Value.Provider, "Iyzico", StringComparison.OrdinalIgnoreCase);
+    // DependencyInjection'daki IPaymentGateway seçimiyle aynı kural.
+    public bool GlobalProviderIsFake => options.Value.IsFake;
 
-    public string DefaultIyzicoBaseUrl => options.Value.Iyzico.BaseUrl;
+    // Şu an kart tahsil edebilen tek sağlayıcı simülasyondur; PayTR eklenince genişler.
+    public bool CardPaymentsAvailable => options.Value.IsFake;
 }

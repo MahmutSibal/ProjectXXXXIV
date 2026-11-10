@@ -16,7 +16,6 @@ public sealed class PlatformPaymentSettingsConfiguration : IEntityTypeConfigurat
         builder.Property(settings => settings.Branch).HasMaxLength(100).IsRequired();
         builder.Property(settings => settings.PaymentNote).HasMaxLength(500).IsRequired();
         builder.Property(settings => settings.BankTransferEnabled).HasDefaultValue(true);
-        builder.Property(settings => settings.ShowIyzicoLogos).HasDefaultValue(true);
         builder.Property(settings => settings.CardPaymentsEnabled).HasDefaultValue(true);
     }
 }

@@ -10,8 +10,8 @@ namespace AppSukran.Infrastructure.Security;
 /// AES-256-GCM ile geri açılabilir şifreleme. Anahtar, JWT imza anahtarından
 /// HKDF-SHA256 ile (sabit amaç dizesiyle) türetilir; çıktı "v1:" + base64(nonce|tag|şifreli).
 ///
-/// DİKKAT: JWT imza anahtarı değiştirilirse saklı değerler çözülemez; işletme
-/// sahipleri iyzico anahtarlarını yeniden girmelidir (bkz. DEPLOYMENT.md).
+/// DİKKAT: JWT imza anahtarı değiştirilirse saklı değerler çözülemez ve
+/// yeniden girilmeleri gerekir (bkz. DEPLOYMENT.md).
 /// </summary>
 public sealed class SecretProtectionService(IOptions<JwtSettings> jwtOptions) : ISecretProtectionService
 {

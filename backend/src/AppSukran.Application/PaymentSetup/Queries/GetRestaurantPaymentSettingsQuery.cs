@@ -1,29 +1,31 @@
 using AppSukran.Application.Abstractions.Payments;
 using AppSukran.Application.Abstractions.Persistence;
-using AppSukran.Application.Abstractions.Security;
 using AppSukran.Application.Common.Security;
+using AppSukran.Domain.Common;
 using AppSukran.Domain.Entities;
 using MediatR;
 
 namespace AppSukran.Application.PaymentSetup.Queries;
 
-/// <param name="ApiKeyMasked">Örn. "sand••••3f". Açık API anahtarı ve gizli anahtar ASLA dönmez.</param>
+/// <param name="Iban">Gösterim için 4'lü gruplara ayrılmış hâliyle döner (yalnızca işletmenin kendisine).</param>
+/// <param name="CardPaymentsAvailable">Kartla tahsilat yapabilen bir ödeme sağlayıcısı bağlı mı?</param>
 /// <param name="GlobalProviderIsFake">Platform ödeme sağlayıcısı simülasyonda (Fake) mı?</param>
 public sealed record RestaurantPaymentSettingsResponse(
     bool OnlinePaymentEnabled,
-    string Provider,
-    bool HasCredentials,
-    string ApiKeyMasked,
-    string BaseUrl,
+    string Iban,
+    string AccountHolderBusinessName,
+    string AccountHolderFullName,
+    bool CardPaymentsAvailable,
     bool GlobalProviderIsFake,
-    bool CardPaymentsAllowedByPlatform = true);
+    bool CardPaymentsAllowedByPlatform = true,
+    int? PayoutSettlementDays = null,
+    decimal? CommissionPercent = null);
 
 public sealed record GetRestaurantPaymentSettingsQuery(string RestaurantId) : IRequest<RestaurantPaymentSettingsResponse>;
 
 public sealed class GetRestaurantPaymentSettingsQueryHandler(
     IUnitOfWork unitOfWork,
     IRestaurantAccessGuard restaurantAccessGuard,
-    ISecretProtectionService secretProtection,
     IPaymentPlatformInfo platformInfo)
     : IRequestHandler<GetRestaurantPaymentSettingsQuery, RestaurantPaymentSettingsResponse>
 {
@@ -38,18 +40,15 @@ public sealed class GetRestaurantPaymentSettingsQueryHandler(
         var platform = await unitOfWork.Repository<PlatformPaymentSettings>()
             .GetByIdAsync(PlatformPaymentSettings.SingletonId, cancellationToken);
 
-        var credentials =RestaurantPaymentCredentials.TryDecrypt(settings, secretProtection);
-        var baseUrl = string.IsNullOrWhiteSpace(settings?.BaseUrl)
-            ? RestaurantPaymentCredentials.DefaultBaseUrl(platformInfo.DefaultIyzicoBaseUrl)
-            : settings.BaseUrl;
-
         return new RestaurantPaymentSettingsResponse(
             settings?.OnlinePaymentEnabled ?? false,
-            settings?.Provider ?? RestaurantPaymentSettings.IyzicoProvider,
-            credentials is not null,
-            RestaurantPaymentCredentials.Mask(credentials?.ApiKey),
-            baseUrl,
+            string.IsNullOrWhiteSpace(settings?.Iban) ? string.Empty : TurkishIban.Format(settings.Iban),
+            settings?.AccountHolderBusinessName ?? string.Empty,
+            settings?.AccountHolderFullName ?? string.Empty,
+            platformInfo.CardPaymentsAvailable,
             platformInfo.GlobalProviderIsFake,
-            platform?.CardPaymentsEnabled ?? true);
+            platform?.CardPaymentsEnabled ?? true,
+            settings?.PayoutSettlementDays,
+            settings?.CommissionPercent);
     }
 }

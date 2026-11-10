@@ -2,4 +2,4 @@ using MediatR;
 
 namespace AppSukran.Application.Payments.Commands;
 
-public sealed record PayCustomAmountCommand(string BillId, long Amount, string PaidByUserId, string? CustomerCardId = null, string? CardNumber = null, string? Cvc = null) : IRequest<PaymentResultDto>;
+public sealed record PayCustomAmountCommand(string BillId, long Amount, string PaidByUserId, string? CustomerCardId = null, string? CardNumber = null, string? Cvc = null, AppSukran.Application.Abstractions.Payments.PaymentBuyer? Buyer = null) : IRequest<PaymentResultDto>;

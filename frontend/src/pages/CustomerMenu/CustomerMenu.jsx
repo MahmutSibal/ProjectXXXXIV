@@ -374,6 +374,17 @@ function BillTab({ session, restaurantId, tableNo }) {
   const [error, setError] = useState('');
   const [paid, setPaid] = useState(false);
   const [card, setCard] = useState({ holder: '', number: '', month: '', year: '', cvc: '' });
+  // Ödeme sağlayıcısı (PayTR) her tahsilatta bu dört bilgiyi zorunlu tutar.
+  const [buyer, setBuyer] = useState({ fullName: '', email: '', address: '', phone: '' });
+  // null = henüz bilinmiyor; false ise kart ödemesi kapalı, form gösterilmez.
+  const [onlinePayment, setOnlinePayment] = useState(null);
+
+  useEffect(() => {
+    customerPaymentsApi
+      .getOnlinePaymentStatus(restaurantId)
+      .then((data) => setOnlinePayment(Boolean(data?.enabled)))
+      .catch(() => setOnlinePayment(false));
+  }, [restaurantId]);
 
   useEffect(() => {
     customerOrdersApi
@@ -441,6 +452,22 @@ function BillTab({ session, restaurantId, tableNo }) {
       setError('Kart üzerindeki ismi girin.');
       return;
     }
+    if (buyer.fullName.trim().length < 3) {
+      setError('Ad soyadınızı girin.');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyer.email.trim())) {
+      setError('Geçerli bir e-posta adresi girin.');
+      return;
+    }
+    if (buyer.address.trim().length < 5) {
+      setError('Adresinizi girin.');
+      return;
+    }
+    if (buyer.phone.replace(/\D/g, '').length < 10) {
+      setError('Telefon numaranızı eksiksiz girin.');
+      return;
+    }
 
     setIsProcessing(true);
     setError('');
@@ -463,6 +490,12 @@ function BillTab({ session, restaurantId, tableNo }) {
         customerCardId: saved.id,
         cardNumber: digits,
         cvc: card.cvc,
+        buyer: {
+          fullName: buyer.fullName.trim(),
+          email: buyer.email.trim(),
+          address: buyer.address.trim(),
+          phone: buyer.phone.trim(),
+        },
       });
       setPaid(true);
     } catch (err) {
@@ -511,9 +544,59 @@ function BillTab({ session, restaurantId, tableNo }) {
         <button type="button" className="customer-primary-btn" onClick={handleRequestBill} disabled={isProcessing}>
           {isProcessing ? 'Hazırlanıyor...' : 'Hesabı İste'}
         </button>
+      ) : onlinePayment === false ? (
+        <p className="customer-card-note">
+          Bu işletmede kartla online ödeme şu anda kullanılamıyor. Ödemeyi personele bildirin.
+        </p>
       ) : (
         <>
           <div className="customer-card-form">
+            <p className="customer-card-note">İletişim bilgileriniz (ödeme için zorunludur)</p>
+
+            <label>
+              <span>Ad Soyad</span>
+              <input
+                type="text"
+                autoComplete="name"
+                value={buyer.fullName}
+                onChange={(e) => setBuyer((p) => ({ ...p, fullName: e.target.value }))}
+                placeholder="Ad Soyad"
+              />
+            </label>
+
+            <label>
+              <span>E-posta</span>
+              <input
+                type="email"
+                autoComplete="email"
+                value={buyer.email}
+                onChange={(e) => setBuyer((p) => ({ ...p, email: e.target.value }))}
+                placeholder="ornek@mail.com"
+              />
+            </label>
+
+            <label>
+              <span>Adres</span>
+              <input
+                type="text"
+                autoComplete="street-address"
+                value={buyer.address}
+                onChange={(e) => setBuyer((p) => ({ ...p, address: e.target.value }))}
+                placeholder="Mahalle, sokak, no, ilçe / il"
+              />
+            </label>
+
+            <label>
+              <span>Telefon</span>
+              <input
+                type="tel"
+                autoComplete="tel"
+                value={buyer.phone}
+                onChange={(e) => setBuyer((p) => ({ ...p, phone: e.target.value }))}
+                placeholder="05xx xxx xx xx"
+              />
+            </label>
+
             <label>
               <span>Kart Üzerindeki İsim</span>
               <input
@@ -580,7 +663,7 @@ function BillTab({ session, restaurantId, tableNo }) {
             </div>
 
             <p className="customer-card-note">
-              Ödeme iyzico altyapısı üzerinden alınır. Nakit ödemek isterseniz personele bildirin.
+              Ödeme güvenli ödeme altyapısı üzerinden alınır. Nakit ödemek isterseniz personele bildirin.
             </p>
           </div>
 

@@ -90,8 +90,8 @@
 
 .login-brand img {
   display: block;
-  width: 46px;
-  height: 46px;
+  width: 120px;
+  height: 120px;
   object-fit: contain;
 }
 
@@ -757,8 +757,8 @@
   }
 
   .login-mobile-brand .login-brand img {
-    width: 44px;
-    height: 44px;
+    width: 96px;
+    height: 96px;
   }
 
   .login-mobile-copyright {

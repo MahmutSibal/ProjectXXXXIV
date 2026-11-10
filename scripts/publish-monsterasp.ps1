@@ -21,7 +21,7 @@
 .EXAMPLE
     # Ana + yedek sunucu. Aynı oturumda, AYNI ortam değişkenleriyle iki kez çalıştırın:
     # iki sunucu aynı veritabanını ve aynı JWT anahtarını kullanmak ZORUNDADIR
-    # (aksi hâlde yedeğe geçen kullanıcının oturumu düşer, iyzico anahtarları çözülemez).
+    # (aksi hâlde yedeğe geçen kullanıcının oturumu düşer).
     .\scripts\publish-monsterasp.ps1 -SiteHost "mahmutapp.tryasp.net" -FrontendOrigin "https://sukranapp.runasp.net" -InstanceName "primary" -OutputPath .\publish\primary
     .\scripts\publish-monsterasp.ps1 -SiteHost "mahmutapp.runasp.net" -FrontendOrigin "https://sukranapp.runasp.net" -InstanceName "backup"  -OutputPath .\publish\backup
 #>
@@ -39,10 +39,6 @@ param(
     [string[]]$FrontendOrigin,
 
     [string]$OutputPath = (Join-Path $PSScriptRoot "..\publish"),
-
-    # Sandbox anahtarlarıyla test ederken bunu kullanın. appsettings.Production.json
-    # canlı iyzico adresini içerir; sandbox anahtarı canlı adrese karşı çalışmaz.
-    [switch]$IyzicoSandbox,
 
     # WhatsApp doğrulama servisinin adresi (ör. https://sukranwa.runasp.net).
     # Verilirse doğrulama açılır; WHATSAPP_SERVICE_TOKEN ortam değişkeni de gerekir.
@@ -90,12 +86,6 @@ if ([Environment]::GetEnvironmentVariable('JWT_SIGNING_KEY').Length -lt 32) {
     throw "JWT_SIGNING_KEY 32 karakterden kısa. Uygulama production'da bu anahtarla açılmaz."
 }
 
-$iyzicoKey    = [Environment]::GetEnvironmentVariable('SUKRAN_IYZICO_API_KEY')
-$iyzicoSecret = [Environment]::GetEnvironmentVariable('SUKRAN_IYZICO_SECRET_KEY')
-if ([string]::IsNullOrWhiteSpace($iyzicoKey) -or [string]::IsNullOrWhiteSpace($iyzicoSecret)) {
-    Write-Warning "iyzico anahtarları yok. Ödeme uçları hata verecek (sahte başarı DÖNMEZ)."
-}
-
 # --- Yayın ----------------------------------------------------------------
 
 if (Test-Path $OutputPath) {
@@ -122,19 +112,15 @@ $vars = [ordered]@{
     'SUKRAN_SUPERADMIN_PASSWORD'   = [Environment]::GetEnvironmentVariable('SUKRAN_SUPERADMIN_PASSWORD')
     # AllowedHosts yanlışsa her istek 400 döner — MonsterASP alan adı buraya yazılmalı.
     'AllowedHosts'                 = $SiteHost
+    # Gerçek ödeme sağlayıcısı (PayTR) bağlanana kadar kart tahsilatı kapalı; "Fake"
+    # canlıda ASLA kullanılmamalı (her kartı kabul eder, para alınmadan "ödendi" görünür).
+    'Payment__Provider'            = 'None'
 }
 
 # CORS kaynakları dizidir; ASP.NET Core bunları Cors__AllowedOrigins__0, __1 ...
 # biçiminde okur. Tek bir değişkene virgülle yazmak ÇALIŞMAZ.
 for ($i = 0; $i -lt $FrontendOrigin.Count; $i++) {
     $vars["Cors__AllowedOrigins__$i"] = $FrontendOrigin[$i]
-}
-
-if (-not [string]::IsNullOrWhiteSpace($iyzicoKey))    { $vars['SUKRAN_IYZICO_API_KEY'] = $iyzicoKey }
-if (-not [string]::IsNullOrWhiteSpace($iyzicoSecret)) { $vars['SUKRAN_IYZICO_SECRET_KEY'] = $iyzicoSecret }
-
-if ($IyzicoSandbox) {
-    $vars['Payment__Iyzico__BaseUrl'] = 'https://sandbox-api.iyzipay.com'
 }
 
 if (-not [string]::IsNullOrWhiteSpace($InstanceName)) {
@@ -154,6 +140,30 @@ if (-not [string]::IsNullOrWhiteSpace($WhatsAppBaseUrl)) {
     $vars['WhatsApp__Enabled'] = 'true'
     $vars['WhatsApp__BaseUrl']  = $WhatsAppBaseUrl.TrimEnd('/')
     $vars['SUKRAN_WHATSAPP_TOKEN'] = $whatsAppToken
+}
+
+# E-posta ile doğrulama (WhatsApp'ı olmayanlar için). SMTP parolası tanımlıysa açılır.
+# Brevo için: SUKRAN_EMAIL_USERNAME = Brevo'nun verdiği SMTP kullanıcı adı,
+# SUKRAN_SMTP_PASSWORD = SMTP anahtarı, SUKRAN_EMAIL_FROM = Brevo'da doğrulanmış gönderici.
+$smtpPassword = [Environment]::GetEnvironmentVariable('SUKRAN_SMTP_PASSWORD')
+if (-not [string]::IsNullOrWhiteSpace($smtpPassword)) {
+    $emailHost = [Environment]::GetEnvironmentVariable('SUKRAN_EMAIL_HOST')
+    if ([string]::IsNullOrWhiteSpace($emailHost)) { $emailHost = 'smtp-relay.brevo.com' }
+    $emailPort = [Environment]::GetEnvironmentVariable('SUKRAN_EMAIL_PORT')
+    if ([string]::IsNullOrWhiteSpace($emailPort)) { $emailPort = '587' }
+    $emailUser = [Environment]::GetEnvironmentVariable('SUKRAN_EMAIL_USERNAME')
+    $emailFrom = [Environment]::GetEnvironmentVariable('SUKRAN_EMAIL_FROM')
+
+    if ([string]::IsNullOrWhiteSpace($emailUser) -or [string]::IsNullOrWhiteSpace($emailFrom)) {
+        throw "SUKRAN_SMTP_PASSWORD verildi ama SUKRAN_EMAIL_USERNAME veya SUKRAN_EMAIL_FROM eksik."
+    }
+
+    $vars['Email__Enabled']      = 'true'
+    $vars['Email__Host']         = $emailHost
+    $vars['Email__Port']         = $emailPort
+    $vars['Email__Username']     = $emailUser
+    $vars['Email__FromAddress']  = $emailFrom
+    $vars['SUKRAN_SMTP_PASSWORD'] = $smtpPassword
 }
 
 [xml]$doc = Get-Content $webConfigPath -Raw
@@ -194,6 +204,3 @@ foreach ($key in $vars.Keys) {
 Write-Host ""
 Write-Host "Sonraki adım: bu klasörün İÇERİĞİNİ MonsterASP'ta wwwroot altına yükleyin." -ForegroundColor Yellow
 Write-Host "Ardından doğrulayın:  https://$SiteHost/api/health/ready"
-if (-not $IyzicoSandbox) {
-    Write-Host "UYARI: canlı iyzico adresi kullanılacak. Sandbox anahtarıyla test ediyorsanız -IyzicoSandbox ekleyin." -ForegroundColor Yellow
-}

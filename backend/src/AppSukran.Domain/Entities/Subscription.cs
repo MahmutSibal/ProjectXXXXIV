@@ -53,35 +53,6 @@ public sealed class Subscription : AggregateRoot
     /// <summary>Son tahsilat hatasının kullanıcıya gösterilebilir açıklaması.</summary>
     public string? LastPaymentError { get; set; }
 
-    // --- Otomatik yenileme için saklı kart -----------------------------------
-    // Kart NUMARASI burada TUTULMAZ. Aşağıdakiler ödeme sağlayıcısındaki (iyzico)
-    // kart referanslarıdır; tahsilat bunlarla yapılır. Böylece kart verisi bizim
-    // veritabanımıza hiç girmez (PCI kapsamı dışında kalırız).
-
-    /// <summary>Sağlayıcıdaki kullanıcı anahtarı (iyzico cardUserKey).</summary>
-    public string? PaymentMethodUserKey { get; set; }
-
-    /// <summary>Sağlayıcıdaki kart anahtarı (iyzico cardToken).</summary>
-    public string? PaymentMethodToken { get; set; }
-
-    /// <summary>Yalnızca gösterim için: kartın son 4 hanesi.</summary>
-    public string? PaymentMethodLast4 { get; set; }
-
-    /// <summary>Yalnızca gösterim için: kart ailesi/markası.</summary>
-    public string? PaymentMethodBrand { get; set; }
-
-    /// <summary>
-    /// Dönem sonunda otomatik tahsilat yapılsın mı? İptal edildiğinde false olur;
-    /// böylece ödenmiş dönem sürerken yenileme denenmez.
-    /// </summary>
-    public bool AutoRenew { get; set; }
-
-    /// <summary>Otomatik yenileme için gereken her şey hazır mı?</summary>
-    public bool CanAutoRenew =>
-        AutoRenew
-        && !string.IsNullOrWhiteSpace(PaymentMethodUserKey)
-        && !string.IsNullOrWhiteSpace(PaymentMethodToken);
-
     public List<SubscriptionPayment> Payments { get; set; } = [];
 
     /// <summary>
@@ -147,10 +118,10 @@ public sealed class SubscriptionPayment
 
     public DateTime PaidAt { get; set; } = DateTime.UtcNow;
 
-    /// <summary>Ödeme sağlayıcısındaki işlem referansı (iyzico vb.).</summary>
+    /// <summary>Ödeme sağlayıcısındaki işlem referansı.</summary>
     public string? TransactionId { get; set; }
 
-    /// <summary>"Iyzico", "Fake" veya elle kaydedilen ödemeler için "Manual".</summary>
+    /// <summary>Sağlayıcı adı ("Fake" vb.) veya elle kaydedilen ödemeler için "Manual".</summary>
     public string Provider { get; set; } = "Manual";
 
     /// <summary>Ödemenin yapıldığı andaki fiyat listesi sürümü.</summary>

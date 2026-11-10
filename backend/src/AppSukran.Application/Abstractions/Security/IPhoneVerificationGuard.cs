@@ -12,5 +12,7 @@ public interface IPhoneVerificationGuard
     /// Jetonu tüketir. Geçersizse hata fırlatır. Tek kullanımlıktır: aynı jetonla
     /// ikinci bir hesap açılamaz.
     /// </summary>
-    Task EnsureVerifiedAsync(string phone, string? verificationTicket, CancellationToken cancellationToken = default);
+    /// <param name="phone">WhatsApp ile doğrulandıysa bu numara aranır.</param>
+    /// <param name="email">E-posta ile doğrulandıysa bu adres aranır.</param>
+    Task EnsureVerifiedAsync(string phone, string email, string? verificationTicket, CancellationToken cancellationToken = default);
 }

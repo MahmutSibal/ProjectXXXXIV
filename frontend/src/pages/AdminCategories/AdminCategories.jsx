@@ -7,9 +7,6 @@ import { uploadsApi } from '../../api/uploads.js';
 import { ApiError } from '../../api/client.js';
 import './AdminCategories.css';
 
-const defaultImage =
-  'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800';
-
 export default function AdminCategories() {
   const toast = useToast();
   const { user } = useAuth();
@@ -85,7 +82,11 @@ export default function AdminCategories() {
       return;
     }
 
-    const payload = { name: cleanName, description: cleanDesc, imageUrl: categoryForm.image || defaultImage };
+    const payload = {
+  name: cleanName,
+  description: cleanDesc,
+  imageUrl: categoryForm.image || '',
+};
 
     try {
       if (isEditMode) {
@@ -190,13 +191,15 @@ export default function AdminCategories() {
 function CategoryCard({ category, onEdit, onDelete }) {
   return (
     <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden ambient-shadow hover:shadow-md transition-all group">
-      <div className="h-40 overflow-hidden">
-        <img
-          alt={category.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          src={category.imageUrl}
-        />
-      </div>
+      {category.imageUrl && (
+  <div className="h-40 overflow-hidden">
+    <img
+      alt={category.name}
+      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+      src={category.imageUrl}
+    />
+  </div>
+)}
 
       <div className="p-md">
         <h4 className="font-headline-sm text-headline-sm text-on-background mb-1">

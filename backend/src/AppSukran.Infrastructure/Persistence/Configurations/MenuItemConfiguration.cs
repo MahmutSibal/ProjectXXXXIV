@@ -15,6 +15,7 @@ public sealed class MenuItemConfiguration : IEntityTypeConfiguration<MenuItem>
         builder.Property(item => item.ImageUrl).HasMaxLength(1000);
         builder.Property(item => item.Recipe).HasMaxLength(4000);
         builder.Property(item => item.Ingredients).HasJsonStringListConversion();
+        builder.Property(item => item.IngredientPrices).HasJsonListConversion();
 
         builder.HasIndex(item => item.RestaurantId);
         builder.HasIndex(item => new { item.RestaurantId, item.IsAvailable });

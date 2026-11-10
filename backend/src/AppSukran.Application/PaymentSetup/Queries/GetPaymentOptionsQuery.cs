@@ -4,11 +4,11 @@ using MediatR;
 
 namespace AppSukran.Application.PaymentSetup.Queries;
 
-public sealed record PaymentOptionsResponse(bool ShowIyzicoLogos, bool CardPaymentsEnabled);
+public sealed record PaymentOptionsResponse(bool CardPaymentsEnabled);
 
 /// <summary>
-/// Herkese açık: iyzico logo bandı gösterilsin mi ve online kart ödemesi platform genelinde açık mı.
-/// Kayıt yoksa veya herhangi bir hata olursa ikisi de true döner; asla hata fırlatmaz.
+/// Herkese açık: online kart ödemesi platform genelinde açık mı.
+/// Kayıt yoksa veya herhangi bir hata olursa true döner; asla hata fırlatmaz.
 /// </summary>
 public sealed record GetPaymentOptionsQuery : IRequest<PaymentOptionsResponse>;
 
@@ -23,8 +23,8 @@ public sealed class GetPaymentOptionsQueryHandler(IUnitOfWork unitOfWork)
                 .GetByIdAsync(PlatformPaymentSettings.SingletonId, cancellationToken);
 
             return settings is null
-                ? new PaymentOptionsResponse(true, true)
-                : new PaymentOptionsResponse(settings.ShowIyzicoLogos, settings.CardPaymentsEnabled);
+                ? new PaymentOptionsResponse(true)
+                : new PaymentOptionsResponse(settings.CardPaymentsEnabled);
         }
         catch (OperationCanceledException)
         {
@@ -32,7 +32,7 @@ public sealed class GetPaymentOptionsQueryHandler(IUnitOfWork unitOfWork)
         }
         catch (Exception)
         {
-            return new PaymentOptionsResponse(true, true);
+            return new PaymentOptionsResponse(true);
         }
     }
 }

@@ -22,7 +22,7 @@ const registerBenefits = [
   },
   {
     icon: 'account_balance_wallet',
-    title: 'iyzico ile Güvenli Ödeme',
+    title: 'Güvenli Online Ödeme',
     description:
       'Sipariş ödemelerini güvenli altyapı üzerinden alın.',
   },
@@ -95,20 +95,14 @@ function Register() {
   const { registerBusiness } = useAuth();
   const navigate = useNavigate();
   const [password, setPassword] = useState('');
-  const [passwordConfirmation, setPasswordConfirmation] =
-    useState('');
 
+  // Şifre tekrarı sorulmaz: "göster" düğmesi ve güç göstergesi yazım hatasını
+  // yakalamak için yeterli.
   const [isPasswordVisible, setIsPasswordVisible] =
     useState(false);
 
-  const [
-    isPasswordConfirmationVisible,
-    setIsPasswordConfirmationVisible,
-  ] = useState(false);
-
-  const [isKvkkAccepted, setIsKvkkAccepted] =
-    useState(false);
-
+  // Tek onay: Kullanım Koşulları kabul edilir; KVKK Aydınlatma Metni bir rıza değil
+  // bilgilendirmedir, okunduğunun beyanı aynı kutuda alınır.
   const [isAgreementAccepted, setIsAgreementAccepted] =
     useState(false);
 
@@ -122,6 +116,7 @@ function Register() {
 
   // Telefon doğrulaması bekleyen kayıt verisi. Dolu ise doğrulama penceresi açılır.
   const [pendingRegistration, setPendingRegistration] = useState(null);
+  const [verificationChannels, setVerificationChannels] = useState({ whatsApp: true, email: false });
 
   const [coordinates, setCoordinates] = useState({ latitude: '', longitude: '' });
   const [isLocating, setIsLocating] = useState(false);
@@ -155,19 +150,13 @@ function Register() {
     [password],
   );
 
-  const passwordsMatch =
-    passwordConfirmation.length === 0 ||
-    password === passwordConfirmation;
-
   const isPasswordValid =
     password.length >= 8 &&
     passwordStrength.score >= 2;
 
   const canSubmit =
-    isKvkkAccepted &&
     isAgreementAccepted &&
     isPasswordValid &&
-    password === passwordConfirmation &&
     !isSubmitting;
 
   const handleSubmit = async (event) => {
@@ -190,23 +179,9 @@ function Register() {
       return;
     }
 
-    if (password !== passwordConfirmation) {
-      setFormError(
-        'Şifre ve şifre tekrarı birbiriyle eşleşmiyor.',
-      );
-      return;
-    }
-
-    if (!isKvkkAccepted) {
-      setFormError(
-        'Devam etmek için KVKK Aydınlatma Metni’ni onaylamalısınız.',
-      );
-      return;
-    }
-
     if (!isAgreementAccepted) {
       setFormError(
-        'Devam etmek için Kullanıcı Sözleşmesi’ni kabul etmelisiniz.',
+        'Devam etmek için Kullanım Koşulları’nı kabul etmelisiniz.',
       );
       return;
     }
@@ -226,10 +201,15 @@ function Register() {
     // Telefon doğrulaması açıksa hesap AÇILMADAN önce numara doğrulanır.
     // Kapalıysa (WhatsApp servisi devrede değilse) doğrudan kayda geçilir.
     setIsSubmitting(true);
-    let requiresPhoneVerification = false;
+    let requiresPhoneVerification;
     try {
       const status = await phoneVerificationApi.getStatus();
       requiresPhoneVerification = Boolean(status?.enabled);
+      setVerificationChannels({
+        // Eski backend yalnızca { enabled } döner: o durumda WhatsApp varsayılır.
+        whatsApp: status?.whatsApp ?? Boolean(status?.enabled),
+        email: Boolean(status?.email),
+      });
     } catch {
       // Durum okunamazsa doğrulamayı zorlamak kaydı tamamen engellerdi;
       // sunucu zaten gerekliyse jeton yokluğunda isteği reddeder.
@@ -295,11 +275,11 @@ function Register() {
               aria-label="Şükran App ana sayfa"
             >
               <img
-                src="/sukranapp.png"
+                src="/sukranapp.png?v=2"
                 alt="Şükran App"
               />
 
-              <span>Şükran</span>
+              <span>Şükran App</span>
             </Link>
 
             <span className="register-showcase__badge">
@@ -377,11 +357,11 @@ function Register() {
               className="register-brand"
             >
               <img
-                src="/sukranapp.png"
+                src="/sukranapp.png?v=2"
                 alt="Şükran App"
               />
 
-              <span>Şükran</span>
+              <span>Şükran App</span>
             </Link>
           </div>
 
@@ -645,87 +625,9 @@ function Register() {
   </div>
 </div>
 
-                <div className="register-field">
-  <label htmlFor="passwordConfirmation">
-    Şifre Tekrarı <span>*</span>
-  </label>
-
-  <div
-    className={`register-input register-input--password ${
-      passwordConfirmation && !passwordsMatch
-        ? 'register-input--error'
-        : ''
-    }`}
-  >
-    <input
-      id="passwordConfirmation"
-      name="passwordConfirmation"
-      type={isPasswordConfirmationVisible ? 'text' : 'password'}
-      value={passwordConfirmation}
-      onChange={(event) =>
-        setPasswordConfirmation(event.target.value)
-      }
-      placeholder="Şifrenizi tekrar girin"
-      autoComplete="new-password"
-      required
-    />
-
-    <button
-      type="button"
-      className="register-password-toggle"
-      onClick={() =>
-        setIsPasswordConfirmationVisible((current) => !current)
-      }
-      aria-label={
-        isPasswordConfirmationVisible
-          ? 'Şifre tekrarını gizle'
-          : 'Şifre tekrarını göster'
-      }
-      aria-pressed={isPasswordConfirmationVisible}
-    >
-      <span className="material-symbols-outlined" aria-hidden="true">
-        {isPasswordConfirmationVisible
-          ? 'visibility_off'
-          : 'visibility'}
-      </span>
-    </button>
-  </div>
-
-  {passwordConfirmation && !passwordsMatch && (
-    <small className="register-field__error">
-      Girdiğiniz şifreler birbiriyle eşleşmiyor.
-    </small>
-  )}
-</div>
               </div>
 
               <div className="register-consents">
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={isKvkkAccepted}
-                    onChange={(event) => {
-                      setIsKvkkAccepted(
-                        event.target.checked,
-                      );
-                      setFormError('');
-                    }}
-                    required
-                  />
-
-                  <span>
-                    <Link
-                      to="/kvkk"
-                      target="_blank"
-                    >
-                      KVKK Aydınlatma Metni
-                    </Link>
-                    ’ni okudum ve kişisel verilerimin
-                    belirtilen amaçlarla işlenmesini kabul
-                    ediyorum.
-                  </span>
-                </label>
-
                 <label>
                   <input
                     type="checkbox"
@@ -741,13 +643,21 @@ function Register() {
 
                   <span>
                     <Link
-                      to="/kullanici-sozlesmesi"
+                      to="/kullanim-kosullari"
                       target="_blank"
+                      rel="noopener noreferrer"
                     >
-                      Kullanıcı Sözleşmesi
+                      Kullanım Koşulları
                     </Link>
-                    ’ni ve Kullanım Koşulları’nı okudum,
-                    kabul ediyorum.
+                    ’nı kabul ediyorum;{' '}
+                    <Link
+                      to="/kvkk"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      KVKK Aydınlatma Metni
+                    </Link>
+                    ’ni okudum.
                   </span>
                 </label>
               </div>
@@ -798,6 +708,8 @@ function Register() {
       {pendingRegistration && (
         <PhoneVerificationDialog
           phone={pendingRegistration.phone}
+          email={pendingRegistration.email}
+          channels={verificationChannels}
           onVerified={(ticket) => completeRegistration(pendingRegistration, ticket)}
           onCancel={() => setPendingRegistration(null)}
         />

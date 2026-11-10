@@ -14,7 +14,9 @@ const emptyForm = {
   recipe: '',
   imageUrl: '',
   price: '',
+  stockQuantity: '',
   averagePreparationTime: '',
+  calories: '',
   isAvailable: true,
 };
 
@@ -27,6 +29,7 @@ export default function AddProduct() {
 
   const [form, setForm] = useState(emptyForm);
   const [ingredientInput, setIngredientInput] = useState('');
+  const [ingredientPriceInput, setIngredientPriceInput] = useState('');
   const [ingredients, setIngredients] = useState([]);
   const [categories, setCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(isEditMode);
@@ -54,10 +57,17 @@ export default function AddProduct() {
           recipe: product.recipe ?? '',
           imageUrl: product.imageUrl ?? '',
           price: product.price ? String(product.price / 100) : '',
+          calories: product.calories == null ? '' : String(product.calories),
+          stockQuantity: product.stockQuantity == null ? '' : String(product.stockQuantity),
           averagePreparationTime: product.averagePreparationTime ? String(product.averagePreparationTime) : '',
           isAvailable: product.isAvailable ?? true,
         });
-        setIngredients(product.ingredients ?? []);
+        setIngredients(
+  (product.ingredients ?? []).map((name, index) => ({
+    name,
+    price: product.ingredientPrices?.[index] ?? null,
+  })),
+);
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : 'Ürün yüklenemedi.'))
       .finally(() => !cancelled && setIsLoading(false));
@@ -88,12 +98,29 @@ export default function AddProduct() {
   };
 
   const handleAddIngredient = () => {
-    const value = ingredientInput.trim();
-    if (!value) return;
-    setIngredients((prev) => [...prev, value]);
-    setIngredientInput('');
-  };
+  const name = ingredientInput.trim();
 
+  if (!name) {
+    toast.warning('Malzeme adını girin.');
+    return;
+  }
+
+  const hasPrice = ingredientPriceInput !== '';
+  const price = hasPrice ? Math.round(Number(ingredientPriceInput) * 100) : null;
+
+  if (
+    hasPrice &&
+    (!/^\d+(?:\.\d{1,2})?$/.test(ingredientPriceInput) ||
+      !Number.isSafeInteger(price))
+  ) {
+    toast.warning('Malzeme fiyatı sıfır veya daha büyük olmalı ve en fazla iki ondalık basamak içermeli.');
+    return;
+  }
+
+  setIngredients((prev) => [...prev, { name, price }]);
+  setIngredientInput('');
+  setIngredientPriceInput('');
+};
   const handleRemoveIngredient = (index) => {
     setIngredients((prev) => prev.filter((_, i) => i !== index));
   };
@@ -108,12 +135,35 @@ export default function AddProduct() {
       return;
     }
 
+    if (ingredientInput.trim() || ingredientPriceInput !== '') {
+  toast.warning('Kaydetmeden önce yazdığınız malzemeyi Ekle düğmesiyle listeye ekleyin.');
+  return;
+}
+
+const calories = form.calories === '' ? null : Number(form.calories);
+
+if (calories !== null && (!Number.isSafeInteger(calories) || calories < 0)) {
+  toast.warning('Kalori değeri sıfır veya daha büyük bir tam sayı olmalı.');
+  return;
+}
+
+const stockQuantity =
+  form.stockQuantity === '' ? null : Number(form.stockQuantity);
+
+if (stockQuantity !== null && (!Number.isSafeInteger(stockQuantity) || stockQuantity < 0)) {
+  toast.warning('Stok miktarı sıfır veya daha büyük bir tam sayı olmalı.');
+  return;
+}
+
     const payload = {
       restaurantId: user.restaurantId,
       category: form.category,
       name: form.name.trim(),
       imageUrl: form.imageUrl.trim(),
-      ingredients,
+      calories,
+      stockQuantity,
+ingredients: ingredients.map(({ name }) => name),
+ingredientPrices: ingredients.map(({ price }) => price),
       recipe: form.recipe.trim() || null,
       averagePreparationTime: Number(form.averagePreparationTime),
       price: Math.round(Number(form.price) * 100),
@@ -248,7 +298,7 @@ export default function AddProduct() {
               />
             </Field>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Fiyat (₺)">
                 <input
                   name="price"
@@ -270,6 +320,31 @@ export default function AddProduct() {
                   type="number"
                 />
               </Field>
+              <Field label="Kalori (kcal)">
+  <input
+    name="calories"
+    type="number"
+    min="0"
+    step="1"
+    value={form.calories}
+    onChange={handleChange}
+    className="admin-input"
+    placeholder="Örn: 350"
+  />
+</Field>
+<Field label="Stok Miktarı (adet)">
+  <input
+    name="stockQuantity"
+    type="number"
+    min="0"
+    step="1"
+    inputMode="numeric"
+    value={form.stockQuantity}
+    onChange={handleChange}
+    className="admin-input"
+    placeholder="Örn: 25"
+  />
+</Field>
             </div>
 
             <div className="flex flex-col gap-2">
@@ -328,6 +403,25 @@ export default function AddProduct() {
             />
           </Field>
 
+          <Field label="Malzeme Fiyatı (₺)">
+  <input
+    type="number"
+    min="0"
+    step="0.01"
+    inputMode="decimal"
+    value={ingredientPriceInput}
+    onChange={(e) => setIngredientPriceInput(e.target.value)}
+    onKeyDown={(e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleAddIngredient();
+      }
+    }}
+    className="admin-input"
+    placeholder="0,00"
+  />
+</Field>
+
           <div className="flex items-end">
             <button
               type="button"
@@ -343,10 +437,21 @@ export default function AddProduct() {
           <div className="flex flex-wrap gap-2">
             {ingredients.map((ingredient, index) => (
               <div
-                key={`${ingredient}-${index}`}
+                key={`${ingredient.name}-${index}`}
                 className="flex items-center gap-2 bg-surface-container-low border border-outline-variant rounded-lg px-4 py-2"
               >
-                <span className="font-label-md text-label-md text-on-background">{ingredient}</span>
+                <span className="font-label-md text-label-md text-on-background">
+  {ingredient.name}
+</span>
+
+{ingredient.price !== null && (
+  <span className="font-label-md text-label-md text-on-surface-variant">
+    {new Intl.NumberFormat('tr-TR', {
+      style: 'currency',
+      currency: 'TRY',
+    }).format(ingredient.price / 100)}
+  </span>
+)}
 
                 <button
                   type="button"

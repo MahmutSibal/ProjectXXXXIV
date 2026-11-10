@@ -4,13 +4,11 @@ using MediatR;
 namespace AppSukran.Application.Subscriptions.Commands;
 
 /// <summary>
-/// Paket seçimi/yükseltme. Ödeme başarılı olursa abonelik aktifleşir ve
-/// dönem, seçilen faturalama periyodu kadar ileri taşınır.
+/// Paket seçimi/yükseltme. Abonelik aktifleşir ve dönem, seçilen faturalama
+/// periyodu kadar ileri taşınır. Ödeme uygulama dışında (havale; ileride PayTR)
+/// alınır ve "Manual" olarak kaydedilir.
 /// </summary>
 public sealed record ChangePlanCommand(
     string RestaurantId,
     SubscriptionPlan Plan,
-    int BillingPeriodMonths,
-    string? CustomerCardId = null,
-    string? CardNumber = null,
-    string? Cvc = null) : IRequest<Unit>;
+    int BillingPeriodMonths) : IRequest<Unit>;

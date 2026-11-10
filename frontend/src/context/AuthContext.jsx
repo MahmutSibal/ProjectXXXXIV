@@ -61,8 +61,9 @@ export function AuthProvider({ children }) {
     return profile;
   }, []);
 
-  const register = useCallback(async (name, email, password, role = ROLES.RestaurantOwner) => {
-    const tokens = await authApi.register(name, email, password, role, null);
+  // Müşteri üyeliği (QR menü). İşletme hesabı registerBusiness ile açılır.
+  const register = useCallback(async (payload) => {
+    const tokens = await authApi.register(payload);
     setTokens(tokens);
     const profile = await profileApi.getMe();
     setUser(profile);

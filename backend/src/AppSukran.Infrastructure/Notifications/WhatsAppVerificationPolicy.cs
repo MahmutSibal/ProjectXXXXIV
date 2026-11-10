@@ -7,9 +7,10 @@ namespace AppSukran.Infrastructure;
 /// Süre/limit ayarlarını Application katmanına köprüler; böylece handler'lar
 /// Infrastructure'daki ayar sınıfına doğrudan bağımlı olmaz.
 /// </summary>
-public sealed class WhatsAppVerificationPolicy(WhatsAppSettings settings) : IPhoneVerificationPolicy
+public sealed class WhatsAppVerificationPolicy(WhatsAppSettings settings, EmailSettings emailSettings) : IPhoneVerificationPolicy
 {
     public int CodeLifetimeSeconds => settings.CodeLifetimeSeconds;
+    public int EmailCodeLifetimeSeconds => emailSettings.CodeLifetimeSeconds;
     public int ResendCooldownSeconds => settings.ResendCooldownSeconds;
     public int TicketLifetimeSeconds => settings.TicketLifetimeSeconds;
 }

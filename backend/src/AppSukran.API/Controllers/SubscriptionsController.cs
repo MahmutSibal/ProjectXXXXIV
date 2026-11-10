@@ -49,24 +49,10 @@ public sealed class SubscriptionsController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> ChangePlan(string restaurantId, [FromBody] ChangePlanRequest request, CancellationToken cancellationToken)
     {
         await mediator.Send(
-            new ChangePlanCommand(restaurantId, request.Plan, request.BillingPeriodMonths, request.CustomerCardId, request.CardNumber, request.Cvc),
+            new ChangePlanCommand(restaurantId, request.Plan, request.BillingPeriodMonths),
             cancellationToken);
         return NoContent();
     }
-
-    /// <summary>
-    /// Otomatik yenileme kartını tanımlar. Bu adımda TAHSİLAT YAPILMAZ;
-    /// kart sağlayıcıda saklanır ve dönem sonunda kullanılır.
-    /// </summary>
-    [HttpPut("restaurant/{restaurantId}/card")]
-    [Authorize(Roles = "SuperAdmin,RestaurantOwner")]
-    public async Task<ActionResult<SubscriptionResponse>> SaveCard(
-        string restaurantId, [FromBody] SaveSubscriptionCardRequest request, CancellationToken cancellationToken)
-        => Ok(await mediator.Send(
-            new SaveSubscriptionCardCommand(
-                restaurantId, request.CardHolderName, request.CardNumber,
-                request.ExpiryMonth, request.ExpiryYear),
-            cancellationToken));
 
     [HttpPost("restaurant/{restaurantId}/cancel")]
     [Authorize(Roles = "SuperAdmin,RestaurantOwner")]
@@ -88,15 +74,9 @@ public sealed class SubscriptionsController(IMediator mediator) : ControllerBase
     }
 }
 
-public sealed record SaveSubscriptionCardRequest(
-    string CardHolderName, string CardNumber, int ExpiryMonth, int ExpiryYear);
-
 public sealed record ChangePlanRequest(
     SubscriptionPlan Plan,
-    int BillingPeriodMonths,
-    string? CustomerCardId = null,
-    string? CardNumber = null,
-    string? Cvc = null);
+    int BillingPeriodMonths);
 
 public sealed record ExtendSubscriptionRequest(
     SubscriptionPlan Plan,

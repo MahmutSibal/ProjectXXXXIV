@@ -27,14 +27,20 @@ public sealed class SaveBillingProfileCommandHandler(
                 profile => profile.RestaurantId == request.RestaurantId, cancellationToken))
             .FirstOrDefault();
 
-        var contactName = Require(request.ContactName, "Ad soyad", minLength: 3, maxLength: 150);
-        var email = Require(request.Email, "E-posta", minLength: 5, maxLength: 320).ToLowerInvariant();
+        // Ad, e-posta ve telefon işletme sahibinin hesabında zaten var; form bunları
+        // yeniden sormaz. Gönderilmezse kayıtlı değer, o da yoksa hesap bilgisi kullanılır.
+        var owner = await FindOwnerAsync(request.RestaurantId, cancellationToken);
+
+        var contactName = Require(
+            FirstFilled(request.ContactName, existing?.ContactName, owner?.Name), "Ad soyad", minLength: 3, maxLength: 150);
+        var email = Require(
+            FirstFilled(request.Email, existing?.Email, owner?.Email), "E-posta", minLength: 5, maxLength: 320).ToLowerInvariant();
         if (!email.Contains('@') || email.StartsWith('@') || email.EndsWith('@'))
         {
             throw new InvalidOperationException("Geçerli bir e-posta adresi girin.");
         }
 
-        var phone = PhoneNumber.Normalize(request.Phone);
+        var phone = PhoneNumber.Normalize(FirstFilled(request.Phone, existing?.Phone, owner?.Phone));
         if (!PhoneNumber.IsPlausible(phone))
         {
             throw new InvalidOperationException("Geçerli bir telefon numarası girin.");
@@ -68,7 +74,8 @@ public sealed class SaveBillingProfileCommandHandler(
 
         var addressLine = Require(request.AddressLine, "Fatura adresi", minLength: 10, maxLength: 500);
         var city = Require(request.City, "İl", minLength: 2, maxLength: 100);
-        var country = Require(request.Country, "Ülke", minLength: 2, maxLength: 100);
+        // Platform yalnızca Türkiye'de hizmet veriyor; ülke sorulmaz.
+        var country = Require(FirstFilled(request.Country, existing?.Country, "Türkiye"), "Ülke", minLength: 2, maxLength: 100);
 
         var postalCode = new string((request.PostalCode ?? string.Empty).Where(char.IsAsciiDigit).ToArray());
         if (!TurkishIdentity.IsValidPostalCode(postalCode))
@@ -105,6 +112,17 @@ public sealed class SaveBillingProfileCommandHandler(
             currentUserService.UserId, cancellationToken);
 
         return profile.ToResponse();
+    }
+
+    private static string? FirstFilled(params string?[] values)
+        => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
+
+    private async Task<User?> FindOwnerAsync(string restaurantId, CancellationToken cancellationToken)
+    {
+        var restaurant = await unitOfWork.Repository<Restaurant>().GetByIdAsync(restaurantId, cancellationToken);
+        return string.IsNullOrWhiteSpace(restaurant?.OwnerId)
+            ? null
+            : await unitOfWork.Repository<User>().GetByIdAsync(restaurant.OwnerId, cancellationToken);
     }
 
     private static string Require(string? value, string fieldName, int minLength, int maxLength)

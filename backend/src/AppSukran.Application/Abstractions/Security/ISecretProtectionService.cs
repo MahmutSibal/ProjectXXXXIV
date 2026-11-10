@@ -1,7 +1,7 @@
 namespace AppSukran.Application.Abstractions.Security;
 
 /// <summary>
-/// Geri açılabilir sır şifreleme (ör. işletmenin iyzico anahtarları).
+/// Geri açılabilir sır şifreleme (ör. ödeme sağlayıcısı anahtarları).
 /// Kart numarası hash'inden farklı olarak değer sonradan okunabilmelidir.
 /// </summary>
 public interface ISecretProtectionService

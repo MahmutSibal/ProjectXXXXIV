@@ -22,11 +22,6 @@ public sealed record SubscriptionResponse(
     DateTime? GraceEndsAt,
     int PaymentFailureCount,
     string? LastPaymentError,
-    /// <summary>Otomatik yenileme açık mı?</summary>
-    bool AutoRenew,
-    /// <summary>Saklı kartın son 4 hanesi (kart numarası saklanmaz).</summary>
-    string? PaymentMethodLast4,
-    string? PaymentMethodBrand,
     int? MaxTables,
     bool HasStaffPanels,
     bool HasDetailedReports,

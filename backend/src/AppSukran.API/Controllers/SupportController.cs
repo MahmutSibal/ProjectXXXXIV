@@ -17,13 +17,26 @@ public sealed class SupportController(IMediator mediator) : ControllerBase
     public async Task<ActionResult<IReadOnlyCollection<SupportRequestResponse>>> GetAll(CancellationToken cancellationToken)
         => Ok(await mediator.Send(new GetSupportRequestsQuery(), cancellationToken));
 
-    // İşletme sahibi ya da işletmesini Şükran'a taşımak isteyen (henüz restoranı olmayan
+    // İşletme sahibi ya da işletmesini Şükran App'e taşımak isteyen (henüz restoranı olmayan
     // Customer rolündeki) bir kullanıcı destek talebi oluşturabilir.
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateSupportRequestRequest request, CancellationToken cancellationToken)
     {
-        var id = await mediator.Send(new CreateSupportRequestCommand(request.BusinessName, request.Content, request.Phone, request.RestaurantId), cancellationToken);
+        var id = await mediator.Send(new CreateSupportRequestCommand(request.BusinessName, request.Content, request.Phone, request.RestaurantId, request.Topic), cancellationToken);
         return Ok(new { id });
+    }
+
+    /// <summary>Giriş yapan kullanıcının kendi talepleri ve SuperAdmin cevapları.</summary>
+    [HttpGet("mine")]
+    public async Task<ActionResult<IReadOnlyCollection<SupportRequestResponse>>> GetMine(CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetMySupportRequestsQuery(), cancellationToken));
+
+    [HttpPut("{id}/reply")]
+    [Authorize(Roles = "SuperAdmin")]
+    public async Task<IActionResult> Reply(string id, [FromBody] ReplySupportRequest request, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new ReplySupportRequestCommand(id, request.Reply), cancellationToken);
+        return NoContent();
     }
 
     [HttpPut("{id}/called")]
@@ -43,5 +56,6 @@ public sealed class SupportController(IMediator mediator) : ControllerBase
     }
 }
 
-public sealed record CreateSupportRequestRequest(string BusinessName, string Content, string Phone, string? RestaurantId);
+public sealed record CreateSupportRequestRequest(string BusinessName, string Content, string Phone, string? RestaurantId, string? Topic = null);
 public sealed record SetCalledRequest(bool IsCalled);
+public sealed record ReplySupportRequest(string Reply);

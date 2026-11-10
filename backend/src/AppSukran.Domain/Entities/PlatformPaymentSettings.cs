@@ -33,9 +33,6 @@ public sealed class PlatformPaymentSettings : AggregateRoot
     /// </summary>
     public bool BankTransferEnabled { get; set; } = true;
 
-    /// <summary>Web sitesinde iyzico logo bandı gösterilsin mi?</summary>
-    public bool ShowIyzicoLogos { get; set; } = true;
-
     /// <summary>
     /// Platform genelinde online KART ödemesi ana anahtarı (masada misafir ödemesi).
     /// Kapalıyken işletmenin kendi ayarı ne olursa olsun kart tahsilatı yapılmaz.

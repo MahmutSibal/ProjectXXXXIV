@@ -25,7 +25,7 @@ public sealed class RegisterBusinessCommandHandler(
         // Telefon doğrulaması: jeton tek kullanımlıktır ve burada tüketilir.
         // Hesap yaratılmadan önce kontrol edilir ki doğrulanmamış numarayla kayıt olmasın.
         await phoneVerificationGuard.EnsureVerifiedAsync(
-            request.Phone, request.PhoneVerificationTicket, cancellationToken);
+            request.Phone, request.Email, request.PhoneVerificationTicket, cancellationToken);
 
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
 
@@ -58,6 +58,9 @@ public sealed class RegisterBusinessCommandHandler(
                 PasswordHash = passwordHashingService.HashPassword(request.Password),
                 Role = UserRole.RestaurantOwner,
                 IsActive = true,
+                // Kayıtta girilen telefon saklanır; fatura bilgileri gibi formlar bunu
+                // yeniden sormaz. (Eskiden yalnızca denetim kaydına yazılıp kayboluyordu.)
+                Phone = PhoneNumber.Normalize(request.Phone),
             };
             await userRepository.InsertAsync(user, cancellationToken);
 

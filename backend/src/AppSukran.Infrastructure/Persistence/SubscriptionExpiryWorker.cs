@@ -59,19 +59,13 @@ public sealed class SubscriptionExpiryWorker(
         var graceCutoff = now.AddDays(-Subscription.PastDueGraceDays);
 
         // 1) Dönemi bitmiş aktif/deneme abonelikler -> "Ödeme Bekleniyor".
-        //    Erişim KESİLMEZ; ek süre boyunca hizmet sürer.
-        //
-        // Otomatik yenilemesi olanlar HARİÇ: onların sahibi SubscriptionRenewalWorker'dır.
-        // İkisi de aynı kaydı güncellerse, tahsilat başarılı olsa bile buradaki
-        // "ödeme alınamadı" işaretlemesi başarının üzerine yazıyor ve hata sayacı
-        // yanlışlıkla artıyordu. Yenileme başarısız olursa PastDue'yu o worker koyar.
+        //    Erişim KESİLMEZ; ek süre boyunca hizmet sürer. Saklı kartla otomatik
+        //    yenileme kaldırıldı; ödeme PayTR ya da havale ile alınıp
+        //    SuperAdmin tarafından işlenir.
         var pastDue = await context.Subscriptions
             .Where(subscription =>
                 (subscription.Status == SubscriptionStatus.Active || subscription.Status == SubscriptionStatus.Trialing)
-                && subscription.CurrentPeriodEnd <= now
-                && !(subscription.AutoRenew
-                     && subscription.PaymentMethodUserKey != null
-                     && subscription.PaymentMethodToken != null))
+                && subscription.CurrentPeriodEnd <= now)
             .ToListAsync(cancellationToken);
 
         foreach (var subscription in pastDue)

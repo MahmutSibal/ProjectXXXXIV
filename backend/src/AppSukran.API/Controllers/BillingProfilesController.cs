@@ -45,12 +45,12 @@ public sealed class BillingProfilesController(IMediator mediator) : ControllerBa
 
 /// <param name="NationalId">Boş bırakılırsa kayıtlı değer korunur.</param>
 public sealed record SaveBillingProfileRequest(
-    string ContactName,
-    string Email,
-    string Phone,
+    string? ContactName,
+    string? Email,
+    string? Phone,
     string? NationalId,
     string? MersisNumber,
     string AddressLine,
     string City,
-    string Country,
+    string? Country,
     string PostalCode);

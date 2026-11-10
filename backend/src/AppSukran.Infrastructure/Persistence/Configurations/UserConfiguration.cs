@@ -13,5 +13,7 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(user => user.Email).HasMaxLength(320).IsRequired();
         builder.HasIndex(user => user.Email).IsUnique();
         builder.Property(user => user.RestaurantId).HasMaxLength(32);
+        builder.Property(user => user.Phone).HasMaxLength(30);
+        builder.Property(user => user.Address).HasMaxLength(500);
     }
 }

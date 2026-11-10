@@ -43,6 +43,7 @@ public static class DependencyInjection
             services.Configure<Settings.IntegrationSettings>(configuration.GetSection("Integration"));
             services.Configure<Settings.PaymentSettings>(configuration.GetSection("Payment"));
             services.Configure<Settings.WhatsAppSettings>(configuration.GetSection("WhatsApp"));
+            services.Configure<Settings.EmailSettings>(configuration.GetSection("Email"));
 
             // Production'da bağlantı dizesi ve SuperAdmin parolası appsettings'e YAZILMAZ;
             // ortam değişkeninden okunur (bkz. DEPLOYMENT.md).
@@ -62,15 +63,10 @@ public static class DependencyInjection
                 services.PostConfigure<Settings.WhatsAppSettings>(settings => settings.ServiceToken = whatsAppToken);
             }
 
-            var iyzicoApiKey = Environment.GetEnvironmentVariable("SUKRAN_IYZICO_API_KEY");
-            var iyzicoSecretKey = Environment.GetEnvironmentVariable("SUKRAN_IYZICO_SECRET_KEY");
-            if (!string.IsNullOrWhiteSpace(iyzicoApiKey) || !string.IsNullOrWhiteSpace(iyzicoSecretKey))
+            var smtpPassword = Environment.GetEnvironmentVariable("SUKRAN_SMTP_PASSWORD");
+            if (!string.IsNullOrWhiteSpace(smtpPassword))
             {
-                services.PostConfigure<Settings.PaymentSettings>(settings =>
-                {
-                    if (!string.IsNullOrWhiteSpace(iyzicoApiKey)) settings.Iyzico.ApiKey = iyzicoApiKey;
-                    if (!string.IsNullOrWhiteSpace(iyzicoSecretKey)) settings.Iyzico.SecretKey = iyzicoSecretKey;
-                });
+                services.PostConfigure<Settings.EmailSettings>(settings => settings.Password = smtpPassword);
             }
 
             services.AddDbContext<AppSukranDbContext>(options =>
@@ -90,48 +86,50 @@ public static class DependencyInjection
             Maintenance.ServerShutdownState>();
         services.AddHttpClient<IPosBridgeService, HttpPosBridgeService>();
 
-        // Ödeme sağlayıcıları: ikisi de kayıtlı, hangisinin kullanılacağı
-        // appsettings "Payment:Provider" değerine göre çalışma anında seçilir.
+        // Ödeme sağlayıcısı appsettings "Payment:Provider" değerine göre seçilir:
+        // "Fake" (simülasyon, geliştirme) ya da "None" (gerçek sağlayıcı yok, kart
+        // tahsilatı reddedilir). PayTR entegrasyonu buraya eklenecek.
         services.AddScoped<FakePaymentGateway>();
-        services.AddHttpClient<IyzicoPaymentGateway>();
+        services.AddScoped<UnavailablePaymentGateway>();
         services.AddScoped<IPaymentGateway>(sp =>
         {
             var settings = sp.GetRequiredService<IOptions<Settings.PaymentSettings>>().Value;
-            var useIyzico = string.Equals(settings.Provider, "Iyzico", StringComparison.OrdinalIgnoreCase);
+            IPaymentGateway gateway = settings.IsFake
+                ? sp.GetRequiredService<FakePaymentGateway>()
+                : sp.GetRequiredService<UnavailablePaymentGateway>();
 
-            // Aktif sağlayıcıyı görünür kıl: yapılandırma okunmadığında (ör. user-secrets
-            // yüklenmemişse) sessizce Fake'e düşülüyor ve "ödeme çalışıyor" sanılıyordu.
-            var logger = sp.GetRequiredService<ILogger<IPaymentGateway>>();
-            logger.LogInformation(
-                "[Payment] Aktif sağlayıcı: {Provider} (yapılandırılmış: {Configured})",
-                useIyzico ? "Iyzico" : "Fake",
-                useIyzico ? settings.Iyzico.IsConfigured : true);
+            // Aktif sağlayıcıyı görünür kıl: yapılandırma okunmadığında sessizce
+            // yanlış sağlayıcıya düşülüp "ödeme çalışıyor" sanılmasın.
+            sp.GetRequiredService<ILogger<IPaymentGateway>>()
+                .LogInformation("[Payment] Aktif sağlayıcı: {Provider}", gateway.Provider);
 
-            return useIyzico
-                ? sp.GetRequiredService<IyzicoPaymentGateway>()
-                : sp.GetRequiredService<FakePaymentGateway>();
+            return gateway;
         });
 
-        // Masa ödemeleri işletmenin KENDİ üye iş yeri hesabına gider; global IPaymentGateway
-        // yalnızca platformun abonelik tahsilatları içindir.
+        // Masa ödemeleri için ayrı çözümleyici; global IPaymentGateway yalnızca
+        // platformun abonelik tahsilatları içindir.
         services.AddSingleton<IPaymentPlatformInfo, PaymentPlatformInfo>();
         services.AddScoped<IRestaurantPaymentGatewayResolver, RestaurantPaymentGatewayResolver>();
 
         // WhatsApp doğrulama (ayrı wppconnect servisi ile konuşur).
-        services.AddHttpClient<IWhatsAppService, Notifications.WppConnectWhatsAppService>();
+        // Varsayılan 100 sn çok uzun: servis takılırsa kullanıcı kayıt ekranında
+        // "Kod gönderiliyor..." diye bekliyordu. Servisin kendi sınırları 8+15 sn.
+        services.AddHttpClient<IWhatsAppService, Notifications.WppConnectWhatsAppService>(
+            client => client.Timeout = TimeSpan.FromSeconds(25));
+        services.AddSingleton<IEmailService, Notifications.SmtpEmailService>();
         services.AddScoped<IVerificationCodeService, VerificationCodeService>();
         services.AddScoped<IPhoneVerificationGuard, Application.Common.Security.PhoneVerificationGuard>();
         services.AddScoped<IPhoneVerificationPolicy>(sp =>
         {
             var settings = sp.GetRequiredService<IOptions<Settings.WhatsAppSettings>>().Value;
-            return new WhatsAppVerificationPolicy(settings);
+            var emailSettings = sp.GetRequiredService<IOptions<Settings.EmailSettings>>().Value;
+            return new WhatsAppVerificationPolicy(settings, emailSettings);
         });
 
         services.AddScoped<IRestaurantSearchService, RestaurantSearchService>();
         services.AddHostedService<DatabaseMigrationInitializer>();
         services.AddHostedService<SuperAdminSeeder>();
         services.AddHostedService<SubscriptionExpiryWorker>();
-        services.AddHostedService<SubscriptionRenewalWorker>();
 
         return services;
     }

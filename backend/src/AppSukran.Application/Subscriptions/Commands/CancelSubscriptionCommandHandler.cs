@@ -28,11 +28,6 @@ public sealed class CancelSubscriptionCommandHandler(
         subscription.Status = SubscriptionStatus.Cancelled;
         subscription.CancelledAt = DateTime.UtcNow;
 
-        // İptalin anlamı: ödenmiş dönem sonuna kadar hizmet sürer, ama SONRAKİ
-        // otomatik tahsilat yapılmaz. Bunu kapatmazsak müşteri iptal etmesine
-        // rağmen kartından çekmeye devam ederdik.
-        subscription.AutoRenew = false;
-
         await repository.ReplaceAsync(subscription, cancellationToken);
         await auditLogService.RecordAsync(
             "SubscriptionCancelled", nameof(Subscription), subscription.Id,

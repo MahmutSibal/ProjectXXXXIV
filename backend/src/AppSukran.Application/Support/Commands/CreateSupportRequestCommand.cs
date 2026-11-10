@@ -6,4 +6,5 @@ public sealed record CreateSupportRequestCommand(
     string BusinessName,
     string Content,
     string Phone,
-    string? RestaurantId) : IRequest<string>;
+    string? RestaurantId,
+    string? Topic = null) : IRequest<string>;

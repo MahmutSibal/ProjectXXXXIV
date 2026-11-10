@@ -3,7 +3,7 @@ using AppSukran.Domain.Common;
 namespace AppSukran.Domain.Entities;
 
 /// <summary>
-/// WhatsApp ile gönderilen telefon doğrulama kodu.
+/// WhatsApp veya e-posta ile gönderilen kayıt doğrulama kodu.
 ///
 /// Kod DÜZ METİN saklanmaz: veritabanını okuyabilen biri aktif kodları görüp
 /// başkasının telefonunu doğrulayabilirdi. Refresh token'larda olduğu gibi
@@ -11,7 +11,10 @@ namespace AppSukran.Domain.Entities;
 /// </summary>
 public class PhoneVerification : AggregateRoot
 {
-    /// <summary>Normalize edilmiş numara (yalnızca rakam, ülke kodu dahil).</summary>
+    /// <summary>
+    /// Doğrulama hedefi: normalize numara (yalnızca rakam, ülke kodu dahil) veya
+    /// "e:" önekli e-posta adresi (bkz. VerificationTarget). Ad geriye uyumluluk için korundu.
+    /// </summary>
     public string Phone { get; set; } = string.Empty;
 
     public string CodeHash { get; set; } = string.Empty;

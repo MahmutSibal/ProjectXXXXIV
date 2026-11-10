@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 namespace AppSukran.Infrastructure.Payments;
 
 /// <summary>
-/// Gerçek bir PSP gibi davranan, ağ çağrısı yapmayan simülasyon sağlayıcısı.
+/// Gerçek bir ödeme sağlayıcısı gibi davranan, ağ çağrısı yapmayan simülasyon sağlayıcısı.
 /// Geliştirme/test için varsayılan sağlayıcıdır. Luhn + son kullanma kontrolü yapar
 /// ve test kart numaralarıyla belirli ret senaryolarını üretir.
 ///
@@ -61,49 +61,5 @@ public sealed class FakePaymentGateway(
             request.BillId, request.AmountMinor, transactionId);
 
         return Task.FromResult(ChargeResult.Ok(transactionId, Provider));
-    }
-
-    /// <summary>
-    /// Simülasyonda kart "saklanır": gerçek bir sağlayıcıya gitmeden sahte anahtarlar
-    /// üretilir. Böylece otomatik yenileme akışı iyzico olmadan da denenebilir.
-    /// </summary>
-    public Task<StoredCardResult> StoreCardAsync(StoreCardRequest request, CancellationToken cancellationToken = default)
-    {
-        var normalized = cardProtectionService.NormalizeCardNumber(request.CardNumber);
-
-        if (normalized.Length < 12)
-        {
-            return Task.FromResult(StoredCardResult.Fail("Kart numarası geçersiz."));
-        }
-
-        var expiry = new DateTime(request.ExpiryYear, Math.Clamp(request.ExpiryMonth, 1, 12), 1).AddMonths(1);
-        if (expiry <= DateTime.UtcNow)
-        {
-            return Task.FromResult(StoredCardResult.Fail("Kartın son kullanma tarihi geçmiş."));
-        }
-
-        logger.LogInformation("[Fake] Kart saklandı (simülasyon) externalId={ExternalId}", request.ExternalId);
-
-        return Task.FromResult(StoredCardResult.Ok(
-            $"fakeuser_{request.ExternalId}",
-            $"faketoken_{Guid.NewGuid():N}",
-            normalized[^4..],
-            "Simulasyon"));
-    }
-
-    public Task<ChargeResult> ChargeStoredCardAsync(StoredCardChargeRequest request, CancellationToken cancellationToken = default)
-    {
-        if (request.AmountMinor <= 0)
-        {
-            return Task.FromResult(ChargeResult.Fail("invalid_amount", "Tahsilat tutarı sıfırdan büyük olmalı.", Provider));
-        }
-
-        if (string.IsNullOrWhiteSpace(request.CardUserKey) || string.IsNullOrWhiteSpace(request.CardToken))
-        {
-            return Task.FromResult(ChargeResult.Fail("no_stored_card", "Saklı kart bulunamadı.", Provider));
-        }
-
-        logger.LogInformation("[Fake] Saklı kartla tahsilat (simülasyon) ref={Reference}", request.ReferenceId);
-        return Task.FromResult(ChargeResult.Ok($"fake_stored_{request.ReferenceId}_{request.AmountMinor}", Provider));
     }
 }
