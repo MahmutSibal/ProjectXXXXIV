@@ -43,6 +43,7 @@ public static class DependencyInjection
             services.Configure<Settings.IntegrationSettings>(configuration.GetSection("Integration"));
             services.Configure<Settings.PaymentSettings>(configuration.GetSection("Payment"));
             services.Configure<Settings.WhatsAppSettings>(configuration.GetSection("WhatsApp"));
+            services.Configure<Settings.EmailSettings>(configuration.GetSection("Email"));
 
             // Production'da bağlantı dizesi ve SuperAdmin parolası appsettings'e YAZILMAZ;
             // ortam değişkeninden okunur (bkz. DEPLOYMENT.md).
@@ -60,6 +61,12 @@ public static class DependencyInjection
             if (!string.IsNullOrWhiteSpace(whatsAppToken))
             {
                 services.PostConfigure<Settings.WhatsAppSettings>(settings => settings.ServiceToken = whatsAppToken);
+            }
+
+            var smtpPassword = Environment.GetEnvironmentVariable("SUKRAN_SMTP_PASSWORD");
+            if (!string.IsNullOrWhiteSpace(smtpPassword))
+            {
+                services.PostConfigure<Settings.EmailSettings>(settings => settings.Password = smtpPassword);
             }
 
             services.AddDbContext<AppSukranDbContext>(options =>
@@ -109,12 +116,14 @@ public static class DependencyInjection
         // "Kod gönderiliyor..." diye bekliyordu. Servisin kendi sınırları 8+15 sn.
         services.AddHttpClient<IWhatsAppService, Notifications.WppConnectWhatsAppService>(
             client => client.Timeout = TimeSpan.FromSeconds(25));
+        services.AddSingleton<IEmailService, Notifications.SmtpEmailService>();
         services.AddScoped<IVerificationCodeService, VerificationCodeService>();
         services.AddScoped<IPhoneVerificationGuard, Application.Common.Security.PhoneVerificationGuard>();
         services.AddScoped<IPhoneVerificationPolicy>(sp =>
         {
             var settings = sp.GetRequiredService<IOptions<Settings.WhatsAppSettings>>().Value;
-            return new WhatsAppVerificationPolicy(settings);
+            var emailSettings = sp.GetRequiredService<IOptions<Settings.EmailSettings>>().Value;
+            return new WhatsAppVerificationPolicy(settings, emailSettings);
         });
 
         services.AddScoped<IRestaurantSearchService, RestaurantSearchService>();

@@ -142,6 +142,30 @@ if (-not [string]::IsNullOrWhiteSpace($WhatsAppBaseUrl)) {
     $vars['SUKRAN_WHATSAPP_TOKEN'] = $whatsAppToken
 }
 
+# E-posta ile doğrulama (WhatsApp'ı olmayanlar için). SMTP parolası tanımlıysa açılır.
+# Brevo için: SUKRAN_EMAIL_USERNAME = Brevo'nun verdiği SMTP kullanıcı adı,
+# SUKRAN_SMTP_PASSWORD = SMTP anahtarı, SUKRAN_EMAIL_FROM = Brevo'da doğrulanmış gönderici.
+$smtpPassword = [Environment]::GetEnvironmentVariable('SUKRAN_SMTP_PASSWORD')
+if (-not [string]::IsNullOrWhiteSpace($smtpPassword)) {
+    $emailHost = [Environment]::GetEnvironmentVariable('SUKRAN_EMAIL_HOST')
+    if ([string]::IsNullOrWhiteSpace($emailHost)) { $emailHost = 'smtp-relay.brevo.com' }
+    $emailPort = [Environment]::GetEnvironmentVariable('SUKRAN_EMAIL_PORT')
+    if ([string]::IsNullOrWhiteSpace($emailPort)) { $emailPort = '587' }
+    $emailUser = [Environment]::GetEnvironmentVariable('SUKRAN_EMAIL_USERNAME')
+    $emailFrom = [Environment]::GetEnvironmentVariable('SUKRAN_EMAIL_FROM')
+
+    if ([string]::IsNullOrWhiteSpace($emailUser) -or [string]::IsNullOrWhiteSpace($emailFrom)) {
+        throw "SUKRAN_SMTP_PASSWORD verildi ama SUKRAN_EMAIL_USERNAME veya SUKRAN_EMAIL_FROM eksik."
+    }
+
+    $vars['Email__Enabled']      = 'true'
+    $vars['Email__Host']         = $emailHost
+    $vars['Email__Port']         = $emailPort
+    $vars['Email__Username']     = $emailUser
+    $vars['Email__FromAddress']  = $emailFrom
+    $vars['SUKRAN_SMTP_PASSWORD'] = $smtpPassword
+}
+
 [xml]$doc = Get-Content $webConfigPath -Raw
 $aspNetCore = $doc.SelectSingleNode('//aspNetCore')
 if ($null -eq $aspNetCore) { throw "web.config içinde <aspNetCore> bulunamadı." }

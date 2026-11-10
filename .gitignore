@@ -40,3 +40,6 @@ backend/**/web.config
 # Veritabanı yedekleri — kullanıcı verisi içerir, DEPOYA GİRMEMELİ
 database_backup/
 *.bacpac
+
+# Kullanılmayan yerel demo verisi
+frontend/src/api/demo.js

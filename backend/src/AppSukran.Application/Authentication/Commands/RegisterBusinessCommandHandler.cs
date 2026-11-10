@@ -25,7 +25,7 @@ public sealed class RegisterBusinessCommandHandler(
         // Telefon doğrulaması: jeton tek kullanımlıktır ve burada tüketilir.
         // Hesap yaratılmadan önce kontrol edilir ki doğrulanmamış numarayla kayıt olmasın.
         await phoneVerificationGuard.EnsureVerifiedAsync(
-            request.Phone, request.PhoneVerificationTicket, cancellationToken);
+            request.Phone, request.Email, request.PhoneVerificationTicket, cancellationToken);
 
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
 

@@ -6,15 +6,20 @@ using Entity = AppSukran.Domain.Entities.PhoneVerification;
 
 namespace AppSukran.Application.Common.Security;
 
+/// <summary>
+/// Kayıttan önce iletişim bilgisinin doğrulandığını kanıtlar. Kullanıcı WhatsApp
+/// (telefon) ya da e-posta ile doğrulamış olabilir; jeton hangisine aitse o kabul edilir.
+/// </summary>
 public sealed class PhoneVerificationGuard(
     IUnitOfWork unitOfWork,
     IVerificationCodeService codeService,
-    IWhatsAppService whatsAppService) : IPhoneVerificationGuard
+    IWhatsAppService whatsAppService,
+    IEmailService emailService) : IPhoneVerificationGuard
 {
-    public bool IsEnabled => whatsAppService.IsEnabled;
+    public bool IsEnabled => whatsAppService.IsEnabled || emailService.IsEnabled;
 
     public async Task EnsureVerifiedAsync(
-        string phone, string? verificationTicket, CancellationToken cancellationToken = default)
+        string phone, string email, string? verificationTicket, CancellationToken cancellationToken = default)
     {
         if (!IsEnabled)
         {
@@ -23,27 +28,34 @@ public sealed class PhoneVerificationGuard(
 
         if (string.IsNullOrWhiteSpace(verificationTicket))
         {
-            throw new InvalidOperationException("Telefon numaranızı doğrulamanız gerekiyor.");
+            throw new InvalidOperationException("Telefon numaranızı veya e-posta adresinizi doğrulamanız gerekiyor.");
         }
 
-        var normalized = PhoneNumber.Normalize(phone);
         var repository = unitOfWork.Repository<Entity>();
         var now = DateTime.UtcNow;
 
-        var verification = (await repository.FindAsync(record => record.Phone == normalized, cancellationToken))
-            .OrderByDescending(record => record.CreatedAt)
-            .FirstOrDefault();
+        // Jeton ancak kayıt formundaki numara ya da adrese aitse geçerlidir: başkasının
+        // doğruladığı bir jetonla farklı bir iletişim bilgisiyle kayıt olunamaz.
+        var targets = new[] { PhoneNumber.Normalize(phone), VerificationTarget.ForEmail(email) };
 
-        if (verification is null
-            || !verification.IsTicketValid(now)
-            || !codeService.Verify(verificationTicket, verification.TicketHash!))
+        foreach (var target in targets)
         {
-            throw new InvalidOperationException(
-                "Telefon doğrulaması geçersiz veya süresi dolmuş. Lütfen numaranızı yeniden doğrulayın.");
+            var verification = (await repository.FindAsync(record => record.Phone == target, cancellationToken))
+                .OrderByDescending(record => record.CreatedAt)
+                .FirstOrDefault();
+
+            if (verification is not null
+                && verification.IsTicketValid(now)
+                && codeService.Verify(verificationTicket, verification.TicketHash!))
+            {
+                // Tek kullanımlık: aynı doğrulamayla ikinci hesap açılamasın.
+                verification.TicketConsumed = true;
+                await repository.ReplaceAsync(verification, cancellationToken);
+                return;
+            }
         }
 
-        // Tek kullanımlık: aynı doğrulamayla ikinci hesap açılamasın.
-        verification.TicketConsumed = true;
-        await repository.ReplaceAsync(verification, cancellationToken);
+        throw new InvalidOperationException(
+            "Doğrulama geçersiz veya süresi dolmuş. Lütfen numaranızı veya e-posta adresinizi yeniden doğrulayın.");
     }
 }

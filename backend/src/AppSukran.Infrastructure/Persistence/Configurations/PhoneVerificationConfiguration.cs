@@ -10,7 +10,8 @@ public sealed class PhoneVerificationConfiguration : IEntityTypeConfiguration<En
     {
         builder.ConfigureAggregateRoot();
 
-        builder.Property(verification => verification.Phone).HasMaxLength(20).IsRequired();
+        // Telefon (rakam) veya "e:" önekli e-posta adresi (bkz. VerificationTarget).
+        builder.Property(verification => verification.Phone).HasMaxLength(260).IsRequired();
         // SHA-256 hex = 64 karakter.
         builder.Property(verification => verification.CodeHash).HasMaxLength(64).IsRequired();
         builder.Property(verification => verification.TicketHash).HasMaxLength(64);

@@ -522,8 +522,8 @@ namespace AppSukran.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("Phone")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasMaxLength(260)
+                        .HasColumnType("nvarchar(260)");
 
                     b.Property<bool>("TicketConsumed")
                         .HasColumnType("bit");

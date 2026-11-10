@@ -53,6 +53,11 @@ public sealed class GlobalExceptionMiddleware(RequestDelegate next, ILogger<Glob
             logger.LogWarning("WhatsApp: {Message}", whatsAppException.Message);
             await WriteProblemDetailsAsync(context, HttpStatusCode.BadRequest, "WhatsApp", [whatsAppException.Message]);
         }
+        catch (EmailDeliveryException emailException)
+        {
+            logger.LogWarning("E-posta: {Message}", emailException.Message);
+            await WriteProblemDetailsAsync(context, HttpStatusCode.BadRequest, "E-posta", [emailException.Message]);
+        }
         catch (UnauthorizedAccessException unauthorizedException)
         {
             logger.LogWarning("Forbidden: {Message}", unauthorizedException.Message);

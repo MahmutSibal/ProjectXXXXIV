@@ -116,6 +116,7 @@ function Register() {
 
   // Telefon doğrulaması bekleyen kayıt verisi. Dolu ise doğrulama penceresi açılır.
   const [pendingRegistration, setPendingRegistration] = useState(null);
+  const [verificationChannels, setVerificationChannels] = useState({ whatsApp: true, email: false });
 
   const [coordinates, setCoordinates] = useState({ latitude: '', longitude: '' });
   const [isLocating, setIsLocating] = useState(false);
@@ -200,10 +201,15 @@ function Register() {
     // Telefon doğrulaması açıksa hesap AÇILMADAN önce numara doğrulanır.
     // Kapalıysa (WhatsApp servisi devrede değilse) doğrudan kayda geçilir.
     setIsSubmitting(true);
-    let requiresPhoneVerification = false;
+    let requiresPhoneVerification;
     try {
       const status = await phoneVerificationApi.getStatus();
       requiresPhoneVerification = Boolean(status?.enabled);
+      setVerificationChannels({
+        // Eski backend yalnızca { enabled } döner: o durumda WhatsApp varsayılır.
+        whatsApp: status?.whatsApp ?? Boolean(status?.enabled),
+        email: Boolean(status?.email),
+      });
     } catch {
       // Durum okunamazsa doğrulamayı zorlamak kaydı tamamen engellerdi;
       // sunucu zaten gerekliyse jeton yokluğunda isteği reddeder.
@@ -702,6 +708,8 @@ function Register() {
       {pendingRegistration && (
         <PhoneVerificationDialog
           phone={pendingRegistration.phone}
+          email={pendingRegistration.email}
+          channels={verificationChannels}
           onVerified={(ticket) => completeRegistration(pendingRegistration, ticket)}
           onCancel={() => setPendingRegistration(null)}
         />

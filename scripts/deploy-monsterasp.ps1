@@ -203,6 +203,24 @@ if ([string]::IsNullOrWhiteSpace($env:SUKRAN_DB_CONNECTION) -or [string]::IsNull
     if ($live.Contains('SUKRAN_WHATSAPP_TOKEN')) { $env:WHATSAPP_SERVICE_TOKEN = $live['SUKRAN_WHATSAPP_TOKEN'] }
     if ($live['WhatsApp__Enabled'] -eq 'true') { $whatsAppBaseUrl = $live['WhatsApp__BaseUrl'] }
 
+    # E-posta ayarları canlıdan taşınır; aksi hâlde her deploy e-posta doğrulamasını
+    # kapatırdı. Bu oturumda elle verilmiş bir değer varsa (ilk kurulum) o önceliklidir.
+    if ($live['Email__Enabled'] -eq 'true') {
+        $emailMap = [ordered]@{
+            'SUKRAN_SMTP_PASSWORD'  = 'SUKRAN_SMTP_PASSWORD'
+            'SUKRAN_EMAIL_HOST'     = 'Email__Host'
+            'SUKRAN_EMAIL_PORT'     = 'Email__Port'
+            'SUKRAN_EMAIL_USERNAME' = 'Email__Username'
+            'SUKRAN_EMAIL_FROM'     = 'Email__FromAddress'
+        }
+        foreach ($envName in $emailMap.Keys) {
+            $liveName = $emailMap[$envName]
+            if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($envName)) -and $live.Contains($liveName)) {
+                Set-Item "env:$envName" $live[$liveName]
+            }
+        }
+    }
+
     $liveOrigins = $live.Keys | Where-Object { $_ -like 'Cors__AllowedOrigins__*' } | ForEach-Object { $live[$_] }
     $frontendOrigins = @($frontendOrigins + $liveOrigins | Select-Object -Unique)
 
@@ -212,6 +230,7 @@ if ([string]::IsNullOrWhiteSpace($env:SUKRAN_DB_CONNECTION) -or [string]::IsNull
 
 Write-Host "  CORS          : $($frontendOrigins -join ', ')"
 Write-Host "  WhatsApp      : $(if ($whatsAppBaseUrl) { $whatsAppBaseUrl } else { 'kapalı' })"
+Write-Host "  E-posta       : $(if ($env:SUKRAN_SMTP_PASSWORD) { "açık ($(if ($env:SUKRAN_EMAIL_FROM) { $env:SUKRAN_EMAIL_FROM } else { 'gönderici eksik' }))" } else { 'kapalı' })"
 Write-Host "  Kart ödemesi  : kapalı (PayTR bağlanana kadar)"
 Write-Host "  QR adresi     : $PublicAppUrl"
 
