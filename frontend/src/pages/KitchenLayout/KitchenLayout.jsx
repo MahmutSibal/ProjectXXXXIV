@@ -20,7 +20,7 @@ function SidebarMenu({ onNavigate }) {
         className="w-full mb-md overflow-hidden flex-shrink-0 block"
       >
         <img
-          src="/sukranapp.png"
+          src="/sukranapp.png?v=2"
           alt="Şükran App Logo"
           className="w-full h-auto object-cover block cursor-pointer"
         />

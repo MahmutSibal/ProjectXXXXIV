@@ -96,7 +96,7 @@ export default function Login({ recovery = false }) {
         <div className="login-showcase__content">
           <div className="login-showcase__top">
             <Link className="login-brand" to="/" aria-label="Şükran ana sayfa">
-              <img src="/sukranapp.png" alt="Şükran App" />
+              <img src="/sukranapp.png?v=2" alt="Şükran App" />
               <span>Şükran App</span>
             </Link>
 
@@ -160,7 +160,7 @@ export default function Login({ recovery = false }) {
         <div className="login-form-wrapper">
           <div className="login-mobile-brand">
             <Link className="login-brand" to="/">
-              <img src="/sukranapp.png" alt="Şükran App" />
+              <img src="/sukranapp.png?v=2" alt="Şükran App" />
               <span>Şükran App</span>
             </Link>
           </div>

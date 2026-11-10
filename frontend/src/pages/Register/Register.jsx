@@ -269,7 +269,7 @@ function Register() {
               aria-label="Şükran App ana sayfa"
             >
               <img
-                src="/sukranapp.png"
+                src="/sukranapp.png?v=2"
                 alt="Şükran App"
               />
 
@@ -351,7 +351,7 @@ function Register() {
               className="register-brand"
             >
               <img
-                src="/sukranapp.png"
+                src="/sukranapp.png?v=2"
                 alt="Şükran App"
               />
 
