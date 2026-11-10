@@ -105,7 +105,10 @@ public static class DependencyInjection
         services.AddScoped<IRestaurantPaymentGatewayResolver, RestaurantPaymentGatewayResolver>();
 
         // WhatsApp doğrulama (ayrı wppconnect servisi ile konuşur).
-        services.AddHttpClient<IWhatsAppService, Notifications.WppConnectWhatsAppService>();
+        // Varsayılan 100 sn çok uzun: servis takılırsa kullanıcı kayıt ekranında
+        // "Kod gönderiliyor..." diye bekliyordu. Servisin kendi sınırları 8+15 sn.
+        services.AddHttpClient<IWhatsAppService, Notifications.WppConnectWhatsAppService>(
+            client => client.Timeout = TimeSpan.FromSeconds(25));
         services.AddScoped<IVerificationCodeService, VerificationCodeService>();
         services.AddScoped<IPhoneVerificationGuard, Application.Common.Security.PhoneVerificationGuard>();
         services.AddScoped<IPhoneVerificationPolicy>(sp =>

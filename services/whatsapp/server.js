@@ -196,6 +196,21 @@ function temizleOturumDosyalari() {
   }
 }
 
+class ZamanAsimiHatasi extends Error {}
+
+/**
+ * Baileys, bağlantı yarı açık kaldığında (ör. uygulama havuzu uykusundan sonra)
+ * sendMessage/onWhatsApp çağrılarını hiç sonuçlandırmayabiliyor. Süre sınırı
+ * olmadan kullanıcı ekranda "Kod gönderiliyor..." diye süresiz bekliyordu.
+ */
+function zamanAsimi(promise, ms, islem) {
+  let zamanlayici;
+  const sinir = new Promise((_, reject) => {
+    zamanlayici = setTimeout(() => reject(new ZamanAsimiHatasi(`${islem} ${ms / 1000} sn içinde yanıt vermedi`)), ms);
+  });
+  return Promise.race([promise, sinir]).finally(() => clearTimeout(zamanlayici));
+}
+
 const app = express();
 app.use(express.json());
 
@@ -262,7 +277,7 @@ app.post('/send', async (request, response) => {
     // protokol değişikliklerinde bu sorgu bozulabiliyor ve doğrulamayı tamamen
     // durdurması, eksik bir uyarıdan daha kötü olurdu.
     try {
-      const [kayit] = await sock.onWhatsApp(digits);
+      const [kayit] = await zamanAsimi(sock.onWhatsApp(digits), 8000, 'numara kontrolü');
       if (kayit && kayit.exists === false) {
         return response.status(422).json({ error: 'number_not_on_whatsapp' });
       }
@@ -271,9 +286,18 @@ app.post('/send', async (request, response) => {
         String(checkError?.message ?? checkError));
     }
 
-    const result = await sock.sendMessage(`${digits}@s.whatsapp.net`, { text: message });
+    const result = await zamanAsimi(
+      sock.sendMessage(`${digits}@s.whatsapp.net`, { text: message }), 15000, 'mesaj gönderimi');
     return response.json({ ok: true, id: result?.key?.id ?? null });
   } catch (error) {
+    if (error instanceof ZamanAsimiHatasi) {
+      // Bağlantı "açık" görünüp yanıt vermiyor (uykudan sonra sık olur). Soketi
+      // kapatıp yeniden bağlanıyoruz; kayıtlı kimlik korunur, QR gerekmez.
+      console.error('[whatsapp]', error.message, '— bağlantı yenileniyor');
+      try { sock?.end(error); } catch { /* zaten kapalı */ }
+      return response.status(503).json({ error: 'not_connected', status: 'reconnecting' });
+    }
+
     console.error('[whatsapp] gönderim hatası:', error);
     return response.status(500).json({ error: 'send_failed', detail: String(error?.message ?? error) });
   }

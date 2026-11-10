@@ -106,7 +106,7 @@ export default function PhoneVerificationDialog({ phone, onVerified, onCancel })
                 WhatsApp üzerinden 6 haneli bir kod gönderdik.
               </>
             ) : (
-              'Kod gönderiliyor...'
+              'WhatsApp üzerinden 6 haneli bir kod göndereceğiz.'
             )}
           </p>
 
@@ -119,7 +119,14 @@ export default function PhoneVerificationDialog({ phone, onVerified, onCancel })
           />
 
           <div className="text-center">
-            {isExpired ? (
+            {isSending ? (
+              <p className="text-body-sm text-on-surface-variant flex items-center justify-center gap-2">
+                <span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
+                Kod gönderiliyor, lütfen bekleyin...
+              </p>
+            ) : !maskedPhone ? (
+              <p className="text-body-sm text-error">Kod gönderilemedi. Aşağıdan yeniden deneyin.</p>
+            ) : isExpired ? (
               <p className="text-body-sm text-error">Kodun süresi doldu.</p>
             ) : (
               <p className="text-body-sm text-on-surface-variant">
