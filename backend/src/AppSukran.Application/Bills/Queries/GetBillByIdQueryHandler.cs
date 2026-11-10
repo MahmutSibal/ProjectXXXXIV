@@ -1,4 +1,5 @@
 using AppSukran.Application.Abstractions.Persistence;
+using AppSukran.Application.Abstractions.Security;
 using AppSukran.Application.Common.Models;
 using AppSukran.Application.Common.Security;
 using AppSukran.Domain.Entities;
@@ -6,7 +7,7 @@ using MediatR;
 
 namespace AppSukran.Application.Bills.Queries;
 
-public sealed class GetBillByIdQueryHandler(IUnitOfWork unitOfWork, IRestaurantAccessGuard restaurantAccessGuard) : IRequestHandler<GetBillByIdQuery, BillResponse?>
+public sealed class GetBillByIdQueryHandler(IUnitOfWork unitOfWork, IRestaurantAccessGuard restaurantAccessGuard, ICurrentUserService currentUserService) : IRequestHandler<GetBillByIdQuery, BillResponse?>
 {
     public async Task<BillResponse?> Handle(GetBillByIdQuery request, CancellationToken cancellationToken)
     {
@@ -16,7 +17,8 @@ public sealed class GetBillByIdQueryHandler(IUnitOfWork unitOfWork, IRestaurantA
             return null;
         }
 
-        restaurantAccessGuard.EnsureCanAccess(bill.RestaurantId);
+        // Personel: kendi restoranı. QR müşterisi: yalnızca kendi masası.
+        PaymentAuthorization.EnsureCanAccessBill(bill.RestaurantId, bill.TableNo, restaurantAccessGuard, currentUserService);
         return Map(bill);
     }
 

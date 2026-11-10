@@ -1,5 +1,7 @@
 using System.Linq.Expressions;
 using AppSukran.Application.Abstractions.Persistence;
+using AppSukran.Application.Abstractions.Security;
+using AppSukran.Domain.Enums;
 using AppSukran.Application.Common;
 using AppSukran.Application.Common.Models;
 using AppSukran.Application.Common.Security;
@@ -8,7 +10,7 @@ using MediatR;
 
 namespace AppSukran.Application.Orders.Queries;
 
-public sealed class GetOrdersByRestaurantQueryHandler(IUnitOfWork unitOfWork, IRestaurantAccessGuard restaurantAccessGuard) : IRequestHandler<GetOrdersByRestaurantQuery, PagedResult<OrderResponse>>
+public sealed class GetOrdersByRestaurantQueryHandler(IUnitOfWork unitOfWork, IRestaurantAccessGuard restaurantAccessGuard, ICurrentUserService currentUserService) : IRequestHandler<GetOrdersByRestaurantQuery, PagedResult<OrderResponse>>
 {
     public async Task<PagedResult<OrderResponse>> Handle(GetOrdersByRestaurantQuery request, CancellationToken cancellationToken)
     {
@@ -25,7 +27,16 @@ public sealed class GetOrdersByRestaurantQueryHandler(IUnitOfWork unitOfWork, IR
             filter = filter.And(order => order.SessionStatus == status);
         }
 
-        if (request.TableNo is { } tableNo)
+        // QR müşterisi yalnızca KENDİ masasının siparişlerini görür; istediği masa
+        // numarası yok sayılır. Eskiden masa numarası verilmezse restorandaki bütün
+        // masaların siparişleri (sipariş verenlerin adlarıyla) dönüyordu.
+        if (currentUserService.IsInRole(nameof(UserRole.Customer)))
+        {
+            var ownTable = currentUserService.TableNo
+                ?? throw new UnauthorizedAccessException("Masa bilgisi bulunamadı.");
+            filter = filter.And(order => order.TableNo == ownTable);
+        }
+        else if (request.TableNo is { } tableNo)
         {
             filter = filter.And(order => order.TableNo == tableNo);
         }

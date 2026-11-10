@@ -24,6 +24,15 @@ public sealed class RefreshTokenCommandHandler(IUnitOfWork unitOfWork, ITokenSer
         var user = await unitOfWork.Repository<User>().GetByIdAsync(storedRefreshToken.UserId, cancellationToken)
             ?? throw new InvalidOperationException("User not found.");
 
+        // Pasife alınan (ör. işten ayrılan personel) kullanıcı oturumunu yenileyemez.
+        // Eskiden giriş engelleniyordu ama eldeki yenileme jetonu süresiz çalışıyordu.
+        if (!user.IsActive)
+        {
+            storedRefreshToken.RevokedAt = DateTime.UtcNow;
+            await unitOfWork.Repository<RefreshToken>().ReplaceAsync(storedRefreshToken, cancellationToken);
+            throw new InvalidOperationException("Invalid refresh token.");
+        }
+
         storedRefreshToken.RevokedAt = DateTime.UtcNow;
 
         var newRefreshToken = refreshTokenService.GenerateRefreshToken();

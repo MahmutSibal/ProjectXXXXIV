@@ -212,8 +212,44 @@ builder.Services.AddAuthentication(options =>
 
             return Task.CompletedTask;
         },
+
+        // Pasife alınan veya silinen kullanıcının elindeki erişim jetonu süresi dolana
+        // kadar (2 saat) çalışmaya devam ediyordu. Artık her istekte hesabın hâlâ aktif
+        // olduğu denetlenir; veritabanını yormamak için sonuç 30 sn önbellekte tutulur,
+        // yani işten çıkarılan personel en geç 30 sn içinde dışarıda kalır.
+        // QR müşteri jetonlarının bir kullanıcı hesabı yoktur ("qr:" ile başlar); onlar
+        // masa oturumu kapanınca zaten geçersizleşir.
+        OnTokenValidated = async context =>
+        {
+            var userId = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId) || userId.StartsWith("qr:", StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            var services = context.HttpContext.RequestServices;
+            var cache = services.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>();
+            var isActive = await Microsoft.Extensions.Caching.Memory.CacheExtensions.GetOrCreateAsync(
+                cache, $"user-active:{userId}", async entry =>
+                {
+                    entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(30);
+                    var db = services.GetRequiredService<AppSukran.Infrastructure.Persistence.AppSukranDbContext>();
+                    return await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.FirstOrDefaultAsync(
+                        System.Linq.Queryable.Select(
+                            System.Linq.Queryable.Where(
+                                Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.AsNoTracking(db.Set<AppSukran.Domain.Entities.User>()),
+                                user => user.Id == userId),
+                            user => (bool?)user.IsActive));
+                });
+
+            if (isActive != true)
+            {
+                context.Fail("Hesap pasif veya silinmiş.");
+            }
+        },
     };
 });
+builder.Services.AddMemoryCache();
 
 builder.Services.AddAuthorization(options =>
 {

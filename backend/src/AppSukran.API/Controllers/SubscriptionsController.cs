@@ -46,13 +46,10 @@ public sealed class SubscriptionsController(IMediator mediator) : ControllerBase
 
     [HttpPost("restaurant/{restaurantId}/plan")]
     [Authorize(Roles = "SuperAdmin,RestaurantOwner")]
-    public async Task<IActionResult> ChangePlan(string restaurantId, [FromBody] ChangePlanRequest request, CancellationToken cancellationToken)
-    {
-        await mediator.Send(
+    public async Task<ActionResult<ChangePlanResult>> ChangePlan(string restaurantId, [FromBody] ChangePlanRequest request, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(
             new ChangePlanCommand(restaurantId, request.Plan, request.BillingPeriodMonths),
-            cancellationToken);
-        return NoContent();
-    }
+            cancellationToken));
 
     [HttpPost("restaurant/{restaurantId}/cancel")]
     [Authorize(Roles = "SuperAdmin,RestaurantOwner")]

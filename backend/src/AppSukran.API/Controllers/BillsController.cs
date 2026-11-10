@@ -19,6 +19,9 @@ public sealed class BillsController(IMediator mediator) : ControllerBase
         => Ok(await mediator.Send(new GetBillByIdQuery(billId), cancellationToken));
 
     [HttpGet("restaurant/{restaurantId}")]
+    // Restorandaki tüm adisyonlar yalnızca personel içindir; QR müşterisi kendi
+    // hesabını sipariş akışından görür.
+    [Authorize(Roles = "SuperAdmin,RestaurantOwner,Waiter,Kitchen")]
     public async Task<ActionResult<IReadOnlyCollection<BillResponse>>> GetByRestaurant(string restaurantId, CancellationToken cancellationToken)
         => Ok(await mediator.Send(new GetBillsByRestaurantQuery(restaurantId), cancellationToken));
 

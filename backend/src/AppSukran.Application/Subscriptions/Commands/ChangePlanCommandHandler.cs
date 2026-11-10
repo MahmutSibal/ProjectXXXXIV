@@ -13,9 +13,9 @@ public sealed class ChangePlanCommandHandler(
     IUnitOfWork unitOfWork,
     IAuditLogService auditLogService,
     ICurrentUserService currentUserService,
-    IRestaurantAccessGuard restaurantAccessGuard) : IRequestHandler<ChangePlanCommand, Unit>
+    IRestaurantAccessGuard restaurantAccessGuard) : IRequestHandler<ChangePlanCommand, ChangePlanResult>
 {
-    public async Task<Unit> Handle(ChangePlanCommand request, CancellationToken cancellationToken)
+    public async Task<ChangePlanResult> Handle(ChangePlanCommand request, CancellationToken cancellationToken)
     {
         restaurantAccessGuard.EnsureCanAccess(request.RestaurantId);
 
@@ -42,6 +42,38 @@ public sealed class ChangePlanCommandHandler(
         // gönderse bile kullanılmaz.
         var quote = PlanCatalog.Quote(request.Plan, request.BillingPeriodMonths);
         var amount = quote.Total;
+        var planName = PlanCatalog.Get(request.Plan).DisplayName;
+
+        // Ödeme alınmadan paket açılamaz. Ödeme altyapısı (PayTR) bağlanana kadar
+        // işletme sahibinin seçimi SuperAdmin'e talep olarak iletilir.
+        if (!currentUserService.IsInRole(nameof(UserRole.SuperAdmin)))
+        {
+            var restaurant = await unitOfWork.Repository<Restaurant>().GetByIdAsync(request.RestaurantId, cancellationToken);
+            var owner = currentUserService.UserId is { } ownerId
+                ? await unitOfWork.Repository<User>().GetByIdAsync(ownerId, cancellationToken)
+                : null;
+
+            await unitOfWork.Repository<SupportRequest>().InsertAsync(new SupportRequest
+            {
+                RestaurantId = request.RestaurantId,
+                CreatedByUserId = currentUserService.UserId,
+                BusinessName = restaurant?.Name ?? "İşletme",
+                Topic = "Paket talebi",
+                Content = $"{planName} paketi, {request.BillingPeriodMonths} ay. Tutar: {amount / 100m:N2} TL. " +
+                          "Ödeme alındıktan sonra Abonelikler ekranından süre uzatılarak aktifleştirilmeli.",
+                Phone = owner?.Phone ?? string.Empty,
+                IsCalled = false,
+            }, cancellationToken);
+
+            await auditLogService.RecordAsync(
+                "SubscriptionPlanRequested", nameof(Subscription), subscription.Id,
+                $"{planName} paketi, {request.BillingPeriodMonths} ay talep edildi.",
+                currentUserService.UserId, cancellationToken);
+
+            return new ChangePlanResult(false,
+                $"{planName} paketi talebiniz alındı. Ödeme bilgileri için ekibimiz sizinle iletişime geçecek; " +
+                "ödeme onaylanınca paketiniz aktifleşir.");
+        }
 
         var now = DateTime.UtcNow;
         // Süresi henüz dolmamışsa kalan süre kaybolmasın: mevcut dönem sonundan devam et.
@@ -72,9 +104,9 @@ public sealed class ChangePlanCommandHandler(
         await repository.ReplaceAsync(subscription, cancellationToken);
         await auditLogService.RecordAsync(
             "SubscriptionPlanChanged", nameof(Subscription), subscription.Id,
-            $"{PlanCatalog.Get(request.Plan).DisplayName} paketi, {request.BillingPeriodMonths} ay.",
+            $"{planName} paketi, {request.BillingPeriodMonths} ay.",
             currentUserService.UserId, cancellationToken);
 
-        return Unit.Value;
+        return new ChangePlanResult(true, $"{planName} paketi aktifleştirildi.");
     }
 }

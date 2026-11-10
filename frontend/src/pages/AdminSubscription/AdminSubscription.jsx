@@ -54,11 +54,15 @@ export default function AdminSubscription() {
 
     setBusyPlan(plan.plan);
     try {
-      // Kart bilgisi gönderilmezse ödeme dışarıda alınmış sayılır (havale/elden).
-      await subscriptionsApi.changePlan(user.restaurantId, {
+      // Ödeme alınmadan paket açılmaz: işletme sahibinin seçimi ekibe talep olarak
+      // iletilir, ödeme onaylanınca paket aktifleşir.
+      const result = await subscriptionsApi.changePlan(user.restaurantId, {
         plan: plan.plan,
         billingPeriodMonths: billingMonths,
       });
+      if (result?.message) {
+        toast.success(result.message);
+      }
       await load();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Paket değiştirilemedi.');
