@@ -133,6 +133,18 @@ builder.Services.AddRateLimiter(options =>
                 AutoReplenishment = true,
             }));
 
+    // Sitedeki iletişim formu (giriş gerektirmez): IP başına 30 dakikada 5 talep.
+    options.AddPolicy("contact", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "bilinmeyen",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(30),
+                QueueLimit = 0,
+                AutoReplenishment = true,
+            }));
+
     // Giriş ve kayıt. reCAPTCHA projeden kaldırıldıktan sonra bu uçlardaki tek
     // bot/kaba kuvvet koruması budur.
     //

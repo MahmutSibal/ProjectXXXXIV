@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
+import { contactApi } from '../../api/contact.js';
+import { ApiError } from '../../api/client.js';
 import './Contact.css';
 
 const helpTopics = [
@@ -159,6 +161,8 @@ function Contact() {
 
   const [isFormSubmitted, setIsFormSubmitted] =
     useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [formError, setFormError] = useState('');
 
   useEffect(() => {
     const revealElements = document.querySelectorAll(
@@ -198,7 +202,7 @@ function Contact() {
     };
   }, []);
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     const form = event.currentTarget;
@@ -208,8 +212,35 @@ function Contact() {
       return;
     }
 
-    setIsFormSubmitted(true);
-    form.reset();
+    // Talep sunucuya gönderilir; Süper Admin'in Destek ekranına düşer ve
+    // platform e-postasına bildirim gider.
+    const data = new FormData(form);
+    const text = (name) => String(data.get(name) ?? '').trim();
+    const tableCount = Number.parseInt(text('tableCount'), 10);
+
+    setIsSending(true);
+    setFormError('');
+    try {
+      await contactApi.submit({
+        fullName: text('fullName'),
+        businessName: text('businessName'),
+        email: text('email'),
+        phone: text('phone'),
+        city: text('city'),
+        businessType: text('businessType') || null,
+        subject: text('subject') || null,
+        tableCount: Number.isFinite(tableCount) ? tableCount : null,
+        message: text('message'),
+        kvkkAccepted: data.get('kvkk') === 'on',
+        website: text('website'),
+      });
+      setIsFormSubmitted(true);
+      form.reset();
+    } catch (err) {
+      setFormError(err instanceof ApiError ? err.message : 'Talebiniz gönderilemedi. Lütfen tekrar deneyin.');
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleFaqToggle = (faqId) => {
@@ -233,7 +264,7 @@ function Contact() {
 
       <section className="contact-hero">
         <img
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuBuynb6EJ321xq41zkhVgGdbUdkMVU8TYdLECLnBCKe5djhOgPZsFFfKu1ILXhc7hzbNQtp3VWRX8WgWQ4fnB5V8tSLXaQZe7F1LWtOoV0bHNoQBUo3Uh92qRA62RmP_ATmm1yN3nor3f0bDPmHM6D98rvk9uC8GpxhPkg7u6UDLxuhbEDKIDjdW6zrlbGC_5mJljqOd5B4-BYJaD0xTIh1Htohj2phlf7J49klPTfV7w5HXsdHprytU0RmDL1JG892sC4BHRNOG78"
+          src="/images/iletisim-restoran.jpg"
           alt=""
           className="contact-hero__background"
         />
@@ -622,11 +653,28 @@ function Contact() {
                   </label>
                 </div>
 
+                {/* Bot tuzağı: insanlar görmez, botlar doldurur. */}
+                <input
+                  type="text"
+                  name="website"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  aria-hidden="true"
+                  style={{ position: 'absolute', left: '-10000px', width: 1, height: 1, opacity: 0 }}
+                />
+
+                {formError && (
+                  <p role="alert" style={{ color: '#b3261e', margin: '0 0 12px', fontSize: 14 }}>
+                    {formError}
+                  </p>
+                )}
+
                 <button
                   type="submit"
                   className="contact-button contact-button--primary"
+                  disabled={isSending}
                 >
-                  Demo Talebi Gönder
+                  {isSending ? 'Gönderiliyor...' : 'Demo Talebi Gönder'}
 
                   <span className="material-symbols-outlined">
                     arrow_forward
@@ -799,7 +847,7 @@ function Contact() {
             data-reveal
           >
             <img
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuCBB-MuPp9ynlA3_j8gaMTWFNLEYKjLWVhSbJonb_yt2vLX8q_i4YvQEEYFHvK7VQtAmh2LjwXEvs-psXFZ3Pj0lCxIDdmEVkLCvK9IY8CKeTY9JarY1hbTyZtE9AjlNG2aNGEEwL6bA16NvhM6YzC3hxP-SmG9yUzdcu004UrjPX2Pcef9mC-fwQQmU61wKXRzzs6PHoMpxP5fsTi5XFOT73GKCq4FJ7uQRCR0kuW9Bd7Oj850xv3WCXhl5KJt8h7fJH8GApYVZBM"
+              src="/images/iletisim-harita.jpg"
               alt="İzmir harita görünümü"
             />
 

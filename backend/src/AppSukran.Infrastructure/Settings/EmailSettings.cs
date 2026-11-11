@@ -24,6 +24,12 @@ public sealed class EmailSettings
 
     public string FromName { get; set; } = "Şükran App";
 
+    /// <summary>İletişim formu gibi platform bildirimlerinin gideceği adres. Boşsa gönderici adres kullanılır.</summary>
+    public string NotificationAddress { get; set; } = string.Empty;
+
+    /// <summary>E-postalardaki bağlantılar için uygulamanın adresi (ör. https://sukranapp.runasp.net).</summary>
+    public string AppBaseUrl { get; set; } = "http://localhost:5173";
+
     /// <summary>
     /// E-posta kodu WhatsApp'tan daha uzun yaşar: e-postalar birkaç dakika gecikebilir
     /// veya önce spam klasörüne düşebilir.

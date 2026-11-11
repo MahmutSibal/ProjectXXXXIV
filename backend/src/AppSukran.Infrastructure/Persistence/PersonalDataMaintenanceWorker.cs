@@ -72,6 +72,12 @@ public sealed class PersonalDataMaintenanceWorker(
             .Where(t => t.ExpiresAt < sessionCutoff || (t.RevokedAt != null && t.RevokedAt < sessionCutoff))
             .ExecuteDeleteAsync(cancellationToken);
 
+        // Şifre sıfırlama bağlantıları 30 dk geçerli; kayıtları 30 gün sonra silinir.
+        var resets = await context.Set<Domain.Entities.PasswordResetToken>()
+            .Where(t => t.CreatedAt < sessionCutoff)
+            .ExecuteDeleteAsync(cancellationToken);
+        sessions += resets;
+
         var refundCutoff = now - RefundBankDetailsRetention;
         var refunds = await context.Set<Domain.Entities.RefundRequest>()
             .Where(r => r.Status != RefundRequestStatus.Pending && r.ResolvedAt != null && r.ResolvedAt < refundCutoff

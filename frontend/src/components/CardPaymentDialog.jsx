@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import PayTrBadge from './PayTrBadge.jsx';
 
 /**
  * Kartla ödeme öncesi iletişim bilgileri (PayTR her ödemede zorunlu tutar; biz saklamayız).
@@ -75,6 +76,7 @@ export default function CardPaymentDialog({ title, description, defaultBuyer, te
             Kart bilgilerinizi bir sonraki adımda PayTR&apos;nin güvenli ödeme sayfasında gireceksiniz;
             Şükran App kart bilgilerinizi görmez ve saklamaz.
           </p>
+          <div className="flex justify-center"><PayTrBadge compact /></div>
           {testMode && <p className="text-[11px] text-error">Test modu: gerçek çekim yapılmaz.</p>}
 
           {error && (

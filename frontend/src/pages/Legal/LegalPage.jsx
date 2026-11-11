@@ -198,10 +198,7 @@ export default function LegalPage() {
           </p>
         </header>
 
-        <div className="space-y-6 px-5 py-6 sm:px-9 sm:py-8">
-          <p className="rounded-xl border border-[#DFE4E0] bg-[#F8F9FA] px-4 py-3 text-sm text-[#59635D]">
-            Taslak metin. Yayınlanmadan önce şirket bilgileriyle tamamlanıp hukuki kontrolden geçirilmelidir.
-          </p>
+        <div className="space-y-6 px-5 py-6 sm:px-9 sm:py-8">
 
           {page.sections.map(([heading, content]) => (
             <section key={heading}>

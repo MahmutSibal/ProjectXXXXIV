@@ -220,7 +220,7 @@ function About() {
 
       <section className="about-hero">
         <img
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuB-ovjuDhrCCbWk6kQsfYrQvkMiXsjJUIqIt7WoictEEH0iEAcSWW9-vdKs4fdn-6CHr2ph5a14hOc3Gv2KVv9mymYDdpgQGPae6CIiSE3GNoW-XoTRkIAvvZNWrd8X0irA4-f9Zc08_iYLhFVqfPsSpVrSHPsn78IyTiR7dahDyGBDeBoR-yq9qBsswMyO1-wTrfkMrOmtep5FzMhvGpNKtBILjLuOHmOJvtqvy-DbSk73R__cBwWYluot_A3g7TF4iKTG6eI_EaE"
+          src="/images/hakkimizda-tablet.jpg"
           alt=""
           className="about-hero__background"
         />
@@ -278,7 +278,7 @@ function About() {
             <div className="about-hero__visual-border" />
 
             <img
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuB-ovjuDhrCCbWk6kQsfYrQvkMiXsjJUIqIt7WoictEEH0iEAcSWW9-vdKs4fdn-6CHr2ph5a14hOc3Gv2KVv9mymYDdpgQGPae6CIiSE3GNoW-XoTRkIAvvZNWrd8X0irA4-f9Zc08_iYLhFVqfPsSpVrSHPsn78IyTiR7dahDyGBDeBoR-yq9qBsswMyO1-wTrfkMrOmtep5FzMhvGpNKtBILjLuOHmOJvtqvy-DbSk73R__cBwWYluot_A3g7TF4iKTG6eI_EaE"
+              src="/images/hakkimizda-tablet.jpg"
               alt="Modern restoran iç mekânı"
             />
 

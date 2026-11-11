@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth, homePathForRole } from '../../context/AuthContext.jsx';
+import { authApi } from '../../api/auth.js';
 import { ApiError } from '../../api/client.js';
 import './Login.css';
 
@@ -19,7 +20,7 @@ const loginFeatures = [
   },
 ];
 
-export default function Login({ recovery = false }) {
+export default function Login({ recovery = false, resetPassword = false }) {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -86,7 +87,7 @@ export default function Login({ recovery = false }) {
       <section className="login-showcase">
         <img
           className="login-showcase__background"
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuAPQXHklBPL_8cineEVEHPo9G8FzlaLg0nWy3Urlsm8XeMRkdN_q8eEFlXbbC-BS2pE6NeFd2IVTrTqjgK7Q9fABMCdAu4JQeeLIvWr9qmzJo7JYvyoo4Ic0xzA4p7N4JEVsFCsSdNqJsVjiTnhA9I31IgskpPKEDhdxdXQU-QxxQrcFT0AMbQCGdYkgZDX_E4Yk-Lu-0IjQadw6GxUHVv1VruqMgxCl9AHgplMCpk7Wu9o1NT0ledow5oIRSHZ68CRB_1fadi70jE"
+          src="/images/giris-restoran.jpg"
           alt=""
           aria-hidden="true"
         />
@@ -165,7 +166,9 @@ export default function Login({ recovery = false }) {
             </Link>
           </div>
 
-          {recovery ? (
+          {resetPassword ? (
+  <ResetPasswordCard />
+) : recovery ? (
   <PasswordRecoveryCard />
 ) : (
   <div className="login-form-card">
@@ -394,58 +397,166 @@ export default function Login({ recovery = false }) {
 }
 
 function PasswordRecoveryCard() {
+  const [email, setEmail] = useState('');
   const [notice, setNotice] = useState('');
+  const [error, setError] = useState('');
+  const [isSending, setIsSending] = useState(false);
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
-    // Sunucuda e-posta gönderimi henüz yok; sıfırlama destek ekibi üzerinden yapılır.
-    setNotice(
-      'Otomatik şifre sıfırlama henüz kullanılamıyor. Şifrenizi sıfırlamak için destek ekibimize ulaşın; ' +
-        'işletmenizin personeliyseniz işletme sahibiniz şifrenizi panelden sıfırlayabilir.',
-    );
+    setError('');
+    setNotice('');
+    setIsSending(true);
+    try {
+      await authApi.forgotPassword(email.trim());
+      // Hesap olsun olmasın aynı mesaj: kayıtlı e-postalar bu ekrandan öğrenilemesin.
+      setNotice(
+        'Bu e-posta adresiyle kayıtlı bir hesap varsa şifre sıfırlama bağlantısı gönderdik. ' +
+          'Bağlantı 30 dakika geçerlidir; gelen kutunuzda yoksa spam klasörüne bakın.',
+      );
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'İstek gönderilemedi. Lütfen tekrar deneyin.');
+    } finally {
+      setIsSending(false);
+    }
   }
 
   return (
     <div className="login-form-card">
       <header className="login-form-card__header">
         <h1>Şifremi Unuttum</h1>
-        <p>İşletme hesabınıza kayıtlı e-posta adresini girin.</p>
+        <p>Hesabınıza kayıtlı e-posta adresini girin; size şifre sıfırlama bağlantısı gönderelim.</p>
       </header>
+
+      {error && (
+        <div className="login-alert login-alert--error" role="alert">
+          <span className="material-symbols-outlined" aria-hidden="true">error</span>
+          <span>{error}</span>
+        </div>
+      )}
 
       <form className="login-form" onSubmit={handleSubmit}>
         <div className="login-field">
           <label htmlFor="businessRecoveryEmail">E-posta adresi</label>
           <div className="login-input">
-            <span
-              className="login-input__icon material-symbols-outlined"
-              aria-hidden="true"
-            >
-              mail
-            </span>
+            <span className="login-input__icon material-symbols-outlined" aria-hidden="true">mail</span>
             <input
               id="businessRecoveryEmail"
               name="email"
               type="email"
               autoComplete="email"
-              placeholder="isletme@sukran.app"
+              placeholder="ornek@isletme.com"
               required
-              onChange={() => setNotice('')}
+              value={email}
+              onChange={(e) => { setEmail(e.target.value); setNotice(''); setError(''); }}
             />
           </div>
         </div>
 
-        <button type="submit" className="login-submit">
-          Sıfırlama Bağlantısı İste
+        <button type="submit" className="login-submit" disabled={isSending || !email.trim()}>
+          {isSending ? 'Gönderiliyor...' : 'Sıfırlama Bağlantısı Gönder'}
         </button>
       </form>
 
       {notice && (
-        <div className="login-role-info" role="status">
-          <span className="material-symbols-outlined" aria-hidden="true">
-            info
-          </span>
-          <p>{notice}</p>
+        <div className="login-alert login-alert--success" role="status">
+          <span className="material-symbols-outlined" aria-hidden="true">mark_email_read</span>
+          <span>{notice}</span>
         </div>
+      )}
+
+      <p className="login-support">
+        <Link to="/giris-yap">← Giriş ekranına dön</Link>
+      </p>
+    </div>
+  );
+}
+
+function ResetPasswordCard() {
+  const navigate = useNavigate();
+  const [token] = useState(() => new URLSearchParams(window.location.search).get('token') ?? '');
+  const [password, setPassword] = useState('');
+  const [passwordAgain, setPasswordAgain] = useState('');
+  const [error, setError] = useState('');
+  const [done, setDone] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setError('');
+    if (password.length < 8) {
+      setError('Yeni şifre en az 8 karakter olmalı.');
+      return;
+    }
+    if (password !== passwordAgain) {
+      setError('Şifreler aynı değil.');
+      return;
+    }
+    setIsSaving(true);
+    try {
+      await authApi.resetPassword(token, password);
+      setDone(true);
+      window.setTimeout(() => navigate('/giris-yap', { replace: true }), 2500);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Şifre değiştirilemedi. Lütfen tekrar deneyin.');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  if (!token) {
+    return (
+      <div className="login-form-card">
+        <header className="login-form-card__header">
+          <h1>Bağlantı geçersiz</h1>
+          <p>Şifre sıfırlama bağlantısı eksik. E-postadaki bağlantıyı yeniden açın ya da yeni bağlantı isteyin.</p>
+        </header>
+        <p className="login-support"><Link to="/sifremi-unuttum">Yeni bağlantı iste</Link></p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="login-form-card">
+      <header className="login-form-card__header">
+        <h1>Yeni Şifre Belirleyin</h1>
+        <p>Yeni şifreniz en az 8 karakter olmalı. Şifre değişince diğer cihazlardaki oturumlar kapanır.</p>
+      </header>
+
+      {error && (
+        <div className="login-alert login-alert--error" role="alert">
+          <span className="material-symbols-outlined" aria-hidden="true">error</span>
+          <span>{error}</span>
+        </div>
+      )}
+
+      {done ? (
+        <div className="login-alert login-alert--success" role="status">
+          <span className="material-symbols-outlined" aria-hidden="true">check_circle</span>
+          <span>Şifreniz değiştirildi. Giriş ekranına yönlendiriliyorsunuz…</span>
+        </div>
+      ) : (
+        <form className="login-form" onSubmit={handleSubmit}>
+          <div className="login-field">
+            <label htmlFor="newPassword">Yeni şifre</label>
+            <div className="login-input">
+              <span className="login-input__icon material-symbols-outlined" aria-hidden="true">lock</span>
+              <input id="newPassword" type="password" autoComplete="new-password" required minLength={8}
+                value={password} onChange={(e) => setPassword(e.target.value)} />
+            </div>
+          </div>
+          <div className="login-field">
+            <label htmlFor="newPasswordAgain">Yeni şifre (tekrar)</label>
+            <div className="login-input">
+              <span className="login-input__icon material-symbols-outlined" aria-hidden="true">lock</span>
+              <input id="newPasswordAgain" type="password" autoComplete="new-password" required minLength={8}
+                value={passwordAgain} onChange={(e) => setPasswordAgain(e.target.value)} />
+            </div>
+          </div>
+          <button type="submit" className="login-submit" disabled={isSaving}>
+            {isSaving ? 'Kaydediliyor...' : 'Şifremi Değiştir'}
+          </button>
+        </form>
       )}
 
       <p className="login-support">

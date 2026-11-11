@@ -15,6 +15,12 @@ public sealed class SmtpEmailService(
 {
     public bool IsEnabled => options.Value.Enabled && options.Value.IsConfigured;
 
+    public string? NotificationAddress => !IsEnabled ? null
+        : !string.IsNullOrWhiteSpace(options.Value.NotificationAddress) ? options.Value.NotificationAddress
+        : options.Value.FromAddress;
+
+    public string AppBaseUrl => options.Value.AppBaseUrl.TrimEnd('/');
+
     public async Task SendAsync(string toAddress, string subject, string textBody, CancellationToken cancellationToken = default)
     {
         var settings = options.Value;

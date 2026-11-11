@@ -230,7 +230,7 @@ function Home() {
 
       <section className="home-hero">
         <img
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuD1CFa0b3-a3B-6GRFjZeigQTDn3QcFUVt0OtAjkAKaGVsQ1vro6U03MXs3kwGbIaPI88KPDSjj2DeP4LVMgRrCi7QcHNbZxDSD88FVhfcKHbbfSoyi4Rtmj6pHGVO4K2TZocQl_-mOoAV5sN50tRunmB0u14guVRDOnZAut4DVwlvD_4WmcEYVKH-8_NsAwea8o1GgCXOOV5OEWiW9rYkSdUDh7tShie4ci1p4zxFXDEMEkDBvYPqJMbShzw-IpSWc_OJk7twXOWM"
+          src="/images/ana-sayfa-restoran.jpg"
           alt=""
           className="home-hero__background"
         />
@@ -310,7 +310,7 @@ function Home() {
             <div className="home-hero__visual-border" />
 
             <img
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuBeFabfrIO95TwTpuIec5JGh7DBeQ9MnYA9MID-5DgVjfo7AsjDgGgyAYnfegzEPzUVARvAobMpeAvdQ3tEDM1Az9V3cQMFkDYK56YtUzl2N54OQ_TPkrdOht_GgIKhBwXYm3rTsYElySQDv_VJzEvTo23i2G1G-mo8zU61C55ym03j49JASb9IzgHi1B3v8rSkBMXaGcVEPizdDty-d7X7Oz0tBHM1mWYtxJ6GtExgU3usbQukH0GxUDkfSz6WjUdImkIFEg9ncqE"
+              src="/images/sukran-panel-cihazlar.jpg"
               alt="Şükran App restoran yönetim paneli"
               className="home-hero__image"
             />
@@ -530,8 +530,8 @@ function Home() {
             <div className="home-platform__visual-border" />
 
             <img
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuBXsFt-J6UeOi_osy4BC2TuFHnccrH2pToTnZTulKo6oxme0QUFoaOTOA-QAByx_w73ivCXzpkjtRpajG16QnS6MTtxsU6jrDtmGFdpgB8jvBu0LjgvSZH1f9PV7DaBDrSU716wxf8nzFtwtKnYIrfVI7HYgxQAccUNovD0i_ZqyLTO7aTcUSG57HZBuKzGM5xHq2TO2FbIVMORb4hHyXESSnaWtFoqPAN3Y5rSPNcedz4OLu6TZP1C2P82Q6c946wS6lcL1h8bjiI"
-              alt="Şükran App yönetim ekranları"
+              src="/images/kayit-restoran.jpg"
+              alt="Şükran App kullanan bir restoran"
               className="home-platform__image"
             />
 

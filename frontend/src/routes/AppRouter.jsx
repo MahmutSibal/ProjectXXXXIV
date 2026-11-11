@@ -187,6 +187,7 @@ export default function AppRouter() {
           
         />
         <Route path="/sifremi-unuttum" element={<Login recovery />} />
+        <Route path="/sifre-sifirla" element={<Login resetPassword />} />
 
         <Route
           path="/kayit-ol"

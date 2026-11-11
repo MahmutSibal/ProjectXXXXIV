@@ -12,6 +12,7 @@ import {
 } from '../../api/customer.js';
 import { OrderSessionStatus, OrderItemStatus, PaymentStatus, ORDER_ITEM_STATUS_LABEL, formatKurus } from '../../api/enums.js';
 import { toPage, MAX_PAGE_SIZE } from '../../api/pagination.js';
+import PayTrBadge from '../../components/PayTrBadge.jsx';
 import { CardPaymentStatus, waitForCardPayment, readPaymentReturnParams, clearPaymentReturnParams, currentReturnPath } from '../../api/paytr.js';
 import './CustomerMenu.css';
 
@@ -610,6 +611,10 @@ function BillTab({ session, restaurantId, tableNo }) {
               gireceksiniz; Şükran App kart bilgilerinizi görmez ve saklamaz. Nakit ödemek
               isterseniz personele bildirin.
             </p>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'center', margin: '4px 0 10px' }}>
+            <PayTrBadge compact />
           </div>
 
           <button type="button" className="customer-primary-btn" onClick={handlePay} disabled={isProcessing}>

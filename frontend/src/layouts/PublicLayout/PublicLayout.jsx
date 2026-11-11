@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
 
+import PayTrBadge from '../../components/PayTrBadge.jsx';
 import './PublicLayout.css';
 
 const navigationItems = [
@@ -186,6 +187,10 @@ function PublicLayout() {
                 yönetilebilir hale getiren yeni nesil dijital çözüm
                 ortağınız.
               </p>
+
+              <div style={{ marginTop: 16 }}>
+                <PayTrBadge compact dark />
+              </div>
             </div>
 
             <div className="public-footer__column">

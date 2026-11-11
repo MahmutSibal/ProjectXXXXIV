@@ -1,0 +1,14 @@
+# Şükran App — arama motoru kuralları
+# Herkese açık tanıtım sayfaları taranır; paneller, QR menüler ve hesap sayfaları taranmaz.
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /super-admin
+Disallow: /kitchen
+Disallow: /menu/
+Disallow: /menu-onizleme
+Disallow: /hesabim
+Disallow: /sifre-sifirla
+Disallow: /sifremi-unuttum
+
+Sitemap: https://sukranapp.runasp.net/sitemap.xml

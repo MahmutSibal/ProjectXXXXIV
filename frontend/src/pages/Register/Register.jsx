@@ -260,7 +260,7 @@ function Register() {
 
       <section className="register-showcase">
         <img
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuDQNVwZGy97PECG452dVtTW4t0iDYoGgrek1nVB_FRsbQ4J1MF0XpV1kPkhNGgwu8pQLY0paLeAL1I_Igc2eXlJA6VSm2nykFSNY6ZHus6PNPjNRfqSKxZKRi7u0pYWAygMf7dccvyTKY2gJmScxKaxl2v-pgA73hLFVWwep88fiucomdJjfekINtELiyDkvznK049YhUC2VGWLM7q6L0b27Xk-iJGZBRmn9HNb8uf9Fvd8uyW5JOs8FZ7pCo1zi0ShUAYn5MrTgWc"
+          src="/images/kayit-restoran.jpg"
           alt=""
           className="register-showcase__background"
         />

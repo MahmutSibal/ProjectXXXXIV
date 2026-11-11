@@ -1,3 +1,5 @@
+// Vite derlemede dosyayı paketler; '/src/...' adresi canlıda çalışmaz.
+import managementScreen from '../../assets/img/screen.png';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -215,7 +217,7 @@ function Services() {
 
       <section className="services-hero">
         <img
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuB5WpF-kHr_wfalvRZO6t7UywMmS-qheCiGDZqDKjlkMgra3r-S0Z4-rCxra3EQWqSMG2BtP4iGqy35lJl1Umqq8QuTLQPdJQ_ZHpYlc4ZeuKqjrsDcJO5xjnxikmroV9PO9_EBUd2CJZQL1rg056777u1gGl00e9JTrAiT5cL8w-gWCWxMdQQcB5a3C8pxkuSociOe1goIX6PltDeBkb2c0iobSZp_1PL7QD06oVCZtvD3aad5EPs3iVJVV6F1Mliy44sMJ_ivrqc"
+          src="/images/hizmetler-restoran.jpg"
           alt=""
           className="services-hero__background"
         />
@@ -283,7 +285,7 @@ function Services() {
               <div className="services-hero__visual-frame-border" />
 
               <img
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuB2wVkBIl_GFQmqmw-XDrjID_zFbmn7bmvQPvpjpzdnRuGs32OEBK2eN8-Qsb_Pic3nHiJWZwlNNZffRgdc-iRvT9zTFwkkvMgZxIbTsqFUUJlFPi-8aoKYZ8p1n-qMXEmktK9BDi9ugIJfQDWzr6c4vrFoSiZxtpDDgFeoGVkS1iGnPfhewRaD1v1p_gLmiBTYAAWHOr8114BlGaoWGfHdnKFdsYW378k5yH0q24FIapiZTIcREbHSDZtfWL9vsZOjBIzJG63waX4"
+                src="/sukranapp.png?v=2"
                 alt="Şükran App restoran teknolojileri"
               />
             </div>
@@ -338,7 +340,7 @@ function Services() {
 
             <div className="services-management__image-frame">
   <img
-    src="/src/assets/img/screen.png"
+    src={managementScreen}
     alt="Şükran App yönetim paneli"
   />
 </div>

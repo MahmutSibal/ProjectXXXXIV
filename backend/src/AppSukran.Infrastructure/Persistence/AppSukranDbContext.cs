@@ -25,6 +25,7 @@ public sealed class AppSukranDbContext : DbContext
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<Bill> Bills => Set<Bill>();
     public DbSet<CardPayment> CardPayments => Set<CardPayment>();
+    public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<Event> Events => Set<Event>();
     public DbSet<SupportRequest> SupportRequests => Set<SupportRequest>();
