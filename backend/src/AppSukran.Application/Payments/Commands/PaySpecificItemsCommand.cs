@@ -2,6 +2,5 @@ using MediatR;
 
 namespace AppSukran.Application.Payments.Commands;
 
-public sealed record PaySpecificItemsCommand(string BillId, IReadOnlyCollection<string> ItemIds, string PaidByUserId, string? CustomerCardId = null, string? CardNumber = null, string? Cvc = null, AppSukran.Application.Abstractions.Payments.PaymentBuyer? Buyer = null) : IRequest<PaymentResultDto>;
-
-public sealed record PaymentResultDto(string BillId, long PaidAmount, long RemainingAmount, string Status, string? TransactionId = null, string? Provider = null);
+/// <summary>Personelin seçili kalemlerin masada (nakit / POS) ödendiğini işlemesi.</summary>
+public sealed record PaySpecificItemsCommand(string BillId, IReadOnlyCollection<string> ItemIds, string PaidByUserId) : IRequest<PaymentResultDto>;

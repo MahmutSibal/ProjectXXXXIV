@@ -9,6 +9,16 @@ import {
 import { formatKurus } from '../../api/enums.js';
 import { billingPeriodLabel } from '../../api/billing.js';
 import { ApiError } from '../../api/client.js';
+import CardPaymentDialog from '../../components/CardPaymentDialog.jsx';
+import {
+  payTrApi,
+  CardPaymentStatus,
+  submitCardToPayTr,
+  waitForCardPayment,
+  readPaymentReturnParams,
+  clearPaymentReturnParams,
+  currentReturnPath,
+} from '../../api/paytr.js';
 
 function statusClass(status) {
   if (status === SubscriptionStatus.Active) return 'bg-primary-container text-on-primary-container';
@@ -26,7 +36,6 @@ export default function AdminSubscription() {
   const [error, setError] = useState('');
   const [billingMonths, setBillingMonths] = useState(1);
   const [busyPlan, setBusyPlan] = useState(null);
-
   const load = () =>
     Promise.all([
       subscriptionsApi.getByRestaurant(user.restaurantId).catch(() => null),
@@ -35,6 +44,45 @@ export default function AdminSubscription() {
       setSubscription(subscriptionData);
       setPlans(plansData);
     });
+
+  // PayTR açıksa paket kartla ödenir; kapalıysa seçim ekibe talep olarak gider.
+  const [payTr, setPayTr] = useState({ available: false, testMode: false });
+  const [payingPlan, setPayingPlan] = useState(null);
+  const [paymentReturn] = useState(() => readPaymentReturnParams());
+
+  useEffect(() => {
+    payTrApi.getStatus().then(setPayTr).catch(() => setPayTr({ available: false, testMode: false }));
+  }, []);
+
+  // PayTR'den dönüş: sonuç yalnızca PayTR'nin sunucuya bildirimiyle kesinleşir.
+  useEffect(() => {
+    if (!paymentReturn) return;
+    clearPaymentReturnParams();
+    waitForCardPayment(payTrApi.getPayment, paymentReturn.merchantOid)
+      .then((payment) => {
+        if (payment.status === CardPaymentStatus.Succeeded) {
+          toast.success('Ödemeniz alındı, paketiniz aktifleştirildi.');
+          load();
+        } else if (payment.status === CardPaymentStatus.Failed) {
+          toast.error(payment.failReason ? `Ödeme tamamlanamadı: ${payment.failReason}` : 'Ödeme tamamlanamadı. Kartınızdan çekim yapılmadı.');
+        } else {
+          toast.error('Ödemenin sonucu henüz gelmedi. Birkaç dakika sonra sayfayı yenileyin.');
+        }
+      })
+      .catch((err) => toast.error(err instanceof ApiError ? err.message : 'Ödeme sonucu alınamadı.'));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paymentReturn]);
+
+  const handleCardPayment = async (card, buyer) => {
+    const started = await payTrApi.startSubscriptionPayment({
+      restaurantId: user.restaurantId,
+      plan: payingPlan.plan,
+      billingPeriodMonths: billingMonths,
+      email: buyer.email.trim(),
+      returnPath: currentReturnPath(),
+    });
+    submitCardToPayTr(started, card, buyer);
+  };
 
   useEffect(() => {
     if (!user?.restaurantId) {
@@ -49,6 +97,11 @@ export default function AdminSubscription() {
   }, [user?.restaurantId]);
 
   const handleSelectPlan = async (plan) => {
+    if (payTr.available) {
+      setPayingPlan(plan);
+      return;
+    }
+
     const label = billingMonths === 12 ? 'yıllık' : 'aylık';
     if (!window.confirm(`${plan.displayName} paketine ${label} olarak geçmek istediğinize emin misiniz?`)) return;
 
@@ -278,10 +331,22 @@ export default function AdminSubscription() {
         </div>
 
         <p className="text-[11px] text-on-surface-variant">
-          Paket seçiminiz kaydedilir; ödeme bilgileri (havale/EFT ya da online ödeme)
-          için ekibimiz sizinle iletişime geçer.
+          {payTr.available
+            ? 'Paket ödemesi PayTR güvenli ödeme altyapısıyla kartla alınır; ödeme onaylanınca paketiniz hemen aktifleşir.'
+            : 'Paket seçiminiz kaydedilir; ödeme bilgileri (havale/EFT) için ekibimiz sizinle iletişime geçer.'}
         </p>
       </section>
+
+      {payingPlan && (
+        <CardPaymentDialog
+          title={`${payingPlan.displayName} paketi`}
+          description={billingPeriodLabel(billingMonths)}
+          testMode={payTr.testMode}
+          defaultBuyer={{ fullName: user?.name, email: user?.email, phone: user?.phone, address: user?.address }}
+          onSubmit={handleCardPayment}
+          onCancel={() => setPayingPlan(null)}
+        />
+      )}
     </div>
   );
 }

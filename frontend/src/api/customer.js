@@ -28,21 +28,16 @@ export const customerBillsApi = {
   create: (payload) => customerApi.post('/bills', payload),
 };
 
-/**
- * QR müşterisinin ödeme kartı. Kart numarası sunucuda SAKLANMAZ; yalnızca
- * özeti, markası ve son 4 hanesi tutulur (CustomerCard).
- */
-export const customerCardsApi = {
-  create: (payload) => customerApi.post('/customercards', payload),
-  getMine: () => customerApi.get('/customercards/me'),
-};
-
 export const customerPaymentsApi = {
   // İşletme kartla ödeme alıyor mu? Kapalıysa ödeme formu hiç gösterilmez.
   getOnlinePaymentStatus: (restaurantId) =>
     apiRequest(`/restaurants/${restaurantId}/online-payment`, { auth: false }),
-  splitEqually: (payload) => customerApi.post('/payments/split-equally', payload),
-  paySpecificItems: (payload) => customerApi.post('/payments/specific-items', payload),
+
+  // PayTR ile kartla ödeme. Sunucu yalnızca imzalı formu döner; kart bilgisi
+  // sunucumuza HİÇ gönderilmez, tarayıcı doğrudan PayTR'ye gönderir (bkz. paytr.js).
+  // { billId, itemIds?, amount?, email, returnPath } -> { merchantOid, amountMinor, testMode, postUrl, fields }
+  startCardPayment: (payload) => customerApi.post('/paytr/table-payments', payload),
+  getCardPayment: (merchantOid) => customerApi.get(`/paytr/payments/${encodeURIComponent(merchantOid)}`),
 };
 
 export const customerReviewsApi = {

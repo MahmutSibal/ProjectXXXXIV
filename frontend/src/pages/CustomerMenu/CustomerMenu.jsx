@@ -8,11 +8,11 @@ import {
   customerOrdersApi,
   customerBillsApi,
   customerPaymentsApi,
-  customerCardsApi,
   customerReviewsApi,
 } from '../../api/customer.js';
 import { OrderSessionStatus, OrderItemStatus, PaymentStatus, ORDER_ITEM_STATUS_LABEL, formatKurus } from '../../api/enums.js';
 import { toPage, MAX_PAGE_SIZE } from '../../api/pagination.js';
+import { CardPaymentStatus, submitCardToPayTr, waitForCardPayment, readPaymentReturnParams, clearPaymentReturnParams, currentReturnPath } from '../../api/paytr.js';
 import './CustomerMenu.css';
 
 const TABS = [
@@ -378,6 +378,30 @@ function BillTab({ session, restaurantId, tableNo }) {
   const [buyer, setBuyer] = useState({ fullName: '', email: '', address: '', phone: '' });
   // null = henüz bilinmiyor; false ise kart ödemesi kapalı, form gösterilmez.
   const [onlinePayment, setOnlinePayment] = useState(null);
+  // PayTR 3D Secure sonrası bu sayfaya ?odeme=...&oid=... ile dönülür. Yönlendirme sonucu
+  // kesin değildir; ödeme yalnızca PayTR'nin sunucumuza bildirimiyle onaylanır.
+  const [paymentReturn] = useState(() => readPaymentReturnParams());
+  const [checkingPayment, setCheckingPayment] = useState(() => Boolean(paymentReturn));
+  const [testMode, setTestMode] = useState(false);
+
+  useEffect(() => {
+    const returned = paymentReturn;
+    if (!returned) return;
+
+    clearPaymentReturnParams();
+    waitForCardPayment(customerPaymentsApi.getCardPayment, returned.merchantOid)
+      .then((payment) => {
+        if (payment.status === CardPaymentStatus.Succeeded) {
+          setPaid(true);
+        } else if (payment.status === CardPaymentStatus.Failed) {
+          setError(payment.failReason ? `Ödeme tamamlanamadı: ${payment.failReason}` : 'Ödeme tamamlanamadı. Kartınızdan çekim yapılmadı.');
+        } else {
+          setError('Ödemenin sonucu henüz gelmedi. Birkaç dakika sonra sayfayı yenileyin; çekim yapıldıysa hesabınız kapanmış görünecektir.');
+        }
+      })
+      .catch((err) => setError(err.message ?? 'Ödeme sonucu alınamadı.'))
+      .finally(() => setCheckingPayment(false));
+  }, [paymentReturn]);
 
   useEffect(() => {
     customerPaymentsApi
@@ -444,8 +468,8 @@ function BillTab({ session, restaurantId, tableNo }) {
       setError('Son kullanma yılını 4 haneli girin (örn. 2030).');
       return;
     }
-    if (!/^\d{3,4}$/.test(card.cvc)) {
-      setError('CVC 3 veya 4 haneli olmalı.');
+    if (!/^\d{3}$/.test(card.cvc)) {
+      setError('CVC 3 haneli olmalı.');
       return;
     }
     if (card.holder.trim().length < 3) {
@@ -456,8 +480,9 @@ function BillTab({ session, restaurantId, tableNo }) {
       setError('Ad soyadınızı girin.');
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyer.email.trim())) {
-      setError('Geçerli bir e-posta adresi girin.');
+    // PayTR e-postada Türkçe karakter kabul etmiyor.
+    if (!/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(buyer.email.trim())) {
+      setError('Geçerli bir e-posta adresi girin (Türkçe karakter olmadan).');
       return;
     }
     if (buyer.address.trim().length < 5) {
@@ -472,40 +497,28 @@ function BillTab({ session, restaurantId, tableNo }) {
     setIsProcessing(true);
     setError('');
     try {
-      // Kart, ödeme için önce kaydedilir; tahsilat sunucuda bu kartla yapılır.
-      // Kart numarası sunucuda saklanmaz, yalnızca özeti ve son 4 hanesi tutulur.
-      const saved = await customerCardsApi.create({
-        cardholderName: card.holder.trim(),
-        cardNumber: digits,
-        expiryMonth: Number(card.month),
-        expiryYear: Number(card.year),
-        cvv: card.cvc,
-        isDefault: false,
-      });
-
-      await customerPaymentsApi.splitEqually({
+      // Sunucu tutarı kendisi hesaplar ve PayTR'ye gidecek imzalı formu döner.
+      // Kart bilgisi ve ad/adres/telefon sunucumuza GÖNDERİLMEZ; yalnızca e-posta
+      // (PayTR imzaya dahil ettiği için) gider ve o da saklanmaz.
+      const started = await customerPaymentsApi.startCardPayment({
         billId: bill.id,
-        personCount: 1,
-        paidByUserId: session.tableSessionId,
-        customerCardId: saved.id,
-        cardNumber: digits,
-        cvc: card.cvc,
-        buyer: {
-          fullName: buyer.fullName.trim(),
-          email: buyer.email.trim(),
-          address: buyer.address.trim(),
-          phone: buyer.phone.trim(),
-        },
+        email: buyer.email.trim(),
+        returnPath: currentReturnPath(),
       });
-      setPaid(true);
+      setTestMode(Boolean(started.testMode));
+      // Sayfa PayTR'nin 3D Secure ekranına geçer.
+      submitCardToPayTr(started, card, buyer);
     } catch (err) {
-      setError(err.message ?? 'Ödeme işlemi başarısız oldu.');
-    } finally {
+      setError(err.message ?? 'Ödeme başlatılamadı.');
       setIsProcessing(false);
     }
   };
 
   if (isLoading) return <p className="customer-empty">Yükleniyor...</p>;
+
+  if (checkingPayment) {
+    return <p className="customer-empty">Ödemeniz kontrol ediliyor, lütfen bekleyin...</p>;
+  }
 
   if (paid) {
     return (
@@ -663,8 +676,10 @@ function BillTab({ session, restaurantId, tableNo }) {
             </div>
 
             <p className="customer-card-note">
-              Ödeme güvenli ödeme altyapısı üzerinden alınır. Nakit ödemek isterseniz personele bildirin.
+              Kart bilgileriniz doğrudan PayTR güvenli ödeme sayfasına iletilir; Şükran App kart
+              bilgilerinizi görmez ve saklamaz. Nakit ödemek isterseniz personele bildirin.
             </p>
+            {testMode && <p className="customer-card-note">Test modu: gerçek çekim yapılmaz.</p>}
           </div>
 
           <button type="button" className="customer-primary-btn" onClick={handlePay} disabled={isProcessing}>

@@ -13,4 +13,3 @@ export * from './support.js';
 export * from './users.js';
 export * from './auditLogs.js';
 export * from './reviews.js';
-export * from './customerCards.js';

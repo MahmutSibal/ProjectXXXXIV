@@ -41,7 +41,17 @@ public static class DependencyInjection
             }
             services.Configure<Settings.SuperAdminSettings>(configuration.GetSection("SuperAdmin"));
             services.Configure<Settings.IntegrationSettings>(configuration.GetSection("Integration"));
-            services.Configure<Settings.PaymentSettings>(configuration.GetSection("Payment"));
+            services.Configure<Settings.PayTrSettings>(configuration.GetSection("PayTr"));
+            // PayTR anahtarları appsettings'e yazılmaz; ortam değişkeninden okunur.
+            var payTrId = Environment.GetEnvironmentVariable("SUKRAN_PAYTR_MERCHANT_ID");
+            var payTrKey = Environment.GetEnvironmentVariable("SUKRAN_PAYTR_MERCHANT_KEY");
+            var payTrSalt = Environment.GetEnvironmentVariable("SUKRAN_PAYTR_MERCHANT_SALT");
+            services.PostConfigure<Settings.PayTrSettings>(settings =>
+            {
+                if (!string.IsNullOrWhiteSpace(payTrId)) settings.MerchantId = payTrId.Trim();
+                if (!string.IsNullOrWhiteSpace(payTrKey)) settings.MerchantKey = payTrKey.Trim();
+                if (!string.IsNullOrWhiteSpace(payTrSalt)) settings.MerchantSalt = payTrSalt.Trim();
+            });
             services.Configure<Settings.WhatsAppSettings>(configuration.GetSection("WhatsApp"));
             services.Configure<Settings.EmailSettings>(configuration.GetSection("Email"));
 
@@ -77,7 +87,6 @@ public static class DependencyInjection
         services.AddScoped<ITokenService, Security.JwtTokenService>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IPasswordHashingService, PasswordHashingService>();
-        services.AddScoped<ICardNumberProtectionService, CardNumberProtectionService>();
         services.AddSingleton<ISecretProtectionService, SecretProtectionService>();
         services.AddScoped<IRefreshTokenService, RefreshTokenService>();
         services.AddScoped<IOrderRealtimePublisher, SignalROrderRealtimePublisher>();
@@ -86,30 +95,10 @@ public static class DependencyInjection
             Maintenance.ServerShutdownState>();
         services.AddHttpClient<IPosBridgeService, HttpPosBridgeService>();
 
-        // Ödeme sağlayıcısı appsettings "Payment:Provider" değerine göre seçilir:
-        // "Fake" (simülasyon, geliştirme) ya da "None" (gerçek sağlayıcı yok, kart
-        // tahsilatı reddedilir). PayTR entegrasyonu buraya eklenecek.
-        services.AddScoped<FakePaymentGateway>();
-        services.AddScoped<UnavailablePaymentGateway>();
-        services.AddScoped<IPaymentGateway>(sp =>
-        {
-            var settings = sp.GetRequiredService<IOptions<Settings.PaymentSettings>>().Value;
-            IPaymentGateway gateway = settings.IsFake
-                ? sp.GetRequiredService<FakePaymentGateway>()
-                : sp.GetRequiredService<UnavailablePaymentGateway>();
-
-            // Aktif sağlayıcıyı görünür kıl: yapılandırma okunmadığında sessizce
-            // yanlış sağlayıcıya düşülüp "ödeme çalışıyor" sanılmasın.
-            sp.GetRequiredService<ILogger<IPaymentGateway>>()
-                .LogInformation("[Payment] Aktif sağlayıcı: {Provider}", gateway.Provider);
-
-            return gateway;
-        });
-
-        // Masa ödemeleri için ayrı çözümleyici; global IPaymentGateway yalnızca
-        // platformun abonelik tahsilatları içindir.
-        services.AddSingleton<IPaymentPlatformInfo, PaymentPlatformInfo>();
-        services.AddScoped<IRestaurantPaymentGatewayResolver, RestaurantPaymentGatewayResolver>();
+        // Kartla ödeme yalnızca PayTR üzerinden alınır (Direkt API). Kart bilgisi sunucumuza
+        // hiç gelmez: tarayıcı doğrudan PayTR'ye gönderir, sonuç bildirim ucuna (callback) gelir.
+        services.AddHttpClient<IPayTrService, PayTrService>(client => client.Timeout = TimeSpan.FromSeconds(30));
+        services.AddScoped<IPaymentPlatformInfo, PaymentPlatformInfo>();
 
         // WhatsApp doğrulama (ayrı wppconnect servisi ile konuşur).
         // Varsayılan 100 sn çok uzun: servis takılırsa kullanıcı kayıt ekranında
@@ -130,6 +119,7 @@ public static class DependencyInjection
         services.AddHostedService<DatabaseMigrationInitializer>();
         services.AddHostedService<SuperAdminSeeder>();
         services.AddHostedService<SubscriptionExpiryWorker>();
+        services.AddHostedService<Payments.PayTrTransferWorker>();
 
         return services;
     }

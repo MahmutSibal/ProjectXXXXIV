@@ -31,16 +31,63 @@ setx JWT_SIGNING_KEY "buraya-uretilen-anahtar" /M
 
 > Not: `setx` ile tanımlanan değişkenler yalnızca yeni açılan süreçlerde görünür; IIS/servis yeniden başlatılmalıdır.
 
-## 1.0. Ödeme sağlayıcısı — GÜNCEL DURUM (iyzico kaldırıldı)
+## 1.0. Ödeme sağlayıcısı — PayTR (Direkt API + Platform Transfer)
 
-> **iyzico projeden kaldırıldı; yerine PayTR (pazaryeri) entegre edilecek.** Aşağıdaki
-> 1.1 ve 1.7.1 bölümlerindeki iyzico ayrıntıları yalnızca geçmiş kayıt içindir.
+> iyzico kaldırıldı. Aşağıdaki 1.1 ve 1.7.1 bölümlerindeki iyzico ayrıntıları yalnızca
+> geçmiş kayıt içindir. `Payment:Provider` ayarı ve "Fake" simülasyon da kaldırıldı.
 
-| `Payment:Provider` | Davranış | Nerede |
-|---|---|---|
-| `None` | Gerçek sağlayıcı yok; her kart tahsilatı **reddedilir**, QR menü kart formunu göstermez | Production (`appsettings.Production.json` ve yayın betiği) |
-| `Fake` | Simülasyon; her geçerli kartı kabul eder | Yalnızca geliştirme. **Canlıda asla** — para alınmadan adisyon "ödendi" görünür |
+### Kart verisi bizde TUTULMAZ
 
+- Kart formu bizim sayfamızda durur ama form **doğrudan** `https://www.paytr.com/odeme`
+  adresine gönderilir. Kart numarası, son kullanma, CVV, kart sahibi, müşterinin adı /
+  adresi / telefonu sunucumuza **hiç gelmez**. Sunucu yalnızca PayTR imzasını hesaplar
+  (bunun için e-postayı görür, saklamaz).
+- Eski "müşteri kartı" tablosu (`CustomerCards`: kart özeti, son 4 hane, kart sahibi,
+  son kullanma) migration `PayTrCardPaymentsRemoveStoredCards` ile **silinir**. Canlıya
+  almadan önce veritabanı yedeği alın.
+- `CardPayments` tablosu yalnızca sipariş no, tutar, durum ve transfer durumunu tutar.
+
+### Akış
+
+1. Müşteri (QR) ya da işletme sahibi (paket) "Öde" der → `POST /api/paytr/table-payments`
+   veya `/api/paytr/subscription-payments`. Tutar sunucuda hesaplanır, imzalı form döner.
+2. Tarayıcı kartı forma ekleyip PayTR'ye gönderir, 3D Secure yapılır.
+3. PayTR sonucu **Bildirim URL**'ye gönderir: `POST /api/paytr/callback`. Ödeme YALNIZCA
+   burada, imza doğrulandıktan sonra onaylanır (hesap kapanır / paket aktifleşir).
+   Yanıt düz metin `OK`. Aynı bildirim birden çok gelirse yalnızca ilki işlenir.
+4. Müşteri `GET|POST /api/paytr/return/{oid}` üzerinden sayfaya döner; sayfa kesin sonucu
+   `GET /api/paytr/payments/{oid}` ile sorgular.
+5. Masa ödemelerinde restoranın payı `PayTrTransferWorker` ile ertesi sabah (TR saati
+   00:30–09:30; PayTR kuralı: aynı gün olmaz, en geç 10:00) Platform Transfer API'sine
+   gönderilir. Pay = ödenen − komisyon − %1 stopaj (KDV hariç tutar üzerinden;
+   `PayTr:FoodVatPercent`, varsayılan %10). Restoranın komisyon oranı tanımlı değilse
+   transfer yapılmaz ve "Komisyon oranı tanımlı değil" hatası yazılır.
+6. 60 dk içinde sonuç gelmeyen ödeme "zaman aşımı" olur, rezerve kalemler serbest kalır.
+   Geç gelen başarılı bildirim yine işlenir.
+
+### Kurulum
+
+1. PayTR panelinde **Bildirim URL**: `https://mahmutapp.tryasp.net/api/paytr/callback`
+2. Deploy'dan önce aynı PowerShell penceresinde (yalnızca ilk kez; sonra canlıdan taşınır):
+
+   ```powershell
+   $env:SUKRAN_PAYTR_MERCHANT_ID   = "Mağaza No"
+   $env:SUKRAN_PAYTR_MERCHANT_KEY  = "Mağaza Parola"
+   $env:SUKRAN_PAYTR_MERCHANT_SALT = "Mağaza Gizli Anahtar"
+   ```
+
+3. Varsayılanlar: test modu **açık**, restoran transferi **kapalı**. Canlıya geçerken
+   (PayTR mağazayı canlı moda aldıktan ve anahtarlar yenilendikten sonra):
+
+   ```powershell
+   $env:SUKRAN_PAYTR_TEST_MODE = "false"
+   $env:SUKRAN_PAYTR_TRANSFERS = "true"
+   ```
+
+4. Her restoran için Süper Admin'den komisyon oranı ve hakediş günü girilmeli.
+
+- Kartla ödeme için işletmenin IBAN'ı ve hesap sahibi adı zorunludur; yoksa kart formu
+  hata verir (para restorana aktarılamayacağı için).
 - Masa ödemesinde müşteriden ad soyad, e-posta, adres ve telefon alınır (PayTR zorunlu tutar).
 - İşletmenin ödeme aktarım hesabı: İşletme Profili → "Ödeme ve IBAN Bilgileri" (IBAN, hesap
   sahibi unvanı ve ad soyad). Valör ve komisyonu SuperAdmin → Transfer İşlemi'nden belirler.

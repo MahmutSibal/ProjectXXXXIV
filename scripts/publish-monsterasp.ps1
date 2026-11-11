@@ -112,9 +112,28 @@ $vars = [ordered]@{
     'SUKRAN_SUPERADMIN_PASSWORD'   = [Environment]::GetEnvironmentVariable('SUKRAN_SUPERADMIN_PASSWORD')
     # AllowedHosts yanlışsa her istek 400 döner — MonsterASP alan adı buraya yazılmalı.
     'AllowedHosts'                 = $SiteHost
-    # Gerçek ödeme sağlayıcısı (PayTR) bağlanana kadar kart tahsilatı kapalı; "Fake"
-    # canlıda ASLA kullanılmamalı (her kartı kabul eder, para alınmadan "ödendi" görünür).
-    'Payment__Provider'            = 'None'
+}
+
+# PayTR (kartla ödeme). Üç anahtar da tanımlıysa açılır; yoksa kart ödemesi kapalı kalır.
+# Anahtarlar PayTR Mağaza Paneli > Destek & Kurulum > Entegrasyon Bilgileri sayfasındadır.
+$payTrId   = [Environment]::GetEnvironmentVariable('SUKRAN_PAYTR_MERCHANT_ID')
+$payTrKey  = [Environment]::GetEnvironmentVariable('SUKRAN_PAYTR_MERCHANT_KEY')
+$payTrSalt = [Environment]::GetEnvironmentVariable('SUKRAN_PAYTR_MERCHANT_SALT')
+if (-not [string]::IsNullOrWhiteSpace($payTrId) -and -not [string]::IsNullOrWhiteSpace($payTrKey) -and -not [string]::IsNullOrWhiteSpace($payTrSalt)) {
+    # Test modu varsayılan AÇIK: canlıya geçerken bilerek "false" verilmeli.
+    $payTrTest = [Environment]::GetEnvironmentVariable('SUKRAN_PAYTR_TEST_MODE')
+    if ([string]::IsNullOrWhiteSpace($payTrTest)) { $payTrTest = 'true' }
+    $payTrTransfers = [Environment]::GetEnvironmentVariable('SUKRAN_PAYTR_TRANSFERS')
+    if ([string]::IsNullOrWhiteSpace($payTrTransfers)) { $payTrTransfers = 'false' }
+
+    $vars['PayTr__Enabled']             = 'true'
+    $vars['PayTr__TestMode']            = $payTrTest.ToLowerInvariant()
+    $vars['PayTr__DebugOn']             = $payTrTest.ToLowerInvariant()
+    $vars['PayTr__TransfersEnabled']    = $payTrTransfers.ToLowerInvariant()
+    $vars['PayTr__AppBaseUrl']          = $FrontendOrigin[0].TrimEnd('/')
+    $vars['SUKRAN_PAYTR_MERCHANT_ID']   = $payTrId.Trim()
+    $vars['SUKRAN_PAYTR_MERCHANT_KEY']  = $payTrKey.Trim()
+    $vars['SUKRAN_PAYTR_MERCHANT_SALT'] = $payTrSalt.Trim()
 }
 
 # CORS kaynakları dizidir; ASP.NET Core bunları Cors__AllowedOrigins__0, __1 ...
@@ -196,7 +215,7 @@ foreach ($key in $vars.Keys) {
     # TOKEN eklenmemişti ve SUKRAN_WHATSAPP_TOKEN ekrana AÇIK yazıldı.
     # Liste yerine "aksi ispatlanana kadar sır say" yaklaşımı daha güvenli olurdu;
     # şimdilik desen genişletildi — yeni bir sır eklerken buraya da bakın.
-    $isSecret = $key -match 'PASSWORD|KEY|SECRET|CONNECTION|TOKEN|CREDENTIAL'
+    $isSecret = $key -match 'PASSWORD|KEY|SECRET|SALT|CONNECTION|TOKEN|CREDENTIAL'
     $shown = if ($isSecret) { '********' } else { $vars[$key] }
     "    {0,-30} = {1}" -f $key, $shown | Write-Host
 }

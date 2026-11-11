@@ -2,4 +2,5 @@ using MediatR;
 
 namespace AppSukran.Application.Payments.Commands;
 
-public sealed record SplitEquallyCommand(string BillId, int PersonCount, string PaidByUserId, string? CustomerCardId = null, string? CardNumber = null, string? Cvc = null, AppSukran.Application.Abstractions.Payments.PaymentBuyer? Buyer = null) : IRequest<PaymentResultDto>;
+/// <summary>Personelin kalan tutarın eşit payının masada (nakit / POS) ödendiğini işlemesi.</summary>
+public sealed record SplitEquallyCommand(string BillId, int PersonCount, string PaidByUserId) : IRequest<PaymentResultDto>;

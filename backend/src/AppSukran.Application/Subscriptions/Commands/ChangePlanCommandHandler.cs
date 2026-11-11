@@ -75,31 +75,8 @@ public sealed class ChangePlanCommandHandler(
                 "ödeme onaylanınca paketiniz aktifleşir.");
         }
 
-        var now = DateTime.UtcNow;
-        // Süresi henüz dolmamışsa kalan süre kaybolmasın: mevcut dönem sonundan devam et.
-        var periodStart = subscription.CurrentPeriodEnd > now && subscription.Status != SubscriptionStatus.Cancelled
-            ? subscription.CurrentPeriodEnd
-            : now;
-        var periodEnd = periodStart.AddMonths(request.BillingPeriodMonths);
-
-        subscription.Plan = request.Plan;
-        subscription.Status = SubscriptionStatus.Active;
-        subscription.CurrentPeriodStart = periodStart;
-        subscription.CurrentPeriodEnd = periodEnd;
-        subscription.PricePerPeriod = amount;
-        subscription.BillingPeriodMonths = request.BillingPeriodMonths;
-        subscription.PriceVersion = quote.PriceVersion;
-        subscription.MarkPaymentSucceeded(now);
-        subscription.CancelledAt = null;
-        subscription.Payments.Add(new SubscriptionPayment
-        {
-            Amount = amount,
-            PaidAt = now,
-            // Ödeme uygulama dışında (havale; ileride PayTR) alınır.
-            Provider = "Manual",
-            PeriodEnd = periodEnd,
-            PriceVersion = quote.PriceVersion,
-        });
+        // Ödeme uygulama dışında (havale) alınmış ve Süper Admin onaylamıştır.
+        SubscriptionActivation.Activate(subscription, request.Plan, request.BillingPeriodMonths, amount, quote.PriceVersion, "Manual", DateTime.UtcNow);
 
         await repository.ReplaceAsync(subscription, cancellationToken);
         await auditLogService.RecordAsync(

@@ -14,7 +14,7 @@ public sealed class AppSukranDbContext(DbContextOptions<AppSukranDbContext> opti
     public DbSet<MenuItem> MenuItems => Set<MenuItem>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<Bill> Bills => Set<Bill>();
-    public DbSet<CustomerCard> CustomerCards => Set<CustomerCard>();
+    public DbSet<CardPayment> CardPayments => Set<CardPayment>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<Event> Events => Set<Event>();
     public DbSet<SupportRequest> SupportRequests => Set<SupportRequest>();
