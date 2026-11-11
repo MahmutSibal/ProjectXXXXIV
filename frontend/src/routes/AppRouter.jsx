@@ -12,6 +12,7 @@ import LegalPage from '../pages/Legal/LegalPage.jsx';
 
 
 import AdminSupport from '../pages/AdminSupport/AdminSupport.jsx';
+import AdminCardPayments from '../pages/AdminCardPayments/AdminCardPayments.jsx';
 import ProtectedRoute from './ProtectedRoute.jsx';
 import { ROLES } from '../api/auth.js';
 
@@ -293,6 +294,11 @@ export default function AppRouter() {
           <Route
             path="subscription"
             element={<AdminSubscription />}
+          />
+
+          <Route
+            path="card-payments"
+            element={<AdminCardPayments />}
           />
         </Route>
         </Route>

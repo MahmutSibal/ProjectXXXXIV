@@ -51,6 +51,17 @@ public class CardPayment : AggregateRoot
     /// <summary>Ödeme sonrası müşterinin döneceği uygulama içi yol (ör. /menu/...).</summary>
     public string ReturnPath { get; set; } = "/";
 
+    // --- İade (PayTR İade API) ---
+    /// <summary>PayTR üzerinden karta iade edilen toplam tutar (kuruş). Kısmi iade olabilir.</summary>
+    public long RefundedMinor { get; set; }
+
+    public DateTime? LastRefundAt { get; set; }
+
+    /// <summary>İade edilebilecek kalan tutar (kuruş).</summary>
+    public long RefundableMinor => Status == CardPaymentStatus.Succeeded
+        ? Math.Max(0, (PaidTotalMinor ?? AmountMinor) - RefundedMinor)
+        : 0;
+
     // --- Restorana transfer (yalnızca masa ödemeleri) ---
     public CardPaymentTransferStatus TransferStatus { get; set; } = CardPaymentTransferStatus.NotApplicable;
     public long? SubmerchantAmountMinor { get; set; }

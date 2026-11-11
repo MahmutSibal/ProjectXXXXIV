@@ -171,6 +171,9 @@ namespace AppSukran.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime?>("LastRefundAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("MerchantOid")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -184,6 +187,9 @@ namespace AppSukran.Infrastructure.Persistence.Migrations
 
                     b.Property<int>("Purpose")
                         .HasColumnType("int");
+
+                    b.Property<long>("RefundedMinor")
+                        .HasColumnType("bigint");
 
                     b.Property<string>("RestaurantId")
                         .IsRequired()
@@ -975,6 +981,9 @@ namespace AppSukran.Infrastructure.Persistence.Migrations
                     b.Property<string>("PriceVersion")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("RenewalReminderSentFor")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("RestaurantId")
                         .IsRequired()

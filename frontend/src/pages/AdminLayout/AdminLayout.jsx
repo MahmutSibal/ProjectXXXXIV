@@ -12,6 +12,7 @@ const menuItems = [
   ['history', 'Sipariş Geçmişi', '/admin/order-history'],
   ['assessment', 'Günlük Raporlar', '/admin/daily-reports'],
   ['receipt_long', 'İşlem Geçmişi', '/admin/transactions'],
+  ['credit_card', 'Kart Ödemeleri', '/admin/card-payments'],
   ['store', 'İşletme Profili', '/admin/business-profile'],
   ['receipt_long', 'Fatura Bilgileri', '/admin/billing'],
   ['dashboard_customize', 'Etkinlik Tahtası', '/admin/events'],

@@ -4,7 +4,7 @@ import { useToast } from '../../context/ToastContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useOrderRealtime } from '../../hooks/useOrderRealtime.js';
 import { useRefundRequests } from '../../hooks/useRefundRequests.js';
-import { RefundRequestStatus } from '../../api/refunds.js';
+import { RefundRequestStatus, RefundMethod } from '../../api/refunds.js';
 import RealtimeStatus from '../../components/RealtimeStatus.jsx';
 import { ordersApi } from '../../api/orders.js';
 import { OrderSessionStatus, OrderItemStatus, formatKurus } from '../../api/enums.js';
@@ -209,6 +209,11 @@ export default function KitchenPanel() {
           <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-relaxed text-on-surface-variant">
             {request.content}
           </p>
+          {request.method === RefundMethod.Card && (
+            <p className="mt-2 text-sm text-on-background">
+              Kartla iadeyi işletme sahibi Kart Ödemeleri sayfasından yapar; talebi ona iletin.
+            </p>
+          )}
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
