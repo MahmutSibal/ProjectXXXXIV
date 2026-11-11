@@ -77,9 +77,11 @@ public sealed record DailyEarningResponse(
     long CommissionAmount,
     long NetAmount);
 
+/// <param name="CommissionIsDefault">Restorana özel oran yok; platformun varsayılan oranı uygulanıyor.</param>
 public sealed record EarningsReportResponse(
     int? SettlementDays,
     decimal? CommissionPercent,
+    bool CommissionIsDefault,
     long TotalGross,
     long TotalCommission,
     long TotalNet,
@@ -94,7 +96,8 @@ public sealed record GetEarningsReportQuery(string RestaurantId, int Days = 15) 
 
 public sealed class GetEarningsReportQueryHandler(
     IUnitOfWork unitOfWork,
-    IRestaurantAccessGuard restaurantAccessGuard) : IRequestHandler<GetEarningsReportQuery, EarningsReportResponse>
+    IRestaurantAccessGuard restaurantAccessGuard,
+    AppSukran.Application.Abstractions.Payments.IPayTrService payTr) : IRequestHandler<GetEarningsReportQuery, EarningsReportResponse>
 {
     // Türkiye 2016'dan beri yaz saati uygulamıyor; sabit UTC+3 sunucunun saat dilimi
     // ayarına bağımlı olmadan doğru günü verir.
@@ -117,7 +120,8 @@ public sealed class GetEarningsReportQueryHandler(
 
         var settings = await unitOfWork.Repository<RestaurantPaymentSettings>()
             .GetByIdAsync(request.RestaurantId, cancellationToken);
-        var rate = (settings?.CommissionPercent ?? 0m) / 100m;
+        var commissionPercent = settings?.CommissionPercent ?? payTr.DefaultCommissionPercent;
+        var rate = commissionPercent / 100m;
 
         var byDay = orders
             .GroupBy(order => order.CreatedAt.Add(TurkeyOffset).Date)
@@ -135,7 +139,8 @@ public sealed class GetEarningsReportQueryHandler(
 
         return new EarningsReportResponse(
             settings?.PayoutSettlementDays,
-            settings?.CommissionPercent,
+            commissionPercent,
+            settings?.CommissionPercent is null,
             rows.Sum(row => row.GrossAmount),
             rows.Sum(row => row.CommissionAmount),
             rows.Sum(row => row.NetAmount),

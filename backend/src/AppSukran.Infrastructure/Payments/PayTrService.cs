@@ -40,6 +40,8 @@ public sealed class PayTrService(
 
     public bool TransfersEnabled => Settings.TransfersEnabled && Settings.IsConfigured;
 
+    public decimal DefaultCommissionPercent => Settings.DefaultCommissionPercent;
+
     public async Task<PayTrIframeResult> CreatePaymentPageAsync(PayTrIframeRequest request, CancellationToken cancellationToken = default)
     {
         EnsureConfigured();

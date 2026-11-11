@@ -142,11 +142,8 @@ public sealed class PayTrTransferWorker(
                 continue;
             }
 
-            if (settings.CommissionPercent is not { } commissionPercent)
-            {
-                MarkFailed(payment, "Komisyon oranı tanımlı değil (Süper Admin → Hakediş ayarları).");
-                continue;
-            }
+            // Restorana özel oran yoksa platformun varsayılan komisyonu uygulanır.
+            var commissionPercent = settings.CommissionPercent ?? payTr.DefaultCommissionPercent;
 
             var paid = payment.PaidTotalMinor ?? payment.AmountMinor;
             var submerchant = CalculateSubmerchantAmount(paid, commissionPercent, payTr.FoodVatPercent);

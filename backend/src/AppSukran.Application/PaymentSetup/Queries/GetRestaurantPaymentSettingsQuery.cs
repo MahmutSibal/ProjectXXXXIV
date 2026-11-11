@@ -19,14 +19,16 @@ public sealed record RestaurantPaymentSettingsResponse(
     bool GlobalProviderIsFake,
     bool CardPaymentsAllowedByPlatform = true,
     int? PayoutSettlementDays = null,
-    decimal? CommissionPercent = null);
+    decimal? CommissionPercent = null,
+    bool CommissionIsDefault = false);
 
 public sealed record GetRestaurantPaymentSettingsQuery(string RestaurantId) : IRequest<RestaurantPaymentSettingsResponse>;
 
 public sealed class GetRestaurantPaymentSettingsQueryHandler(
     IUnitOfWork unitOfWork,
     IRestaurantAccessGuard restaurantAccessGuard,
-    IPaymentPlatformInfo platformInfo)
+    IPaymentPlatformInfo platformInfo,
+    IPayTrService payTr)
     : IRequestHandler<GetRestaurantPaymentSettingsQuery, RestaurantPaymentSettingsResponse>
 {
     public async Task<RestaurantPaymentSettingsResponse> Handle(
@@ -49,6 +51,8 @@ public sealed class GetRestaurantPaymentSettingsQueryHandler(
             platformInfo.GlobalProviderIsFake,
             platform?.CardPaymentsEnabled ?? true,
             settings?.PayoutSettlementDays,
-            settings?.CommissionPercent);
+            // Restorana özel oran yoksa uygulanan varsayılan oran gösterilir.
+            settings?.CommissionPercent ?? payTr.DefaultCommissionPercent,
+            settings?.CommissionPercent is null);
     }
 }

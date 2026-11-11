@@ -62,8 +62,8 @@ setx JWT_SIGNING_KEY "buraya-uretilen-anahtar" /M
 5. Masa ödemelerinde restoranın payı `PayTrTransferWorker` ile ertesi sabah (TR saati
    00:30–09:30; PayTR kuralı: aynı gün olmaz, en geç 10:00) Platform Transfer API'sine
    gönderilir. Pay = ödenen − komisyon − %1 stopaj (KDV hariç tutar üzerinden;
-   `PayTr:FoodVatPercent`, varsayılan %10). Restoranın komisyon oranı tanımlı değilse
-   transfer yapılmaz ve "Komisyon oranı tanımlı değil" hatası yazılır.
+   `PayTr:FoodVatPercent`, varsayılan %10). Restoranın kendi komisyon oranı girilmemişse
+   platform varsayılanı uygulanır (`PayTr:DefaultCommissionPercent`, **%5**).
 6. 60 dk içinde sonuç gelmeyen ödeme "zaman aşımı" olur, rezerve kalemler serbest kalır.
    Geç gelen başarılı bildirim yine işlenir.
 
@@ -86,7 +86,8 @@ setx JWT_SIGNING_KEY "buraya-uretilen-anahtar" /M
    $env:SUKRAN_PAYTR_TRANSFERS = "true"
    ```
 
-4. Her restoran için Süper Admin'den komisyon oranı ve hakediş günü girilmeli.
+4. Komisyon varsayılanı %5'tir; farklı oran gereken restoran için Süper Admin → Transfer
+   İşlemi'nden özel oran girilir. Hakediş günü girilmezse 1 gün (ertesi sabah) uygulanır.
 
 - Kartla ödeme için işletmenin IBAN'ı ve hesap sahibi adı zorunludur; yoksa kart formu
   hata verir (para restorana aktarılamayacağı için).

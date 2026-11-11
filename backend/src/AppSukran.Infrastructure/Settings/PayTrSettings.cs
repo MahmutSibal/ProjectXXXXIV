@@ -36,6 +36,12 @@ public sealed class PayTrSettings
     public decimal FoodVatPercent { get; set; } = 10;
 
     /// <summary>
+    /// Restoran için ayrı oran girilmemişse uygulanan platform komisyonu (%). PayTR'nin kendi
+    /// kesintisi bu paydan çıkar; %3'ün altı zarar ettirebilir.
+    /// </summary>
+    public decimal DefaultCommissionPercent { get; set; } = 5;
+
+    /// <summary>
     /// Restoranlara otomatik transfer. PayTR test modunda transfer API'si çalışmadığı için
     /// varsayılan kapalıdır; canlıya geçince açılır.
     /// </summary>

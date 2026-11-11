@@ -58,6 +58,9 @@ public interface IPayTrService
 
     bool TransfersEnabled { get; }
 
+    /// <summary>Restorana özel oran girilmemişse uygulanan platform komisyonu (%).</summary>
+    decimal DefaultCommissionPercent { get; }
+
     /// <summary>PayTR'den tek kullanımlık ödeme sayfası alır (sunucudan sunucuya istek).</summary>
     Task<PayTrIframeResult> CreatePaymentPageAsync(PayTrIframeRequest request, CancellationToken cancellationToken = default);
 
