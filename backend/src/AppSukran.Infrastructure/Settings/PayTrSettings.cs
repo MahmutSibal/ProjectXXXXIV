@@ -23,6 +23,9 @@ public sealed class PayTrSettings
     /// </summary>
     public bool TestMode { get; set; } = true;
 
+    /// <summary>PayTR adresi. Yalnızca yerel testte sahte sunucuya yönlendirmek için değiştirilir.</summary>
+    public string ApiBaseUrl { get; set; } = "https://www.paytr.com";
+
     /// <summary>PayTR hata ayrıntılarını döndürür. Entegrasyon sürecinde açık kalmalı.</summary>
     public bool DebugOn { get; set; } = true;
 

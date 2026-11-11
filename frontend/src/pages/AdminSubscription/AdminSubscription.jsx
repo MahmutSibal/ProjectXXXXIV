@@ -13,7 +13,6 @@ import CardPaymentDialog from '../../components/CardPaymentDialog.jsx';
 import {
   payTrApi,
   CardPaymentStatus,
-  submitCardToPayTr,
   waitForCardPayment,
   readPaymentReturnParams,
   clearPaymentReturnParams,
@@ -73,15 +72,16 @@ export default function AdminSubscription() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paymentReturn]);
 
-  const handleCardPayment = async (card, buyer) => {
+  const handleCardPayment = async (buyer) => {
     const started = await payTrApi.startSubscriptionPayment({
       restaurantId: user.restaurantId,
       plan: payingPlan.plan,
       billingPeriodMonths: billingMonths,
-      email: buyer.email.trim(),
+      ...buyer,
       returnPath: currentReturnPath(),
     });
-    submitCardToPayTr(started, card, buyer);
+    // PayTR'nin kendi sayfasına geçilir: kart ve 3D Secure orada girilir.
+    window.location.assign(started.paymentPageUrl);
   };
 
   useEffect(() => {

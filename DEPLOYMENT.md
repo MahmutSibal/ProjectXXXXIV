@@ -31,17 +31,18 @@ setx JWT_SIGNING_KEY "buraya-uretilen-anahtar" /M
 
 > Not: `setx` ile tanımlanan değişkenler yalnızca yeni açılan süreçlerde görünür; IIS/servis yeniden başlatılmalıdır.
 
-## 1.0. Ödeme sağlayıcısı — PayTR (Direkt API + Platform Transfer)
+## 1.0. Ödeme sağlayıcısı — PayTR (iFrame API + Platform Transfer)
 
 > iyzico kaldırıldı. Aşağıdaki 1.1 ve 1.7.1 bölümlerindeki iyzico ayrıntıları yalnızca
 > geçmiş kayıt içindir. `Payment:Provider` ayarı ve "Fake" simülasyon da kaldırıldı.
 
 ### Kart verisi bizde TUTULMAZ
 
-- Kart formu bizim sayfamızda durur ama form **doğrudan** `https://www.paytr.com/odeme`
-  adresine gönderilir. Kart numarası, son kullanma, CVV, kart sahibi, müşterinin adı /
-  adresi / telefonu sunucumuza **hiç gelmez**. Sunucu yalnızca PayTR imzasını hesaplar
-  (bunun için e-postayı görür, saklamaz).
+- Kart bilgisi uygulamamızda **hiç sorulmaz**: müşteri PayTR'nin kendi güvenli ödeme
+  sayfasına (`https://www.paytr.com/odeme/guvenli/...`) geçer, kartı ve 3D Secure'u orada
+  girer. Kart numarası, son kullanma, CVV, kart sahibi sunucumuza **hiç gelmez**.
+- Müşterinin e-posta / ad / adres / telefonu (PayTR zorunlu tutar) sunucudan PayTR'ye
+  iletilir, **saklanmaz**.
 - Eski "müşteri kartı" tablosu (`CustomerCards`: kart özeti, son 4 hane, kart sahibi,
   son kullanma) migration `PayTrCardPaymentsRemoveStoredCards` ile **silinir**. Canlıya
   almadan önce veritabanı yedeği alın.
@@ -49,9 +50,10 @@ setx JWT_SIGNING_KEY "buraya-uretilen-anahtar" /M
 
 ### Akış
 
-1. Müşteri (QR) ya da işletme sahibi (paket) "Öde" der → `POST /api/paytr/table-payments`
-   veya `/api/paytr/subscription-payments`. Tutar sunucuda hesaplanır, imzalı form döner.
-2. Tarayıcı kartı forma ekleyip PayTR'ye gönderir, 3D Secure yapılır.
+1. Müşteri (QR) ya da işletme sahibi (paket) iletişim bilgilerini girip "Kartla Öde" der →
+   `POST /api/paytr/table-payments` veya `/api/paytr/subscription-payments`. Tutar sunucuda
+   hesaplanır, sunucu PayTR'den (`/odeme/api/get-token`) tek kullanımlık ödeme sayfası alır.
+2. Tarayıcı PayTR'nin sayfasına geçer; kart ve 3D Secure orada girilir.
 3. PayTR sonucu **Bildirim URL**'ye gönderir: `POST /api/paytr/callback`. Ödeme YALNIZCA
    burada, imza doğrulandıktan sonra onaylanır (hesap kapanır / paket aktifleşir).
    Yanıt düz metin `OK`. Aynı bildirim birden çok gelirse yalnızca ilki işlenir.

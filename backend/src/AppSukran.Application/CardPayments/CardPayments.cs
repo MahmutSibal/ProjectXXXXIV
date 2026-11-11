@@ -14,25 +14,25 @@ using MediatR;
 
 namespace AppSukran.Application.CardPayments;
 
-// PayTR Direkt API akışı:
+// PayTR iFrame API akışı:
 //  1) Uygulama "ödeme başlat" der; sunucu tutarı KENDİSİ hesaplar, bir CardPayment kaydı
-//     açar ve PayTR'ye gidecek imzalı formu döner.
-//  2) Tarayıcı kart bilgilerini forma ekleyip DOĞRUDAN PayTR'ye gönderir (sunucumuz
-//     kartı hiç görmez), 3D Secure yapılır.
+//     açar ve PayTR'den tek kullanımlık ödeme sayfası alır.
+//  2) Müşteri kart bilgilerini PayTR'NİN sayfasında girer, 3D Secure orada yapılır.
+//     Kart bilgisi uygulamamızda hiç girilmez, sunucumuza hiç gelmez.
 //  3) PayTR sonucu bildirim ucuna (callback) gönderir; ödeme YALNIZCA orada onaylanır.
 //  4) Masa ödemelerinde restoranın payı ertesi sabah PayTR Platform Transfer ile
 //     restoranın IBAN'ına gönderilir (PayTrTransferWorker).
 
 /// <param name="ItemIds">Kalem seçerek ödeme. Boşsa tutar ödemesidir.</param>
 /// <param name="Amount">Tutar ödemesi (kuruş). Boşsa kalan tutarın tamamı.</param>
-/// <param name="Email">PayTR zorunlu tutar. Bizde SAKLANMAZ.</param>
+/// <param name="Buyer">PayTR zorunlu tutar (e-posta, ad, adres, telefon). Bizde SAKLANMAZ.</param>
 /// <param name="UserIp">Müşterinin IP'si (controller doldurur).</param>
 /// <param name="BackendBaseUrl">PayTR'nin müşteriyi döndüreceği backend adresi (controller doldurur).</param>
 public sealed record StartTableCardPaymentCommand(
     string BillId,
     IReadOnlyCollection<string>? ItemIds,
     long? Amount,
-    string Email,
+    PayTrBuyer Buyer,
     string ReturnPath,
     string UserIp,
     string BackendBaseUrl) : IRequest<CardPaymentStartResult>;
@@ -41,12 +41,13 @@ public sealed record StartSubscriptionCardPaymentCommand(
     string RestaurantId,
     SubscriptionPlan Plan,
     int BillingPeriodMonths,
-    string Email,
+    PayTrBuyer Buyer,
     string ReturnPath,
     string UserIp,
     string BackendBaseUrl) : IRequest<CardPaymentStartResult>;
 
-public sealed record CardPaymentStartResult(string MerchantOid, long AmountMinor, bool TestMode, string PostUrl, IReadOnlyDictionary<string, string> Fields);
+/// <param name="PaymentPageUrl">PayTR'nin güvenli ödeme sayfası (kart bilgisi orada girilir).</param>
+public sealed record CardPaymentStartResult(string MerchantOid, long AmountMinor, bool TestMode, string PaymentPageUrl);
 
 /// <summary>PayTR bildirimi. Alanlar PayTR'nin gönderdiği adlarla aynıdır.</summary>
 public sealed record HandlePayTrCallbackCommand(
@@ -68,6 +69,30 @@ internal static partial class CardPaymentRules
     public const int PendingLifetimeMinutes = 60;
 
     public static string NewMerchantOid() => "SA" + Guid.NewGuid().ToString("N");
+
+    /// <summary>PayTR'ye gidecek iletişim bilgilerini doğrular. Hiçbiri saklanmaz.</summary>
+    public static PayTrBuyer NormalizeBuyer(PayTrBuyer? buyer)
+    {
+        var email = NormalizeEmail(buyer?.Email);
+        var name = (buyer?.FullName ?? string.Empty).Trim();
+        var address = (buyer?.Address ?? string.Empty).Trim();
+        var phone = new string((buyer?.Phone ?? string.Empty).Where(c => char.IsDigit(c) || c == '+').ToArray());
+
+        if (name.Length < 3) throw new InvalidOperationException("Ad soyad girin.");
+        if (address.Length < 5) throw new InvalidOperationException("Adres girin.");
+        if (phone.Count(char.IsDigit) < 10) throw new InvalidOperationException("Telefon numarasını eksiksiz girin.");
+        return new PayTrBuyer(email, name, address, phone);
+    }
+
+    public static async Task<string> GetPaymentPageAsync(IPayTrService payTr, PayTrIframeRequest request, CancellationToken cancellationToken)
+    {
+        var page = await payTr.CreatePaymentPageAsync(request, cancellationToken);
+        if (!page.Success || string.IsNullOrWhiteSpace(page.PaymentPageUrl))
+        {
+            throw new InvalidOperationException($"Ödeme sayfası açılamadı: {page.Error}");
+        }
+        return page.PaymentPageUrl;
+    }
 
     public static string NormalizeEmail(string? email)
     {
@@ -116,7 +141,7 @@ public sealed class StartTableCardPaymentCommandHandler(
             throw new InvalidOperationException("Kartla ödeme şu anda kullanılamıyor. Ödemeyi personele bildirin.");
         }
 
-        var email = CardPaymentRules.NormalizeEmail(request.Email);
+        var buyer = CardPaymentRules.NormalizeBuyer(request.Buyer);
 
         await unitOfWork.BeginTransactionAsync(cancellationToken);
         try
@@ -181,10 +206,12 @@ public sealed class StartTableCardPaymentCommandHandler(
                 ReturnPath = CardPaymentRules.NormalizeReturnPath(request.ReturnPath),
             }, cancellationToken);
 
-            var form = payTr.CreatePaymentForm(new PayTrFormRequest(merchantOid, request.UserIp, email, amount, basket, okUrl, failUrl));
+            // PayTR sayfası alınamazsa işlem geri alınır (kalem rezervasyonu dahil).
+            var pageUrl = await CardPaymentRules.GetPaymentPageAsync(payTr,
+                new PayTrIframeRequest(merchantOid, request.UserIp, buyer, amount, basket, okUrl, failUrl), cancellationToken);
             await unitOfWork.CommitAsync(cancellationToken);
 
-            return new CardPaymentStartResult(merchantOid, amount, payTr.TestMode, form.PostUrl, form.Fields);
+            return new CardPaymentStartResult(merchantOid, amount, payTr.TestMode, pageUrl);
         }
         catch
         {
@@ -232,7 +259,7 @@ public sealed class StartSubscriptionCardPaymentCommandHandler(
             throw new InvalidOperationException("Bu paket kartla satın alınamaz. Lütfen bizimle iletişime geçin.");
         }
 
-        var email = CardPaymentRules.NormalizeEmail(request.Email);
+        var buyer = CardPaymentRules.NormalizeBuyer(request.Buyer);
 
         var subscriptions = await unitOfWork.Repository<Subscription>()
             .FindAsync(subscription => subscription.RestaurantId == request.RestaurantId, cancellationToken);
@@ -244,6 +271,12 @@ public sealed class StartSubscriptionCardPaymentCommandHandler(
 
         var merchantOid = CardPaymentRules.NewMerchantOid();
         var (okUrl, failUrl) = CardPaymentRules.ReturnUrls(request.BackendBaseUrl, merchantOid);
+
+        // Önce PayTR sayfası alınır; alınamazsa kayıt hiç açılmaz.
+        var pageUrl = await CardPaymentRules.GetPaymentPageAsync(payTr, new PayTrIframeRequest(
+            merchantOid, request.UserIp, buyer, quote.Total,
+            [new PayTrBasketLine($"Şükran App {planName} paketi ({request.BillingPeriodMonths} ay)", quote.Total, 1)],
+            okUrl, failUrl), cancellationToken);
 
         await unitOfWork.Repository<CardPayment>().InsertAsync(new CardPayment
         {
@@ -257,12 +290,7 @@ public sealed class StartSubscriptionCardPaymentCommandHandler(
             ReturnPath = CardPaymentRules.NormalizeReturnPath(request.ReturnPath),
         }, cancellationToken);
 
-        var form = payTr.CreatePaymentForm(new PayTrFormRequest(
-            merchantOid, request.UserIp, email, quote.Total,
-            [new PayTrBasketLine($"Şükran App {planName} paketi ({request.BillingPeriodMonths} ay)", quote.Total, 1)],
-            okUrl, failUrl));
-
-        return new CardPaymentStartResult(merchantOid, quote.Total, payTr.TestMode, form.PostUrl, form.Fields);
+        return new CardPaymentStartResult(merchantOid, quote.Total, payTr.TestMode, pageUrl);
     }
 }
 

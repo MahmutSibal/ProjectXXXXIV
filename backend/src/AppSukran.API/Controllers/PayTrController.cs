@@ -11,8 +11,8 @@ using Microsoft.Extensions.Options;
 namespace AppSukran.API.Controllers;
 
 /// <summary>
-/// PayTR ile kartla ödeme. Kart bilgisi bu uçlara HİÇ gelmez: başlat uçları yalnızca
-/// imzalı formu döner, tarayıcı kartı doğrudan PayTR'ye gönderir.
+/// PayTR ile kartla ödeme (iFrame API). Kart bilgisi bu uçlara HİÇ gelmez: başlat uçları
+/// PayTR'nin güvenli ödeme sayfasını döner, müşteri kartı orada girer (3D Secure dahil).
 /// </summary>
 [ApiController]
 [Route("api/paytr")]
@@ -31,7 +31,7 @@ public sealed class PayTrController(IMediator mediator, IPayTrService payTr, IOp
     public async Task<ActionResult<CardPaymentStartResult>> StartTablePayment(
         [FromBody] StartTablePaymentRequest request, CancellationToken cancellationToken)
         => Ok(await mediator.Send(new StartTableCardPaymentCommand(
-            request.BillId, request.ItemIds, request.Amount, request.Email, request.ReturnPath ?? "/",
+            request.BillId, request.ItemIds, request.Amount, request.ToBuyer(), request.ReturnPath ?? "/",
             ClientIp(), BackendBaseUrl()), cancellationToken));
 
     /// <summary>İşletme sahibinin paket ödemesi.</summary>
@@ -41,7 +41,7 @@ public sealed class PayTrController(IMediator mediator, IPayTrService payTr, IOp
     public async Task<ActionResult<CardPaymentStartResult>> StartSubscriptionPayment(
         [FromBody] StartSubscriptionPaymentRequest request, CancellationToken cancellationToken)
         => Ok(await mediator.Send(new StartSubscriptionCardPaymentCommand(
-            request.RestaurantId, request.Plan, request.BillingPeriodMonths, request.Email,
+            request.RestaurantId, request.Plan, request.BillingPeriodMonths, request.ToBuyer(),
             request.ReturnPath ?? "/admin/subscription", ClientIp(), BackendBaseUrl()), cancellationToken));
 
     /// <summary>Ödemenin sonucu (sayfa, PayTR'den döndükten sonra bunu sorgular).</summary>
@@ -80,9 +80,20 @@ public sealed class PayTrController(IMediator mediator, IPayTrService payTr, IOp
     {
         var path = await mediator.Send(new GetCardPaymentReturnUrlQuery(merchantOid, result == "ok"), cancellationToken);
         var target = settings.Value.AppBaseUrl.TrimEnd('/') + path;
-        // 303: tarayıcı POST'u GET'e çevirerek sayfaya gider.
-        Response.Headers.Location = target;
-        return StatusCode((int)HttpStatusCode.SeeOther);
+
+        // PayTR'nin ödeme sayfası uygulamamızın içinde (iframe) açılır; dönüş de o çerçevede
+        // yüklenir. Bu küçük sayfa ANA pencereyi uygulamaya yönlendirir. Hedef adres yalnızca
+        // yapılandırılmış uygulama adresi + kayıtlı uygulama içi yoldur (açık yönlendirme yok).
+        var encoded = System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(target);
+        var html = $$"""
+            <!doctype html><html lang="tr"><head><meta charset="utf-8"><title>Yönlendiriliyor</title></head>
+            <body style="font-family:sans-serif;text-align:center;padding-top:40px">
+            <p>Ödeme sayfasından dönülüyor...</p>
+            <script>var t="{{encoded}}";try{window.top.location.href=t;}catch(e){window.location.href=t;}</script>
+            <noscript><a href="{{System.Net.WebUtility.HtmlEncode(target)}}">Devam etmek için tıklayın</a></noscript>
+            </body></html>
+            """;
+        return Content(html, "text/html; charset=utf-8");
     }
 
     private string ClientIp()
@@ -98,9 +109,19 @@ public sealed class PayTrController(IMediator mediator, IPayTrService payTr, IOp
 
 public sealed record PayTrStatusResponse(bool Available, bool TestMode);
 
-public sealed record StartTablePaymentRequest(string BillId, IReadOnlyCollection<string>? ItemIds, long? Amount, string Email, string? ReturnPath);
+/// <summary>Ödeme yapanın iletişim bilgileri: PayTR'ye iletilir, saklanmaz.</summary>
+public abstract record PayTrBuyerRequest(string? Email, string? FullName, string? Address, string? Phone)
+{
+    public PayTrBuyer ToBuyer() => new(Email ?? string.Empty, FullName ?? string.Empty, Address ?? string.Empty, Phone ?? string.Empty);
+}
 
-public sealed record StartSubscriptionPaymentRequest(string RestaurantId, SubscriptionPlan Plan, int BillingPeriodMonths, string Email, string? ReturnPath);
+public sealed record StartTablePaymentRequest(
+    string BillId, IReadOnlyCollection<string>? ItemIds, long? Amount, string? ReturnPath,
+    string? Email, string? FullName, string? Address, string? Phone) : PayTrBuyerRequest(Email, FullName, Address, Phone);
+
+public sealed record StartSubscriptionPaymentRequest(
+    string RestaurantId, SubscriptionPlan Plan, int BillingPeriodMonths, string? ReturnPath,
+    string? Email, string? FullName, string? Address, string? Phone) : PayTrBuyerRequest(Email, FullName, Address, Phone);
 
 /// <summary>PayTR'nin gönderdiği alan adları (snake_case) birebir.</summary>
 #pragma warning disable IDE1006

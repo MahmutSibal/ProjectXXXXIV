@@ -13,25 +13,25 @@ public interface IPaymentPlatformInfo
 /// <summary>Sepetteki bir satır. Fiyat kuruş cinsindendir.</summary>
 public sealed record PayTrBasketLine(string Name, long UnitPriceMinor, int Quantity);
 
+/// <summary>
+/// Ödemeyi yapan kişinin iletişim bilgileri. PayTR her ödemede zorunlu tutar; biz
+/// yalnızca PayTR'ye iletiriz, SAKLAMAYIZ.
+/// </summary>
+public sealed record PayTrBuyer(string Email, string FullName, string Address, string Phone);
+
 /// <param name="MerchantOid">Bizim ürettiğimiz benzersiz sipariş no (yalnızca harf/rakam).</param>
 /// <param name="UserIp">Müşterinin gerçek IP adresi (PayTR imzaya dahil eder).</param>
-/// <param name="Email">Müşterinin e-postası (PayTR zorunlu tutar; bizde SAKLANMAZ).</param>
-public sealed record PayTrFormRequest(
+public sealed record PayTrIframeRequest(
     string MerchantOid,
     string UserIp,
-    string Email,
+    PayTrBuyer Buyer,
     long AmountMinor,
     IReadOnlyList<PayTrBasketLine> Basket,
     string OkUrl,
     string FailUrl);
 
-/// <summary>
-/// Tarayıcının PayTR'ye göndereceği form. Kart alanları (cc_owner, card_number,
-/// expiry_month, expiry_year, cvv) ve müşteri adı/adresi/telefonu BURADA YOKTUR:
-/// tarayıcı onları forma kendisi ekler ve doğrudan PayTR'ye gönderir. Sunucumuz
-/// kart bilgisini hiç görmez.
-/// </summary>
-public sealed record PayTrForm(string PostUrl, IReadOnlyDictionary<string, string> Fields);
+/// <summary>Sonuç: PayTR'nin güvenli ödeme sayfası (kart bilgisi ve 3D Secure orada girilir).</summary>
+public sealed record PayTrIframeResult(bool Success, string? PaymentPageUrl, string? Error);
 
 public sealed record PayTrTransferRequest(
     string MerchantOid,
@@ -43,7 +43,10 @@ public sealed record PayTrTransferRequest(
 
 public sealed record PayTrTransferResult(bool Success, string? Reference, string? ErrorCode, string? ErrorMessage);
 
-/// <summary>PayTR Direkt API ve Platform Transfer API istemcisi.</summary>
+/// <summary>
+/// PayTR iFrame API ve Platform Transfer API istemcisi. iFrame API'de kart formu ve
+/// 3D Secure PayTR'nin sayfasındadır; kart bilgisi uygulamamızda hiç girilmez.
+/// </summary>
 public interface IPayTrService
 {
     bool IsConfigured { get; }
@@ -55,7 +58,8 @@ public interface IPayTrService
 
     bool TransfersEnabled { get; }
 
-    PayTrForm CreatePaymentForm(PayTrFormRequest request);
+    /// <summary>PayTR'den tek kullanımlık ödeme sayfası alır (sunucudan sunucuya istek).</summary>
+    Task<PayTrIframeResult> CreatePaymentPageAsync(PayTrIframeRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>Bildirim (callback) imzasını doğrular. Yanlışsa istek PayTR'den gelmemiştir.</summary>
     bool VerifyCallback(string merchantOid, string status, string totalAmount, string hash);

@@ -1,9 +1,8 @@
 import { useState } from 'react';
 
 /**
- * PayTR kart formu (pencere). Kart bilgileri bu bileşenden ÇIKMAZ: onSubmit'e verilir,
- * o da kartı doğrudan PayTR'ye gönderen submitCardToPayTr'ı çağırır. Sunucumuza kart
- * bilgisi gitmez.
+ * Kartla ödeme öncesi iletişim bilgileri (PayTR her ödemede zorunlu tutar; biz saklamayız).
+ * Kart bilgisi BURADA SORULMAZ: bir sonraki adımda PayTR'nin güvenli ödeme sayfasında girilir.
  */
 export default function CardPaymentDialog({ title, description, defaultBuyer, testMode, onSubmit, onCancel }) {
   const [buyer, setBuyer] = useState({
@@ -12,7 +11,6 @@ export default function CardPaymentDialog({ title, description, defaultBuyer, te
     phone: defaultBuyer?.phone ?? '',
     address: defaultBuyer?.address ?? '',
   });
-  const [card, setCard] = useState({ holder: '', number: '', month: '', year: '', cvc: '' });
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -23,11 +21,6 @@ export default function CardPaymentDialog({ title, description, defaultBuyer, te
     }
     if (buyer.phone.replace(/\D/g, '').length < 10) return 'Telefon numarasını eksiksiz girin.';
     if (buyer.address.trim().length < 5) return 'Adres girin.';
-    if (card.holder.trim().length < 3) return 'Kart üzerindeki ismi girin.';
-    if (card.number.replace(/\D/g, '').length < 15) return 'Kart numarasını eksiksiz girin.';
-    if (!/^\d{1,2}$/.test(card.month) || Number(card.month) < 1 || Number(card.month) > 12) return 'Son kullanma ayı 1-12 arasında olmalı.';
-    if (!/^\d{4}$/.test(card.year)) return 'Son kullanma yılını 4 haneli girin (örn. 2030).';
-    if (!/^\d{3}$/.test(card.cvc)) return 'CVC 3 haneli olmalı.';
     return '';
   };
 
@@ -42,8 +35,12 @@ export default function CardPaymentDialog({ title, description, defaultBuyer, te
     setError('');
     setIsSubmitting(true);
     try {
-      await onSubmit(card, buyer);
-      // Başarılıysa sayfa PayTR'ye geçer; buraya dönülmez.
+      await onSubmit({
+        fullName: buyer.fullName.trim(),
+        email: buyer.email.trim(),
+        phone: buyer.phone.trim(),
+        address: buyer.address.trim(),
+      });
     } catch (err) {
       setError(err?.message ?? 'Ödeme başlatılamadı.');
       setIsSubmitting(false);
@@ -74,23 +71,9 @@ export default function CardPaymentDialog({ title, description, defaultBuyer, te
           <input className={input} placeholder="Adres" autoComplete="street-address" value={buyer.address}
             onChange={(e) => setBuyer((p) => ({ ...p, address: e.target.value }))} />
 
-          <p className="text-[11px] text-on-surface-variant mt-2">Kart bilgileri</p>
-          <input className={input} placeholder="Kart üzerindeki isim" autoComplete="cc-name" value={card.holder}
-            onChange={(e) => setCard((p) => ({ ...p, holder: e.target.value }))} />
-          <input className={input} placeholder="Kart numarası" inputMode="numeric" autoComplete="cc-number" maxLength={19}
-            value={card.number} onChange={(e) => setCard((p) => ({ ...p, number: e.target.value }))} />
-          <div className="grid grid-cols-3 gap-2">
-            <input className={input} placeholder="Ay" inputMode="numeric" autoComplete="cc-exp-month" maxLength={2}
-              value={card.month} onChange={(e) => setCard((p) => ({ ...p, month: e.target.value }))} />
-            <input className={input} placeholder="Yıl" inputMode="numeric" autoComplete="cc-exp-year" maxLength={4}
-              value={card.year} onChange={(e) => setCard((p) => ({ ...p, year: e.target.value }))} />
-            <input className={input} placeholder="CVC" inputMode="numeric" autoComplete="cc-csc" maxLength={3}
-              value={card.cvc} onChange={(e) => setCard((p) => ({ ...p, cvc: e.target.value }))} />
-          </div>
-
           <p className="text-[11px] text-on-surface-variant">
-            Kart bilgileriniz doğrudan PayTR güvenli ödeme sayfasına iletilir; Şükran App kart
-            bilgilerinizi görmez ve saklamaz.
+            Kart bilgilerinizi bir sonraki adımda PayTR&apos;nin güvenli ödeme sayfasında gireceksiniz;
+            Şükran App kart bilgilerinizi görmez ve saklamaz.
           </p>
           {testMode && <p className="text-[11px] text-error">Test modu: gerçek çekim yapılmaz.</p>}
 
@@ -103,7 +86,7 @@ export default function CardPaymentDialog({ title, description, defaultBuyer, te
 
           <button type="submit" disabled={isSubmitting}
             className="w-full h-12 rounded-xl bg-primary-container text-on-primary-container font-label-lg disabled:opacity-50">
-            {isSubmitting ? 'Güvenli ödemeye yönlendiriliyor...' : 'Öde'}
+            {isSubmitting ? 'Güvenli ödeme sayfası açılıyor...' : 'Kartla Öde'}
           </button>
           <button type="button" onClick={onCancel} disabled={isSubmitting}
             className="text-body-sm text-on-surface-variant hover:underline">

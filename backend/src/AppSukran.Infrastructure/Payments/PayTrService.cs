@@ -10,11 +10,12 @@ using Microsoft.Extensions.Options;
 namespace AppSukran.Infrastructure.Payments;
 
 /// <summary>
-/// PayTR Direkt API ve Platform Transfer API. İmza formülleri PayTR'nin resmî örnek
-/// kodlarıyla birebir aynıdır (dev.paytr.com, Kasım 2026):
-///   Ödeme:    HMACSHA256(merchant_id + user_ip + merchant_oid + email + payment_amount
-///                        + payment_type + installment_count + currency + test_mode + non_3d
-///                        + merchant_salt, key = merchant_key) → base64
+/// PayTR iFrame API ve Platform Transfer API. Kart formu ve 3D Secure PayTR'nin
+/// sayfasındadır. İmza formülleri PayTR'nin resmî örnek kodlarıyla birebir aynıdır
+/// (dev.paytr.com, Kasım 2026):
+///   Ödeme:    HMACSHA256(merchant_id + user_ip + merchant_oid + email + payment_amount(kuruş)
+///                        + user_basket(base64) + no_installment + max_installment + currency
+///                        + test_mode + merchant_salt, key = merchant_key) → base64
 ///   Bildirim: HMACSHA256(merchant_oid + merchant_salt + status + total_amount, merchant_key)
 ///   Transfer: HMACSHA256(merchant_id + merchant_oid + trans_id + submerchant_amount
 ///                        + total_amount + transfer_name + transfer_iban + merchant_salt, merchant_key)
@@ -24,8 +25,10 @@ public sealed class PayTrService(
     IOptions<PayTrSettings> options,
     ILogger<PayTrService> logger) : IPayTrService
 {
-    private const string PaymentUrl = "https://www.paytr.com/odeme";
-    private const string TransferUrl = "https://www.paytr.com/odeme/platform/transfer";
+    private string BaseUrl => Settings.ApiBaseUrl.TrimEnd('/');
+    private string TokenUrl => $"{BaseUrl}/odeme/api/get-token";
+    private string PaymentPageBaseUrl => $"{BaseUrl}/odeme/guvenli/";
+    private string TransferUrl => $"{BaseUrl}/odeme/platform/transfer";
 
     private PayTrSettings Settings => options.Value;
 
@@ -37,48 +40,79 @@ public sealed class PayTrService(
 
     public bool TransfersEnabled => Settings.TransfersEnabled && Settings.IsConfigured;
 
-    public PayTrForm CreatePaymentForm(PayTrFormRequest request)
+    public async Task<PayTrIframeResult> CreatePaymentPageAsync(PayTrIframeRequest request, CancellationToken cancellationToken = default)
     {
         EnsureConfigured();
         var s = Settings;
 
-        // PayTR: ondalık ayraç nokta, kuruş varsa iki hane ("100.99" veya "150").
-        var paymentAmount = FormatAmount(request.AmountMinor);
-        const string paymentType = "card";
-        const string installmentCount = "0"; // Taksit kapalı (tek çekim).
+        // iFrame API: tutar kuruş cinsinden tam sayı (34,56 TL -> 3456).
+        var paymentAmount = request.AmountMinor.ToString(CultureInfo.InvariantCulture);
+        const string noInstallment = "1";  // Taksit gösterilmez (tek çekim).
+        const string maxInstallment = "0";
         const string currency = "TL";
-        const string non3d = "0";            // Her zaman 3D Secure.
         var testMode = s.TestMode ? "1" : "0";
 
-        var token = Sign(string.Concat(
-            s.MerchantId, request.UserIp, request.MerchantOid, request.Email, paymentAmount,
-            paymentType, installmentCount, currency, testMode, non3d, s.MerchantSalt));
-
-        var basket = JsonSerializer.Serialize(request.Basket
+        // Sepet: [["ürün adı", "birim fiyat", adet], ...] JSON'u, base64.
+        var basketJson = JsonSerializer.Serialize(request.Basket
             .Select(line => new object[] { line.Name, FormatAmount(line.UnitPriceMinor), line.Quantity })
-            .ToArray());
+            .ToArray(), new JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
+        var userBasket = Convert.ToBase64String(Encoding.UTF8.GetBytes(basketJson));
 
-        var fields = new Dictionary<string, string>
+        var token = Sign(string.Concat(
+            s.MerchantId, request.UserIp, request.MerchantOid, request.Buyer.Email, paymentAmount,
+            userBasket, noInstallment, maxInstallment, currency, testMode, s.MerchantSalt));
+
+        using var content = new FormUrlEncodedContent(new Dictionary<string, string>
         {
             ["merchant_id"] = s.MerchantId,
             ["user_ip"] = request.UserIp,
             ["merchant_oid"] = request.MerchantOid,
-            ["email"] = request.Email,
-            ["payment_type"] = paymentType,
+            ["email"] = request.Buyer.Email,
             ["payment_amount"] = paymentAmount,
-            ["installment_count"] = installmentCount,
-            ["currency"] = currency,
-            ["test_mode"] = testMode,
-            ["non_3d"] = non3d,
+            ["paytr_token"] = token,
+            ["user_basket"] = userBasket,
+            ["debug_on"] = s.DebugOn ? "1" : "0",
+            ["no_installment"] = noInstallment,
+            ["max_installment"] = maxInstallment,
+            ["user_name"] = Truncate(request.Buyer.FullName, 60),
+            ["user_address"] = Truncate(request.Buyer.Address, 400),
+            ["user_phone"] = Truncate(request.Buyer.Phone, 20),
             ["merchant_ok_url"] = request.OkUrl,
             ["merchant_fail_url"] = request.FailUrl,
-            ["user_basket"] = basket,
-            ["client_lang"] = "tr",
-            ["debug_on"] = s.DebugOn ? "1" : "0",
-            ["paytr_token"] = token,
-        };
+            ["timeout_limit"] = "30",
+            ["currency"] = currency,
+            ["test_mode"] = testMode,
+            ["lang"] = "tr",
+        });
 
-        return new PayTrForm(PaymentUrl, fields);
+        try
+        {
+            using var response = await httpClient.PostAsync(TokenUrl, content, cancellationToken);
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            using var json = JsonDocument.Parse(body);
+            var root = json.RootElement;
+
+            if (root.TryGetProperty("status", out var status) && status.GetString() == "success"
+                && root.TryGetProperty("token", out var pageToken))
+            {
+                return new PayTrIframeResult(true, PaymentPageBaseUrl + pageToken.GetString(), null);
+            }
+
+            var reason = root.TryGetProperty("reason", out var r) ? r.GetString() : body;
+            logger.LogWarning("[PayTR] Ödeme sayfası alınamadı {MerchantOid}: {Reason}", request.MerchantOid, reason);
+            return new PayTrIframeResult(false, null, reason);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            logger.LogError(exception, "[PayTR] Token isteği başarısız ({MerchantOid})", request.MerchantOid);
+            return new PayTrIframeResult(false, null, "PayTR'ye ulaşılamadı.");
+        }
+    }
+
+    private static string Truncate(string value, int max)
+    {
+        var trimmed = (value ?? string.Empty).Trim();
+        return trimmed.Length <= max ? trimmed : trimmed[..max];
     }
 
     public bool VerifyCallback(string merchantOid, string status, string totalAmount, string hash)

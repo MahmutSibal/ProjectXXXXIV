@@ -26,6 +26,8 @@ export const customerOrdersApi = {
 
 export const customerBillsApi = {
   create: (payload) => customerApi.post('/bills', payload),
+  // Ödenecek tutar sunucudan okunur (ödenmiş kalemler düşülmüş hâliyle).
+  getById: (billId) => customerApi.get(`/bills/${billId}`),
 };
 
 export const customerPaymentsApi = {
@@ -33,9 +35,10 @@ export const customerPaymentsApi = {
   getOnlinePaymentStatus: (restaurantId) =>
     apiRequest(`/restaurants/${restaurantId}/online-payment`, { auth: false }),
 
-  // PayTR ile kartla ödeme. Sunucu yalnızca imzalı formu döner; kart bilgisi
-  // sunucumuza HİÇ gönderilmez, tarayıcı doğrudan PayTR'ye gönderir (bkz. paytr.js).
-  // { billId, itemIds?, amount?, email, returnPath } -> { merchantOid, amountMinor, testMode, postUrl, fields }
+  // PayTR ile kartla ödeme. Sunucu PayTR'nin güvenli ödeme sayfasını döner; kart
+  // bilgisi o sayfada girilir, uygulamamıza ve sunucumuza HİÇ gelmez.
+  // { billId, itemIds?, amount?, email, fullName, address, phone, returnPath }
+  //   -> { merchantOid, amountMinor, testMode, paymentPageUrl }
   startCardPayment: (payload) => customerApi.post('/paytr/table-payments', payload),
   getCardPayment: (merchantOid) => customerApi.get(`/paytr/payments/${encodeURIComponent(merchantOid)}`),
 };
