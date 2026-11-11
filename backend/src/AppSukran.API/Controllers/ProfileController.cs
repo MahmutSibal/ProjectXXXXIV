@@ -33,7 +33,18 @@ public sealed class ProfileController(IMediator mediator) : ControllerBase
         await mediator.Send(new ChangePasswordCommand(request.CurrentPassword, request.NewPassword), cancellationToken);
         return NoContent();
     }
+
+    /// <summary>
+    /// "Hesabımı sil" (KVKK m.11). Müşteri/personel hesabı anonimleştirilir; işletme
+    /// sahibinin talebi Süper Admin'e iletilir. Şifre onayı ister.
+    /// </summary>
+    [HttpPost("me/delete")]
+    [EnableRateLimiting("auth")]
+    public async Task<ActionResult<DeleteMyAccountResult>> DeleteMe([FromBody] DeleteMyAccountRequest request, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new DeleteMyAccountCommand(request.Password), cancellationToken));
 }
+
+public sealed record DeleteMyAccountRequest(string Password);
 
 public sealed record UpdateProfileRequest(string Name, string? Phone = null, string? Address = null, bool? MarketingConsent = null);
 public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);

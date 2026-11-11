@@ -14,7 +14,9 @@ public sealed class BillingProfileConfiguration : IEntityTypeConfiguration<Billi
         builder.Property(profile => profile.ContactName).HasMaxLength(150).IsRequired();
         builder.Property(profile => profile.Email).HasMaxLength(320).IsRequired();
         builder.Property(profile => profile.Phone).HasMaxLength(20).IsRequired();
-        builder.Property(profile => profile.NationalId).HasMaxLength(11).IsRequired();
+        // Şifreli saklanır ("v1:" + base64); bkz. PersonalDataProtection.
+        builder.Property(profile => profile.NationalId).HasMaxLength(200).IsRequired()
+            .HasConversion(PersonalDataProtection.Converter);
         builder.Property(profile => profile.MersisNumber).HasMaxLength(16);
         builder.Property(profile => profile.AddressLine).HasMaxLength(500).IsRequired();
         builder.Property(profile => profile.City).HasMaxLength(100).IsRequired();

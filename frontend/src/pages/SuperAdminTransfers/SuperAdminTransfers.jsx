@@ -220,6 +220,11 @@ function TransferForm({ restaurantId, tab, settings, onSaved }) {
                   {settings?.commissionPercent == null
                     ? 'Belirlenmedi'
                     : `%${Number(settings.commissionPercent).toLocaleString('tr-TR')}`}
+                  {settings?.commissionIsDefault && (
+                    <span className="ml-1 font-normal text-on-surface-variant">
+                      (varsayılan — bu restorana özel oran girilmedi)
+                    </span>
+                  )}
                 </dd>
               </div>
             </>

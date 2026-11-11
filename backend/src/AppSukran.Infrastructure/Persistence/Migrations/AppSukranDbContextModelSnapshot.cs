@@ -108,8 +108,8 @@ namespace AppSukran.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("NationalId")
                         .IsRequired()
-                        .HasMaxLength(11)
-                        .HasColumnType("nvarchar(11)");
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("Phone")
                         .IsRequired()
@@ -139,6 +139,106 @@ namespace AppSukran.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("BillingProfiles");
+                });
+
+            modelBuilder.Entity("AppSukran.Domain.Entities.CardPayment", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<long>("AmountMinor")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("BillId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int?>("BillingPeriodMonths")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FailReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ItemIds")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("MerchantOid")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<long?>("PaidTotalMinor")
+                        .HasColumnType("bigint");
+
+                    b.Property<int?>("Plan")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Purpose")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RestaurantId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ReturnPath")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<long?>("SubmerchantAmountMinor")
+                        .HasColumnType("bigint");
+
+                    b.Property<int?>("TableNo")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("TestMode")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("TransferError")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("TransferReference")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("TransferRequestedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("TransferStatus")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TransferTransId")
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MerchantOid")
+                        .IsUnique();
+
+                    b.HasIndex("RestaurantId");
+
+                    b.HasIndex("TransferStatus", "Status");
+
+                    b.ToTable("CardPayments");
                 });
 
             modelBuilder.Entity("AppSukran.Domain.Entities.Category", b =>
@@ -224,63 +324,6 @@ namespace AppSukran.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Complaints");
-                });
-
-            modelBuilder.Entity("AppSukran.Domain.Entities.CustomerCard", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
-
-                    b.Property<string>("Brand")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("CardHash")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<string>("CardholderName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("ExpiryMonth")
-                        .HasColumnType("int");
-
-                    b.Property<int>("ExpiryYear")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsDefault")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Last4")
-                        .IsRequired()
-                        .HasMaxLength(4)
-                        .HasColumnType("nvarchar(4)");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasMaxLength(160)
-                        .HasColumnType("nvarchar(160)");
-
-                    b.Property<long>("Version")
-                        .IsConcurrencyToken()
-                        .HasColumnType("bigint");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId", "IsDefault", "CreatedAt");
-
-                    b.ToTable("CustomerCards");
                 });
 
             modelBuilder.Entity("AppSukran.Domain.Entities.Event", b =>
@@ -498,6 +541,45 @@ namespace AppSukran.Infrastructure.Persistence.Migrations
                     b.HasDiscriminator<string>("OrderKind").HasValue("Order");
 
                     b.UseTphMappingStrategy();
+                });
+
+            modelBuilder.Entity("AppSukran.Domain.Entities.PasswordResetToken", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("PasswordResetTokens");
                 });
 
             modelBuilder.Entity("AppSukran.Domain.Entities.PhoneVerification", b =>

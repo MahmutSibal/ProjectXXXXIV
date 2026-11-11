@@ -182,7 +182,7 @@ export default function KitchenLayout() {
               {isProfileOpen && (
                 <div className="absolute right-0 top-[calc(100%+10px)] w-56 bg-surface-container-lowest border border-outline-variant rounded-xl ambient-shadow overflow-hidden z-[999]">
                   <Link
-                    to="/kitchen/profile"
+                    to="/hesabim"
                     onClick={() => setIsProfileOpen(false)}
                     className="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-low transition-colors font-label-md text-label-md"
                   >

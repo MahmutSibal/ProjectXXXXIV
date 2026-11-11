@@ -69,6 +69,7 @@ import SuperAdminSubscriptions from '../pages/SuperAdminSubscriptions/SuperAdmin
 /* Müşteri (QR menü) sayfası */
 
 import CustomerMenu from '../pages/CustomerMenu/CustomerMenu.jsx';
+import Account from '../pages/Account/Account.jsx';
 import CustomerMenuDesign from '../pages/CustomerMenu/CustomerMenuDesign.jsx';
 
 function NotFound() {
@@ -186,6 +187,7 @@ export default function AppRouter() {
           
         />
         <Route path="/sifremi-unuttum" element={<Login recovery />} />
+        <Route path="/sifre-sifirla" element={<Login resetPassword />} />
 
         <Route
           path="/kayit-ol"
@@ -293,6 +295,11 @@ export default function AppRouter() {
             element={<AdminSubscription />}
           />
         </Route>
+        </Route>
+
+        {/* Hesabım: şifre değiştirme ve hesap silme (her rol) */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/hesabim" element={<Account />} />
         </Route>
 
         {/* Mutfak route'ları */}

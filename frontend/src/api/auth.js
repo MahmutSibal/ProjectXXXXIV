@@ -19,4 +19,8 @@ export const authApi = {
   logout: (refreshToken) => api.post('/auth/logout', { refreshToken }),
   createQrSession: (restaurantId, tableNo, qrToken) =>
     api.post('/auth/qr-session', { restaurantId, tableNo, qrToken }, { auth: false }),
+  // Şifremi unuttum: hesap varsa e-postayla sıfırlama bağlantısı gönderilir (yanıt hep aynı).
+  forgotPassword: (email) => api.post('/auth/forgot-password', { email }, { auth: false }),
+  // E-postadaki bağlantıdaki anahtarla yeni şifre belirlenir.
+  resetPassword: (token, newPassword) => api.post('/auth/reset-password', { token, newPassword }, { auth: false }),
 };

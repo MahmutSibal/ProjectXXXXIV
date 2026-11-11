@@ -205,6 +205,23 @@ if ([string]::IsNullOrWhiteSpace($env:SUKRAN_DB_CONNECTION) -or [string]::IsNull
 
     # E-posta ayarları canlıdan taşınır; aksi hâlde her deploy e-posta doğrulamasını
     # kapatırdı. Bu oturumda elle verilmiş bir değer varsa (ilk kurulum) o önceliklidir.
+    # PayTR ayarları da canlıdan taşınır (elle verilmiş değer önceliklidir).
+    if ($live['PayTr__Enabled'] -eq 'true') {
+        $payTrMap = [ordered]@{
+            'SUKRAN_PAYTR_MERCHANT_ID'   = 'SUKRAN_PAYTR_MERCHANT_ID'
+            'SUKRAN_PAYTR_MERCHANT_KEY'  = 'SUKRAN_PAYTR_MERCHANT_KEY'
+            'SUKRAN_PAYTR_MERCHANT_SALT' = 'SUKRAN_PAYTR_MERCHANT_SALT'
+            'SUKRAN_PAYTR_TEST_MODE'     = 'PayTr__TestMode'
+            'SUKRAN_PAYTR_TRANSFERS'     = 'PayTr__TransfersEnabled'
+        }
+        foreach ($envName in $payTrMap.Keys) {
+            $liveName = $payTrMap[$envName]
+            if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($envName)) -and $live.Contains($liveName)) {
+                Set-Item "env:$envName" $live[$liveName]
+            }
+        }
+    }
+
     if ($live['Email__Enabled'] -eq 'true') {
         $emailMap = [ordered]@{
             'SUKRAN_SMTP_PASSWORD'  = 'SUKRAN_SMTP_PASSWORD'
@@ -224,14 +241,17 @@ if ([string]::IsNullOrWhiteSpace($env:SUKRAN_DB_CONNECTION) -or [string]::IsNull
     $liveOrigins = $live.Keys | Where-Object { $_ -like 'Cors__AllowedOrigins__*' } | ForEach-Object { $live[$_] }
     $frontendOrigins = @($frontendOrigins + $liveOrigins | Select-Object -Unique)
 
-    Write-Host "  Okunan ayarlar: $(($live.Keys | Where-Object { $_ -notmatch 'PASSWORD|KEY|SECRET|CONNECTION|TOKEN' }) -join ', ')"
+    Write-Host "  Okunan ayarlar: $(($live.Keys | Where-Object { $_ -notmatch 'PASSWORD|KEY|SECRET|SALT|CONNECTION|TOKEN' }) -join ', ')"
     Write-Host "  Sırlar okundu (değerleri yazdırılmaz)."
 }
 
 Write-Host "  CORS          : $($frontendOrigins -join ', ')"
 Write-Host "  WhatsApp      : $(if ($whatsAppBaseUrl) { $whatsAppBaseUrl } else { 'kapalı' })"
 Write-Host "  E-posta       : $(if ($env:SUKRAN_SMTP_PASSWORD) { "açık ($(if ($env:SUKRAN_EMAIL_FROM) { $env:SUKRAN_EMAIL_FROM } else { 'gönderici eksik' }))" } else { 'kapalı' })"
-Write-Host "  Kart ödemesi  : kapalı (PayTR bağlanana kadar)"
+$payTrReady = $env:SUKRAN_PAYTR_MERCHANT_ID -and $env:SUKRAN_PAYTR_MERCHANT_KEY -and $env:SUKRAN_PAYTR_MERCHANT_SALT
+$payTrTestText = if ($env:SUKRAN_PAYTR_TEST_MODE -eq 'false') { 'CANLI - gerçek para' } else { 'TEST modu' }
+$payTrTransferText = if ($env:SUKRAN_PAYTR_TRANSFERS -eq 'true') { 'açık' } else { 'kapalı' }
+Write-Host "  Kart ödemesi  : $(if ($payTrReady) { "PayTR ($payTrTestText, restoran transferi $payTrTransferText)" } else { 'kapalı (PayTR anahtarları yok)' })"
 Write-Host "  QR adresi     : $PublicAppUrl"
 
 $commonArgs = @{ FrontendOrigin = $frontendOrigins }

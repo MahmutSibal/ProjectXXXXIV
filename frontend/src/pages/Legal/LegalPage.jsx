@@ -22,47 +22,75 @@ const pages = {
   },
 
   '/kvkk': {
-    title: 'KVKK Aydınlatma Metni',
-    intro: 'Şükran App kullanımı sırasında kişisel verilerin işlenmesine ilişkin bilgilendirme.',
+    title: "KVKK Aydınlatma Metni",
+    intro: "6698 sayılı Kişisel Verilerin Korunması Kanunu (KVKK) 10. madde kapsamında Şükran App kullanımı sırasında işlenen kişisel veriler hakkında bilgilendirme.",
     sections: [
       [
-        'Veri sorumlusu',
-        'Veri sorumlusu [tam ticari unvan], adresi [resmî adres], başvuru kanalı [KVKK başvuru kanalı]. Restoranın kendi yürüttüğü sipariş ve müşteri işlemlerindeki rolü, ilgili işletmenin bilgilendirmesinde açıklanır.',
+        "Veri sorumlusu",
+        "Veri sorumlusu [tam ticari unvan / ad soyad], adresi [resmî adres], e-posta [KVKK başvuru e-postası]. QR menü ile verilen siparişlerde siparişi hazırlayan restoran, kendi müşteri ilişkisi bakımından ayrıca veri sorumlusudur.",
       ],
       [
-        'İşlenen veriler ve elde edilme yöntemi',
-        'Üyelik, sipariş, yorum veya destek ekranlarını kullandığınızda ad, soyad, e-posta, telefon, ilgili işlem için gerekli adres, sipariş ve talep bilgileri elektronik formlar üzerinden alınabilir. Teknik işlem kayıtları uygulama kullanımı sırasında oluşabilir.',
+        "QR menüden sipariş veren müşteriler",
+        "Sipariş içeriği ve isteğe bağlı olarak siparişi verenin adı; kartla ödemede ad soyad, e-posta, telefon ve adres; yorum yazarsanız yorumunuz ve görünen adınız. Kartla ödemede iletişim bilgileri yalnızca ödeme kuruluşu PayTR'ye iletilir, Şükran App'te saklanmaz.",
       ],
       [
-        'İşleme amaçları ve hukuki sebepler',
-        'Veriler hesap yönetimi, masa oturumu, siparişin yürütülmesi, destek talepleri ve gerektiğinde ödeme işlemleri için kullanılabilir. Bu amaçlara karşılık gelen hukuki sebepler [doğrulanmış amaç ve hukuki sebep eşleştirmesi] alanında açıklanacaktır.',
+        "Kart bilgileri",
+        "Kart numarası, son kullanma tarihi, güvenlik kodu (CVV) ve kart sahibi adı PayTR'nin güvenli ödeme sayfasında girilir. Şükran App bu bilgileri görmez, işlemez ve saklamaz.",
       ],
       [
-        'Aktarım ve başvuru',
-        'Aktarım yapılan alıcı grupları ve amaçları [restoran, ödeme ve teknik hizmet sağlayıcıları için doğrulanmış liste ve aktarım amaçları] alanında belirtilecektir. Kişisel verilerinize ilişkin başvurunuzu [başvuru kanalı] üzerinden iletebilirsiniz.',
+        "Üye müşteriler, işletme sahipleri ve personel",
+        "Ad soyad, e-posta, telefon, adres ve şifrenin geri döndürülemez özeti (şifrenin kendisi saklanmaz); isteğe bağlı kampanya bildirimi tercihi. İşletme sahiplerinden ayrıca fatura için T.C. kimlik numarası (veritabanında şifreli tutulur) ve varsa MERSİS numarası; restorana ödeme aktarımı için IBAN ve hesap sahibi adı.",
+      ],
+      [
+        "İade talepleri, doğrulama ve teknik kayıtlar",
+        "İade talebinde IBAN ve hesap sahibi adı; kayıt sırasında telefon numarası veya e-posta adresi ile tek kullanımlık doğrulama kodunun özeti; güvenlik ve kötüye kullanımı önleme amacıyla oturum kayıtları ve işlem kayıtları. Kartla ödemede IP adresiniz dolandırıcılık kontrolü için PayTR'ye iletilir.",
+      ],
+      [
+        "İşleme amaçları ve hukuki sebepler",
+        "Hesabın açılması ve yönetimi, siparişin alınıp hazırlanması, ödemenin alınması ve restorana aktarılması, iade ve destek taleplerinin yürütülmesi: sözleşmenin kurulması ve ifası (KVKK m.5/2-c). Fatura düzenlenmesi ve kayıtların saklanması: hukuki yükümlülük (m.5/2-ç). Hesap ve ödeme güvenliği, kötüye kullanımın önlenmesi: meşru menfaat (m.5/2-f). Kampanya ve tanıtım iletileri: yalnızca açık rızanız ile (m.5/1).",
+      ],
+      [
+        "Kimlere aktarılır",
+        "Siparişi hazırlayan restoran; ödeme kuruluşu PayTR Ödeme ve Elektronik Para Kuruluşu A.Ş.; e-posta gönderim hizmeti Brevo (sunucuları Avrupa Birliği'nde); doğrulama mesajları için WhatsApp (Meta); barındırma hizmeti [barındırma sağlayıcısı ve ülkesi]; talep hâlinde yetkili kamu kurum ve kuruluşları. Yurt dışına aktarım KVKK m.9 kapsamında [standart sözleşme / açık rıza] ile yapılır.",
+      ],
+      [
+        "Saklama süreleri",
+        "Doğrulama kayıtları 30 gün; süresi dolan oturum kayıtları 30 gün; iade talebindeki IBAN ve hesap sahibi adı talep kapandıktan 90 gün sonra silinir. Fatura, ödeme ve sipariş kayıtları Vergi Usul Kanunu gereği yasal süre boyunca saklanır. Hesabınızı sildiğinizde ad, e-posta, telefon ve adresiniz hemen silinir.",
+      ],
+      [
+        "Haklarınız",
+        "KVKK m.11 uyarınca verilerinizin işlenip işlenmediğini öğrenme, bilgi talep etme, düzeltilmesini veya silinmesini isteme, aktarıldığı üçüncü kişileri öğrenme, itiraz etme ve zararın giderilmesini talep etme haklarına sahipsiniz. Hesabınızı \"Hesabım\" sayfasından kendiniz silebilir, diğer talepleriniz için [KVKK başvuru e-postası] adresine yazabilirsiniz.",
       ],
     ],
   },
 
   '/gizlilik-politikasi': {
-    title: 'Gizlilik Politikası',
-    intro: 'Hesap, QR menü, sipariş ve destek özelliklerinde kullanılan bilgiler.',
+    title: "Gizlilik Politikası",
+    intro: "Şükran App'te hangi bilgilerin neden tutulduğu ve nasıl korunduğu.",
     sections: [
       [
-        'Hesap ve masa oturumu',
-        'Hesap bilgileriniz üyelik işlemlerinde kullanılır. QR bağlantısı menüyü ilgili işletme ve masa ile eşleştirir. Sepet ve oturum bilgilerinin cihazda tutulma biçimi, kullanılan uygulama sürümüne göre açıklanır.',
+        "Hesap ve masa oturumu",
+        "Hesap bilgileriniz giriş ve hesap yönetimi için kullanılır. QR bağlantısı menüyü ilgili restoran ve masa ile eşleştirir; masa oturumu restoran masayı kapattığında sona erer.",
       ],
       [
-        'Sipariş, ödeme ve destek',
-        'Sipariş içeriği, seçilen ekstralar ve müşteri notları siparişin işlenmesi için kullanılabilir. Ödeme sağlayıcısı devrede olduğunda ödeme akışında hangi bilgilerin paylaşıldığı [sağlayıcı ve veri kapsamı] bölümünde belirtilir. Destek taleplerinde paylaştığınız bilgiler talebin incelenmesi için kullanılır.',
+        "Ödeme",
+        "Kartla ödeme PayTR üzerinden alınır. Kart bilgileri PayTR'nin sayfasında girilir; Şükran App kart bilgilerini görmez ve saklamaz. Ödeme için zorunlu olan ad, e-posta, telefon ve adres yalnızca PayTR'ye iletilir.",
       ],
       [
-        'Tarayıcı verileri ve saklama',
-        'Oturum veya sepet işlevleri için kullanılan tarayıcı depolama yöntemleri [çerez ve yerel depolama envanteri] bölümünde, kişisel verilerin saklama süreleri [saklama süreleri] bölümünde açıklanacaktır.',
+        "Güvenlik",
+        "Şifreler geri döndürülemez biçimde, T.C. kimlik numaraları şifreli saklanır. Tüm bağlantılar HTTPS ile şifrelidir. Personel yalnızca kendi restoranının, müşteri yalnızca kendi masasının bilgilerine erişebilir.",
       ],
       [
-        'Kampanya tercihleri',
-        'Üyelik ekranındaki kampanya tercihi ayrı bir seçimdir. Ticari ileti tercihlerinin nasıl yönetileceği [tercih ve ret kanalı] üzerinden açıklanacaktır.',
+        "Tarayıcıda tutulan bilgiler",
+        "Oturumunuzu açık tutmak için oturum anahtarı ve QR masa oturumu tarayıcınızın yerel depolamasında tutulur. Reklam veya takip amaçlı çerez kullanılmaz.",
+      ],
+      [
+        "Saklama ve silme",
+        "Amacı biten veriler otomatik olarak silinir (ayrıntılar KVKK Aydınlatma Metni'nde). Hesabınızı \"Hesabım\" sayfasından silebilirsiniz.",
+      ],
+      [
+        "Kampanya tercihleri",
+        "Üyelik ekranındaki kampanya bildirimi tercihi isteğe bağlıdır; vermeseniz de hizmetten yararlanırsınız. Ticari ileti gönderimi başladığında tercihinizi her iletideki bağlantıdan veya hesabınızdan değiştirebilirsiniz.",
       ],
     ],
   },
@@ -170,10 +198,7 @@ export default function LegalPage() {
           </p>
         </header>
 
-        <div className="space-y-6 px-5 py-6 sm:px-9 sm:py-8">
-          <p className="rounded-xl border border-[#DFE4E0] bg-[#F8F9FA] px-4 py-3 text-sm text-[#59635D]">
-            Taslak metin. Yayınlanmadan önce şirket bilgileriyle tamamlanıp hukuki kontrolden geçirilmelidir.
-          </p>
+        <div className="space-y-6 px-5 py-6 sm:px-9 sm:py-8">
 
           {page.sections.map(([heading, content]) => (
             <section key={heading}>

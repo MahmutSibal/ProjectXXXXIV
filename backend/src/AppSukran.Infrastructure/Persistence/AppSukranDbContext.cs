@@ -3,8 +3,18 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AppSukran.Infrastructure.Persistence;
 
-public sealed class AppSukranDbContext(DbContextOptions<AppSukranDbContext> options) : DbContext(options)
+public sealed class AppSukranDbContext : DbContext
 {
+    public AppSukranDbContext(DbContextOptions<AppSukranDbContext> options, AppSukran.Application.Abstractions.Security.ISecretProtectionService? protector = null)
+        : base(options)
+    {
+        // T.C. kimlik no şifrelemesi için (bkz. PersonalDataProtection).
+        if (protector is not null)
+        {
+            PersonalDataProtection.Protector ??= protector;
+        }
+    }
+
     public DbSet<User> Users => Set<User>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
@@ -14,7 +24,8 @@ public sealed class AppSukranDbContext(DbContextOptions<AppSukranDbContext> opti
     public DbSet<MenuItem> MenuItems => Set<MenuItem>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<Bill> Bills => Set<Bill>();
-    public DbSet<CustomerCard> CustomerCards => Set<CustomerCard>();
+    public DbSet<CardPayment> CardPayments => Set<CardPayment>();
+    public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<Event> Events => Set<Event>();
     public DbSet<SupportRequest> SupportRequests => Set<SupportRequest>();

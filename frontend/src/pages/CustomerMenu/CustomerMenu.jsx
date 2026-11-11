@@ -8,11 +8,12 @@ import {
   customerOrdersApi,
   customerBillsApi,
   customerPaymentsApi,
-  customerCardsApi,
   customerReviewsApi,
 } from '../../api/customer.js';
 import { OrderSessionStatus, OrderItemStatus, PaymentStatus, ORDER_ITEM_STATUS_LABEL, formatKurus } from '../../api/enums.js';
 import { toPage, MAX_PAGE_SIZE } from '../../api/pagination.js';
+import PayTrBadge from '../../components/PayTrBadge.jsx';
+import { CardPaymentStatus, waitForCardPayment, readPaymentReturnParams, clearPaymentReturnParams, currentReturnPath } from '../../api/paytr.js';
 import './CustomerMenu.css';
 
 const TABS = [
@@ -45,7 +46,12 @@ export default function CustomerMenu() {
       setError('');
       try {
         let current = getCustomerSession();
-        const matches = current && current.restaurantId === restaurantId && String(current.tableNo) === String(tableNo);
+        // Masa yeniden açıldıysa QR'daki anahtar değişir; eski oturum artık geçersizdir.
+        // Adresteki anahtar kayıtlı oturumunkinden farklıysa yeni oturum açılır.
+        const matches = current
+          && current.restaurantId === restaurantId
+          && String(current.tableNo) === String(tableNo)
+          && (!token || current.qrToken === token);
 
         if (!matches || !isSessionValid(current)) {
           if (!token) {
@@ -373,11 +379,33 @@ function BillTab({ session, restaurantId, tableNo }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState('');
   const [paid, setPaid] = useState(false);
-  const [card, setCard] = useState({ holder: '', number: '', month: '', year: '', cvc: '' });
   // Ödeme sağlayıcısı (PayTR) her tahsilatta bu dört bilgiyi zorunlu tutar.
   const [buyer, setBuyer] = useState({ fullName: '', email: '', address: '', phone: '' });
   // null = henüz bilinmiyor; false ise kart ödemesi kapalı, form gösterilmez.
   const [onlinePayment, setOnlinePayment] = useState(null);
+  // PayTR 3D Secure sonrası bu sayfaya ?odeme=...&oid=... ile dönülür. Yönlendirme sonucu
+  // kesin değildir; ödeme yalnızca PayTR'nin sunucumuza bildirimiyle onaylanır.
+  const [paymentReturn] = useState(() => readPaymentReturnParams());
+  const [checkingPayment, setCheckingPayment] = useState(() => Boolean(paymentReturn));
+
+  useEffect(() => {
+    const returned = paymentReturn;
+    if (!returned) return;
+
+    clearPaymentReturnParams();
+    waitForCardPayment(customerPaymentsApi.getCardPayment, returned.merchantOid)
+      .then((payment) => {
+        if (payment.status === CardPaymentStatus.Succeeded) {
+          setPaid(true);
+        } else if (payment.status === CardPaymentStatus.Failed) {
+          setError(payment.failReason ? `Ödeme tamamlanamadı: ${payment.failReason}` : 'Ödeme tamamlanamadı. Kartınızdan çekim yapılmadı.');
+        } else {
+          setError('Ödemenin sonucu henüz gelmedi. Birkaç dakika sonra sayfayı yenileyin; çekim yapıldıysa hesabınız kapanmış görünecektir.');
+        }
+      })
+      .catch((err) => setError(err.message ?? 'Ödeme sonucu alınamadı.'))
+      .finally(() => setCheckingPayment(false));
+  }, [paymentReturn]);
 
   useEffect(() => {
     customerPaymentsApi
@@ -420,7 +448,10 @@ function BillTab({ session, restaurantId, tableNo }) {
           paymentStatus: item.paymentStatus,
         })),
       });
-      setBill({ id: billId, remainingAmount: total });
+      // Tutarı sunucu belirler: daha önce ödenmiş kalemler düşülür. Ekrandaki toplam
+      // bununla değiştirilir ki müşteri ödeyeceğinden farklı bir tutar görmesin.
+      const created = await customerBillsApi.getById(billId).catch(() => null);
+      setBill({ id: billId, remainingAmount: created?.remainingAmount ?? total });
     } catch (err) {
       setError(err.message ?? 'Hesap oluşturulamadı.');
     } finally {
@@ -431,33 +462,13 @@ function BillTab({ session, restaurantId, tableNo }) {
   const handlePay = async () => {
     if (!bill) return;
 
-    const digits = card.number.replace(/\D/g, '');
-    if (digits.length < 15) {
-      setError('Kart numarasını eksiksiz girin.');
-      return;
-    }
-    if (!/^\d{2}$/.test(card.month) || Number(card.month) < 1 || Number(card.month) > 12) {
-      setError('Son kullanma ayı 01-12 arasında olmalı.');
-      return;
-    }
-    if (!/^\d{4}$/.test(card.year)) {
-      setError('Son kullanma yılını 4 haneli girin (örn. 2030).');
-      return;
-    }
-    if (!/^\d{3,4}$/.test(card.cvc)) {
-      setError('CVC 3 veya 4 haneli olmalı.');
-      return;
-    }
-    if (card.holder.trim().length < 3) {
-      setError('Kart üzerindeki ismi girin.');
-      return;
-    }
     if (buyer.fullName.trim().length < 3) {
       setError('Ad soyadınızı girin.');
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyer.email.trim())) {
-      setError('Geçerli bir e-posta adresi girin.');
+    // PayTR e-postada Türkçe karakter kabul etmiyor.
+    if (!/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(buyer.email.trim())) {
+      setError('Geçerli bir e-posta adresi girin (Türkçe karakter olmadan).');
       return;
     }
     if (buyer.address.trim().length < 5) {
@@ -472,40 +483,31 @@ function BillTab({ session, restaurantId, tableNo }) {
     setIsProcessing(true);
     setError('');
     try {
-      // Kart, ödeme için önce kaydedilir; tahsilat sunucuda bu kartla yapılır.
-      // Kart numarası sunucuda saklanmaz, yalnızca özeti ve son 4 hanesi tutulur.
-      const saved = await customerCardsApi.create({
-        cardholderName: card.holder.trim(),
-        cardNumber: digits,
-        expiryMonth: Number(card.month),
-        expiryYear: Number(card.year),
-        cvv: card.cvc,
-        isDefault: false,
-      });
-
-      await customerPaymentsApi.splitEqually({
+      // Sunucu tutarı kendisi hesaplar ve PayTR'nin güvenli ödeme sayfasını alır.
+      // İletişim bilgileri yalnızca PayTR'ye iletilir, saklanmaz. Kart bilgisi PayTR'nin
+      // sayfasında girilir; uygulamamıza hiç gelmez.
+      const started = await customerPaymentsApi.startCardPayment({
         billId: bill.id,
-        personCount: 1,
-        paidByUserId: session.tableSessionId,
-        customerCardId: saved.id,
-        cardNumber: digits,
-        cvc: card.cvc,
-        buyer: {
-          fullName: buyer.fullName.trim(),
-          email: buyer.email.trim(),
-          address: buyer.address.trim(),
-          phone: buyer.phone.trim(),
-        },
+        email: buyer.email.trim(),
+        fullName: buyer.fullName.trim(),
+        address: buyer.address.trim(),
+        phone: buyer.phone.trim(),
+        returnPath: currentReturnPath(),
       });
-      setPaid(true);
+      // Müşteri PayTR'nin kendi sayfasına geçer: kart ve 3D Secure orada girilir,
+      // ödeme bitince PayTR bu sayfaya geri döndürür.
+      window.location.assign(started.paymentPageUrl);
     } catch (err) {
-      setError(err.message ?? 'Ödeme işlemi başarısız oldu.');
-    } finally {
+      setError(err.message ?? 'Ödeme başlatılamadı.');
       setIsProcessing(false);
     }
   };
 
   if (isLoading) return <p className="customer-empty">Yükleniyor...</p>;
+
+  if (checkingPayment) {
+    return <p className="customer-empty">Ödemeniz kontrol ediliyor, lütfen bekleyin...</p>;
+  }
 
   if (paid) {
     return (
@@ -537,6 +539,13 @@ function BillTab({ session, restaurantId, tableNo }) {
         <span>Toplam</span>
         <strong>{formatKurus(total)}</strong>
       </div>
+
+      {bill && bill.remainingAmount !== total && (
+        <div className="customer-cart-total">
+          <span>Ödenecek (ödenmiş ürünler düşüldü)</span>
+          <strong>{formatKurus(bill.remainingAmount)}</strong>
+        </div>
+      )}
 
       {error && <p className="customer-error">{error}</p>}
 
@@ -597,78 +606,19 @@ function BillTab({ session, restaurantId, tableNo }) {
               />
             </label>
 
-            <label>
-              <span>Kart Üzerindeki İsim</span>
-              <input
-                type="text"
-                autoComplete="cc-name"
-                value={card.holder}
-                onChange={(e) => setCard((p) => ({ ...p, holder: e.target.value }))}
-                placeholder="Ad Soyad"
-              />
-            </label>
-
-            <label>
-              <span>Kart Numarası</span>
-              <input
-                type="text"
-                inputMode="numeric"
-                autoComplete="cc-number"
-                maxLength={19}
-                value={card.number}
-                onChange={(e) => setCard((p) => ({ ...p, number: e.target.value }))}
-                placeholder="•••• •••• •••• ••••"
-              />
-            </label>
-
-            <div className="customer-card-row">
-              <label>
-                <span>Ay</span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={2}
-                  autoComplete="cc-exp-month"
-                  value={card.month}
-                  onChange={(e) => setCard((p) => ({ ...p, month: e.target.value }))}
-                  placeholder="12"
-                />
-              </label>
-
-              <label>
-                <span>Yıl</span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={4}
-                  autoComplete="cc-exp-year"
-                  value={card.year}
-                  onChange={(e) => setCard((p) => ({ ...p, year: e.target.value }))}
-                  placeholder="2030"
-                />
-              </label>
-
-              <label>
-                <span>CVC</span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={4}
-                  autoComplete="cc-csc"
-                  value={card.cvc}
-                  onChange={(e) => setCard((p) => ({ ...p, cvc: e.target.value }))}
-                  placeholder="123"
-                />
-              </label>
-            </div>
-
             <p className="customer-card-note">
-              Ödeme güvenli ödeme altyapısı üzerinden alınır. Nakit ödemek isterseniz personele bildirin.
+              Kart bilgilerinizi bir sonraki adımda PayTR&apos;nin güvenli ödeme sayfasında
+              gireceksiniz; Şükran App kart bilgilerinizi görmez ve saklamaz. Nakit ödemek
+              isterseniz personele bildirin.
             </p>
           </div>
 
+          <div style={{ display: 'flex', justifyContent: 'center', margin: '4px 0 10px' }}>
+            <PayTrBadge compact />
+          </div>
+
           <button type="button" className="customer-primary-btn" onClick={handlePay} disabled={isProcessing}>
-            {isProcessing ? 'İşleniyor...' : `${formatKurus(total)} Öde`}
+            {isProcessing ? 'Güvenli ödeme sayfası açılıyor...' : `${formatKurus(bill?.remainingAmount ?? total)} Kartla Öde`}
           </button>
         </>
       )}

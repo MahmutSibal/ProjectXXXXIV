@@ -38,6 +38,8 @@ public sealed class CreateReviewCommandHandler(IUnitOfWork unitOfWork, ICurrentU
         var restaurantId = request.RestaurantId.Trim();
         var repository = unitOfWork.Repository<Review>();
 
+        await EnsureOrderedFromTableAsync(restaurantId, cancellationToken);
+
         // Tek yorum kuralı: kullanıcının bu restorana daha önce yaptığı yorum(lar) silinir,
         // yerine yeni yorum gelir (eski tepki ve yanıtlar da gider).
         var existing = await repository.FindAsync(
@@ -60,5 +62,39 @@ public sealed class CreateReviewCommandHandler(IUnitOfWork unitOfWork, ICurrentU
 
         await repository.InsertAsync(review, cancellationToken);
         return ReviewMapping.ToResponse(review, userId);
+    }
+
+    /// <summary>
+    /// Yorumu yalnızca restoranda gerçekten bulunmuş müşteri yazabilir: o restoranın
+    /// masasındaki QR ile bağlanmış ve bu oturumda sipariş vermiş olmalı. Eskiden
+    /// ücretsiz bir hesap açan herkes (ör. rakip işletme) hiç gitmediği restorana
+    /// yorum yazabiliyordu.
+    /// </summary>
+    private async Task EnsureOrderedFromTableAsync(string restaurantId, CancellationToken cancellationToken)
+    {
+        const string NotAllowed = "Yorum yapabilmek için restoranda QR menüden sipariş vermiş olmanız gerekiyor.";
+
+        var tableNo = currentUserService.TableNo;
+        if (tableNo is null
+            || !currentUserService.IsInRole(nameof(Domain.Enums.UserRole.Customer))
+            || !string.Equals(currentUserService.RestaurantId, restaurantId, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(NotAllowed);
+        }
+
+        var restaurant = await unitOfWork.Repository<Restaurant>().GetByIdAsync(restaurantId, cancellationToken)
+            ?? throw new InvalidOperationException("Restoran bulunamadı.");
+        var sessionStart = restaurant.Tables.FirstOrDefault(table => table.TableNo == tableNo)?.SessionOpenedAt
+            ?? throw new InvalidOperationException(NotAllowed);
+
+        // Masa oturumu açıldıktan sonra bu masadan verilmiş en az bir sipariş.
+        var orders = await unitOfWork.Repository<Order>().FindAsync(
+            order => order.RestaurantId == restaurantId && order.TableNo == tableNo && order.CreatedAt >= sessionStart,
+            cancellationToken);
+
+        if (orders.Count == 0)
+        {
+            throw new InvalidOperationException(NotAllowed);
+        }
     }
 }

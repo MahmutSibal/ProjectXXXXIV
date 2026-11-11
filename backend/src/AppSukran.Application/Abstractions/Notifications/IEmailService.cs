@@ -8,6 +8,12 @@ public interface IEmailService
 {
     bool IsEnabled { get; }
 
+    /// <summary>Platform bildirimlerinin (iletişim formu vb.) gideceği adres; tanımlı değilse null.</summary>
+    string? NotificationAddress { get; }
+
+    /// <summary>Uygulamanın herkese açık adresi (e-postadaki bağlantılar için).</summary>
+    string AppBaseUrl { get; }
+
     Task SendAsync(string toAddress, string subject, string textBody, CancellationToken cancellationToken = default);
 }
 

@@ -76,6 +76,22 @@ public sealed class AuthController(IMediator mediator) : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>"Şifremi unuttum": hesap varsa e-postayla sıfırlama bağlantısı gönderir (yanıt hep aynıdır).</summary>
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new RequestPasswordResetCommand(request.Email ?? string.Empty), cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>E-postadaki bağlantıyla yeni şifre belirler.</summary>
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new ResetPasswordCommand(request.Token ?? string.Empty, request.NewPassword ?? string.Empty), cancellationToken);
+        return NoContent();
+    }
+
     [HttpPost("logout")]
     public async Task<IActionResult> Logout([FromBody] RefreshTokenRequest? request, CancellationToken cancellationToken)
     {
@@ -123,5 +139,7 @@ public sealed record RegisterBusinessRequest(
     string Phone, string Address, double Longitude, double Latitude,
     string? PhoneVerificationTicket = null);
 public sealed record LoginUserRequest(string Email, string Password);
+public sealed record ForgotPasswordRequest(string? Email);
+public sealed record ResetPasswordRequest(string? Token, string? NewPassword);
 public sealed record RefreshTokenRequest(string RefreshToken);
 public sealed record CreateQrSessionRequest(string RestaurantId, int TableNo, string QrToken);

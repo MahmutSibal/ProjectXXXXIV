@@ -1,14 +1,10 @@
 using AppSukran.Application.Abstractions.Payments;
-using AppSukran.Infrastructure.Settings;
-using Microsoft.Extensions.Options;
 
 namespace AppSukran.Infrastructure.Payments;
 
-public sealed class PaymentPlatformInfo(IOptions<PaymentSettings> options) : IPaymentPlatformInfo
+public sealed class PaymentPlatformInfo(IPayTrService payTr) : IPaymentPlatformInfo
 {
-    // DependencyInjection'daki IPaymentGateway seçimiyle aynı kural.
-    public bool GlobalProviderIsFake => options.Value.IsFake;
+    public bool GlobalProviderIsFake => payTr.IsConfigured && payTr.TestMode;
 
-    // Şu an kart tahsil edebilen tek sağlayıcı simülasyondur; PayTR eklenince genişler.
-    public bool CardPaymentsAvailable => options.Value.IsFake;
+    public bool CardPaymentsAvailable => payTr.IsConfigured;
 }
