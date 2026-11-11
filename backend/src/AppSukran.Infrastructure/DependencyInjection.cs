@@ -120,6 +120,7 @@ public static class DependencyInjection
         services.AddHostedService<SuperAdminSeeder>();
         services.AddHostedService<SubscriptionExpiryWorker>();
         services.AddHostedService<Payments.PayTrTransferWorker>();
+        services.AddHostedService<PersonalDataMaintenanceWorker>();
 
         return services;
     }

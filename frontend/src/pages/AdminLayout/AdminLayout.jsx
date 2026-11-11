@@ -170,6 +170,17 @@ export default function AdminLayout() {
                 </Link>
 
                 <Link
+                  to="/hesabim"
+                  onClick={() => setIsProfileOpen(false)}
+                  className="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-low transition-colors font-label-md text-label-md"
+                >
+                  <span className="material-symbols-outlined text-[20px]">
+                    lock_person
+                  </span>
+                  Şifre ve Hesap
+                </Link>
+
+                <Link
                   to="/admin/support"
                   onClick={() => setIsProfileOpen(false)}
                   className="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-low transition-colors font-label-md text-label-md"

@@ -108,8 +108,8 @@ namespace AppSukran.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("NationalId")
                         .IsRequired()
-                        .HasMaxLength(11)
-                        .HasColumnType("nvarchar(11)");
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("Phone")
                         .IsRequired()
