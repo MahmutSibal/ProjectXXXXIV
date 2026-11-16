@@ -44,6 +44,19 @@ public sealed class PayTrController(IMediator mediator, IPayTrService payTr, IOp
             request.RestaurantId, request.Plan, request.BillingPeriodMonths, request.ToBuyer(),
             request.ReturnPath ?? "/admin/subscription", ClientIp(), BackendBaseUrl()), cancellationToken));
 
+    /// <summary>Restoranın kartla alınan ödemeleri (son N gün).</summary>
+    [HttpGet("restaurants/{restaurantId}/payments")]
+    [Authorize(Roles = "SuperAdmin,RestaurantOwner")]
+    public async Task<ActionResult<IReadOnlyCollection<CardPaymentListItem>>> List(string restaurantId, [FromQuery] int days = 30, CancellationToken cancellationToken = default)
+        => Ok(await mediator.Send(new GetCardPaymentsQuery(restaurantId, days), cancellationToken));
+
+    /// <summary>Kart ödemesini (tamamen veya kısmen) PayTR üzerinden karta iade eder.</summary>
+    [HttpPost("payments/{merchantOid}/refund")]
+    [Authorize(Roles = "SuperAdmin,RestaurantOwner")]
+    [EnableRateLimiting("payments-write")]
+    public async Task<ActionResult<CardPaymentListItem>> Refund(string merchantOid, [FromBody] RefundCardPaymentRequest request, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new RefundCardPaymentCommand(merchantOid, request.AmountMinor, request.Reason), cancellationToken));
+
     /// <summary>Ödemenin sonucu (sayfa, PayTR'den döndükten sonra bunu sorgular).</summary>
     [HttpGet("payments/{merchantOid}")]
     [Authorize]
@@ -108,6 +121,9 @@ public sealed class PayTrController(IMediator mediator, IPayTrService payTr, IOp
 }
 
 public sealed record PayTrStatusResponse(bool Available, bool TestMode);
+
+/// <param name="AmountMinor">İade tutarı (kuruş). Boşsa kalan tutarın tamamı.</param>
+public sealed record RefundCardPaymentRequest(long? AmountMinor, string? Reason);
 
 /// <summary>Ödeme yapanın iletişim bilgileri: PayTR'ye iletilir, saklanmaz.</summary>
 public abstract record PayTrBuyerRequest(string? Email, string? FullName, string? Address, string? Phone)

@@ -121,6 +121,7 @@ public static class DependencyInjection
         services.AddHostedService<SubscriptionExpiryWorker>();
         services.AddHostedService<Payments.PayTrTransferWorker>();
         services.AddHostedService<PersonalDataMaintenanceWorker>();
+        services.AddHostedService<SubscriptionRenewalReminderWorker>();
 
         return services;
     }

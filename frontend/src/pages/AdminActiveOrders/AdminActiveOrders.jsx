@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { matchesSearch } from '../../lib/text.js';
 import { useToast } from '../../context/ToastContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useOrderRealtime } from '../../hooks/useOrderRealtime.js';
 import { useRefundRequests } from '../../hooks/useRefundRequests.js';
-import { RefundRequestStatus } from '../../api/refunds.js';
+import { RefundRequestStatus, RefundMethod } from '../../api/refunds.js';
 import RealtimeStatus from '../../components/RealtimeStatus.jsx';
 import { ordersApi } from '../../api/orders.js';
 import { OrderSessionStatus, ORDER_ITEM_STATUS_LABEL, formatKurus } from '../../api/enums.js';
@@ -152,6 +153,13 @@ export default function AdminActiveOrders() {
             <p className="mt-2 text-sm text-on-background">
               IBAN: <span className="font-mono">{request.iban}</span>
               {request.accountHolderName ? ` · ${request.accountHolderName}` : ''}
+            </p>
+          )}
+          {request.method === RefundMethod.Card && (
+            <p className="mt-2 text-sm text-on-background">
+              Kartla iade için ödemeyi{' '}
+              <Link to="/admin/card-payments" className="font-semibold underline">Kart Ödemeleri</Link>
+              {' '}sayfasından bulup &quot;İade Et&quot;e basın; ardından bu talebi &quot;İade Yapıldı&quot; olarak işaretleyin.
             </p>
           )}
           <div className="mt-3 flex flex-wrap gap-2">
