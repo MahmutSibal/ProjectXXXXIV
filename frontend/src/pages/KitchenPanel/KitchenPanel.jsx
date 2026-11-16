@@ -11,6 +11,8 @@ import { OrderSessionStatus, OrderItemStatus, formatKurus } from '../../api/enum
 import { ApiError } from '../../api/client.js';
 import { toPage, MAX_PAGE_SIZE } from '../../api/pagination.js';
 import './KitchenPanel.css';
+import WaiterCallAlerts from '../../components/WaiterCallAlerts.jsx';
+import { useWaiterCalls } from '../../hooks/useWaiterCalls.js';
 
 function orderOverallStatus(order) {
   if (order.items.every((item) => item.status === OrderItemStatus.Ready || item.status === OrderItemStatus.Delivered)) {
@@ -67,10 +69,12 @@ export default function KitchenPanel() {
   // Masadan sipariş geldiğinde ekran kendiliğinden güncellensin. Öncesinde
   // hiçbir otomatik yenileme yoktu: sipariş, biri sayfayı elle yenileyene
   // kadar mutfakta görünmüyordu.
+  const waiterCalls = useWaiterCalls();
   const { status: realtimeStatus } = useOrderRealtime({
     enabled: Boolean(user?.restaurantId),
     onChange: loadOrders,
     onRefundChange: reloadRefunds,
+    onWaiterCalled: waiterCalls.onWaiterCalled,
   });
 
   const filteredOrders = useMemo(
@@ -110,6 +114,7 @@ export default function KitchenPanel() {
 
   return (
     <div className="max-w-[1400px] mx-auto flex flex-col gap-lg">
+      <WaiterCallAlerts calls={waiterCalls.calls} onDismiss={waiterCalls.dismiss} />
       <section className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-md">
         <div>
           <div className="flex items-center gap-3 mb-2 flex-wrap">

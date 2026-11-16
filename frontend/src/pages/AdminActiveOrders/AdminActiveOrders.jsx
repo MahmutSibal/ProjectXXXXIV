@@ -12,6 +12,8 @@ import { OrderSessionStatus, ORDER_ITEM_STATUS_LABEL, formatKurus } from '../../
 import { ApiError } from '../../api/client.js';
 import { toPage, MAX_PAGE_SIZE } from '../../api/pagination.js';
 import './AdminActiveOrders.css';
+import WaiterCallAlerts from '../../components/WaiterCallAlerts.jsx';
+import { useWaiterCalls } from '../../hooks/useWaiterCalls.js';
 
 export default function AdminActiveOrders() {
   const toast = useToast();
@@ -55,10 +57,12 @@ export default function AdminActiveOrders() {
   }, [user?.restaurantId]);
 
   // Sipariş ve kalem durumu değişince liste kendiliğinden tazelensin.
+  const waiterCalls = useWaiterCalls();
   const { status: realtimeStatus } = useOrderRealtime({
     enabled: Boolean(user?.restaurantId),
     onChange: loadOrders,
     onRefundChange: reloadRefunds,
+    onWaiterCalled: waiterCalls.onWaiterCalled,
   });
 
   const filteredOrders = useMemo(
@@ -77,6 +81,7 @@ export default function AdminActiveOrders() {
 
   return (
     <div className="max-w-[1400px] mx-auto flex flex-col gap-lg">
+      <WaiterCallAlerts calls={waiterCalls.calls} onDismiss={waiterCalls.dismiss} />
       <section className="flex flex-col gap-md">
         <div>
           <div className="flex items-center gap-3 mb-2 flex-wrap">

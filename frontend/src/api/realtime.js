@@ -42,6 +42,7 @@ export function connectOrderHub({
   onOrderCreated,
   onOrderUpdated,
   onRefundRequestChanged,
+  onWaiterCalled,
   onReconnected,
   onStatusChange,
 } = {}) {
@@ -74,6 +75,7 @@ export function connectOrderHub({
     if (onOrderUpdated) created.on('orderUpdated', onOrderUpdated);
     // İade talebi açıldı/sonuçlandı; olay yalnızca kimlik ve durum taşır, liste API'den çekilir.
     if (onRefundRequestChanged) created.on('refundRequestChanged', onRefundRequestChanged);
+    if (onWaiterCalled) created.on('waiterCalled', onWaiterCalled);
 
     created.onreconnecting(() => {
       if (!isCurrent()) return;

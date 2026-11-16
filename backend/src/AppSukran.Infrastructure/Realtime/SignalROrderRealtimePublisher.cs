@@ -26,6 +26,11 @@ public sealed class SignalROrderRealtimePublisher(IHubContext<OrderHub> hubConte
                 .SendAsync("refundRequestChanged", payload, cancellationToken));
     }
 
+    public Task PublishWaiterCalledAsync(WaiterCallNotification notification, CancellationToken cancellationToken = default)
+        => hubContext.Clients
+            .Group(OrderGroups.Restaurant(notification.RestaurantId))
+            .SendAsync("waiterCalled", new { notification.TableNo, notification.Reason, notification.Note, notification.CalledAt }, cancellationToken);
+
     /// <summary>
     /// Olayı iki gruba birden gönderir: restoranın personeline ve yalnızca ilgili
     /// masadaki müşteriye.

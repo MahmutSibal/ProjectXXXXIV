@@ -71,7 +71,6 @@ import SuperAdminSubscriptions from '../pages/SuperAdminSubscriptions/SuperAdmin
 
 import CustomerMenu from '../pages/CustomerMenu/CustomerMenu.jsx';
 import Account from '../pages/Account/Account.jsx';
-import CustomerMenuDesign from '../pages/CustomerMenu/CustomerMenuDesign.jsx';
 
 function NotFound() {
   return (
@@ -200,13 +199,6 @@ export default function AppRouter() {
         <Route
           path="/menu/:restaurantId/:tableNo"
           element={<CustomerMenu />}
-        />
-
-        {/* Yeni QR menü tasarımının önizlemesi. Sabit örnek verilerle çalışır, sunucuya
-            bağlı değildir; gerçek veriye bağlanınca /menu rotasının yerini alacak. */}
-        <Route
-          path="/menu-onizleme"
-          element={<CustomerMenuDesign />}
         />
 
         {/* Admin route'ları */}

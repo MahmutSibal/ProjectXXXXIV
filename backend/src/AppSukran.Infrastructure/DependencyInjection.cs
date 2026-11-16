@@ -89,6 +89,7 @@ public static class DependencyInjection
         services.AddScoped<IPasswordHashingService, PasswordHashingService>();
         services.AddSingleton<ISecretProtectionService, SecretProtectionService>();
         services.AddScoped<IRefreshTokenService, RefreshTokenService>();
+        services.AddSingleton<ILoginAttemptGuard, LoginAttemptGuard>();
         services.AddScoped<IOrderRealtimePublisher, SignalROrderRealtimePublisher>();
         services.AddScoped<IAuditLogService, EfAuditLogService>();
         services.AddSingleton<AppSukran.Application.Abstractions.Maintenance.IServerShutdownState,

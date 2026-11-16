@@ -15,7 +15,10 @@ namespace AppSukran.API.Controllers;
 [EnableRateLimiting("auth")]
 public sealed class AuthController(IMediator mediator) : ControllerBase
 {
+    // Restoranın Wi-Fi'ındaki bütün misafirler aynı IP'den QR okutur; giriş/kayıt
+    // sınırını paylaşsaydı 11. misafir menüyü açamazdı.
     [HttpPost("qr-session")]
+    [EnableRateLimiting("qr-session")]
     public async Task<ActionResult<QrSessionResponse>> CreateQrSession([FromBody] CreateQrSessionRequest request, CancellationToken cancellationToken)
     {
         var result = await mediator.Send(new CreateQrSessionCommand(request.RestaurantId, request.TableNo, request.QrToken), cancellationToken);
@@ -49,7 +52,10 @@ public sealed class AuthController(IMediator mediator) : ControllerBase
         return Ok(result);
     }
 
+    // Kaba kuvvete karşı asıl koruma hesap + IP başına deneme sayacıdır (ILoginAttemptGuard);
+    // IP sınırı aynı ağdaki personelin vardiya başında birlikte girebileceği kadar geniştir.
     [HttpPost("login")]
+    [EnableRateLimiting("login")]
     public async Task<ActionResult<TokenResponse>> Login([FromBody] LoginUserRequest request, CancellationToken cancellationToken)
     {
         var result = await mediator.Send(new LoginUserCommand(request.Email, request.Password), cancellationToken);
@@ -57,7 +63,9 @@ public sealed class AuthController(IMediator mediator) : ControllerBase
         return Ok(result);
     }
 
+    // Açık her panel oturumu süresi dolunca token yeniler; giriş sınırını tüketmemeli.
     [HttpPost("refresh")]
+    [EnableRateLimiting("token-refresh")]
     public async Task<ActionResult<TokenResponse>> Refresh([FromBody] RefreshTokenRequest request, CancellationToken cancellationToken)
     {
         var refreshToken = request.RefreshToken;
@@ -93,6 +101,7 @@ public sealed class AuthController(IMediator mediator) : ControllerBase
     }
 
     [HttpPost("logout")]
+    [EnableRateLimiting("token-refresh")]
     public async Task<IActionResult> Logout([FromBody] RefreshTokenRequest? request, CancellationToken cancellationToken)
     {
         var refreshToken = request?.RefreshToken;
