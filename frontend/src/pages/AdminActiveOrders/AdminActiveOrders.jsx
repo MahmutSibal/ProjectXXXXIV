@@ -1,16 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { matchesSearch } from '../../lib/text.js';
 import { useToast } from '../../context/ToastContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useOrderRealtime } from '../../hooks/useOrderRealtime.js';
 import { useRefundRequests } from '../../hooks/useRefundRequests.js';
-import { RefundRequestStatus } from '../../api/refunds.js';
+import { RefundRequestStatus, RefundMethod } from '../../api/refunds.js';
 import RealtimeStatus from '../../components/RealtimeStatus.jsx';
 import { ordersApi } from '../../api/orders.js';
 import { OrderSessionStatus, ORDER_ITEM_STATUS_LABEL, formatKurus } from '../../api/enums.js';
 import { ApiError } from '../../api/client.js';
 import { toPage, MAX_PAGE_SIZE } from '../../api/pagination.js';
 import './AdminActiveOrders.css';
+import WaiterCallAlerts from '../../components/WaiterCallAlerts.jsx';
+import { useWaiterCalls } from '../../hooks/useWaiterCalls.js';
 
 export default function AdminActiveOrders() {
   const toast = useToast();
@@ -54,10 +57,12 @@ export default function AdminActiveOrders() {
   }, [user?.restaurantId]);
 
   // Sipariş ve kalem durumu değişince liste kendiliğinden tazelensin.
+  const waiterCalls = useWaiterCalls();
   const { status: realtimeStatus } = useOrderRealtime({
     enabled: Boolean(user?.restaurantId),
     onChange: loadOrders,
     onRefundChange: reloadRefunds,
+    onWaiterCalled: waiterCalls.onWaiterCalled,
   });
 
   const filteredOrders = useMemo(
@@ -76,6 +81,7 @@ export default function AdminActiveOrders() {
 
   return (
     <div className="max-w-[1400px] mx-auto flex flex-col gap-lg">
+      <WaiterCallAlerts calls={waiterCalls.calls} onDismiss={waiterCalls.dismiss} />
       <section className="flex flex-col gap-md">
         <div>
           <div className="flex items-center gap-3 mb-2 flex-wrap">
@@ -152,6 +158,13 @@ export default function AdminActiveOrders() {
             <p className="mt-2 text-sm text-on-background">
               IBAN: <span className="font-mono">{request.iban}</span>
               {request.accountHolderName ? ` · ${request.accountHolderName}` : ''}
+            </p>
+          )}
+          {request.method === RefundMethod.Card && (
+            <p className="mt-2 text-sm text-on-background">
+              Kartla iade için ödemeyi{' '}
+              <Link to="/admin/card-payments" className="font-semibold underline">Kart Ödemeleri</Link>
+              {' '}sayfasından bulup &quot;İade Et&quot;e basın; ardından bu talebi &quot;İade Yapıldı&quot; olarak işaretleyin.
             </p>
           )}
           <div className="mt-3 flex flex-wrap gap-2">

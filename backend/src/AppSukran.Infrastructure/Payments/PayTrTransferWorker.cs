@@ -145,8 +145,17 @@ public sealed class PayTrTransferWorker(
             // Restorana özel oran yoksa platformun varsayılan komisyonu uygulanır.
             var commissionPercent = settings.CommissionPercent ?? payTr.DefaultCommissionPercent;
 
+            // İade edilen kısım restorana gönderilmez. PayTR total_amount olarak ödemenin
+            // tamamını bekler; restoran payı yalnızca iade sonrası kalan üzerinden hesaplanır.
             var paid = payment.PaidTotalMinor ?? payment.AmountMinor;
-            var submerchant = CalculateSubmerchantAmount(paid, commissionPercent, payTr.FoodVatPercent);
+            var netPaid = paid - payment.RefundedMinor;
+            if (netPaid <= 0)
+            {
+                payment.TransferStatus = CardPaymentTransferStatus.NotApplicable;
+                payment.TransferError = "Ödemenin tamamı iade edildi; transfer yapılmadı.";
+                continue;
+            }
+            var submerchant = CalculateSubmerchantAmount(netPaid, commissionPercent, payTr.FoodVatPercent);
             if (submerchant <= 0)
             {
                 MarkFailed(payment, "Hesaplanan restoran payı sıfır veya negatif.");

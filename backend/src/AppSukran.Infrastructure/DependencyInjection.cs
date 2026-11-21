@@ -89,6 +89,7 @@ public static class DependencyInjection
         services.AddScoped<IPasswordHashingService, PasswordHashingService>();
         services.AddSingleton<ISecretProtectionService, SecretProtectionService>();
         services.AddScoped<IRefreshTokenService, RefreshTokenService>();
+        services.AddSingleton<ILoginAttemptGuard, LoginAttemptGuard>();
         services.AddScoped<IOrderRealtimePublisher, SignalROrderRealtimePublisher>();
         services.AddScoped<IAuditLogService, EfAuditLogService>();
         services.AddSingleton<AppSukran.Application.Abstractions.Maintenance.IServerShutdownState,
@@ -118,9 +119,15 @@ public static class DependencyInjection
         services.AddScoped<IRestaurantSearchService, RestaurantSearchService>();
         services.AddHostedService<DatabaseMigrationInitializer>();
         services.AddHostedService<SuperAdminSeeder>();
+        services.AddHostedService<PlanCatalogRefreshWorker>();
+        services.AddSingleton<Notifications.CampaignQueue>();
+        services.AddSingleton<AppSukran.Application.Campaigns.ICampaignQueue>(sp => sp.GetRequiredService<Notifications.CampaignQueue>());
+        services.AddSingleton<AppSukran.Application.Campaigns.IUnsubscribeTokenService, Notifications.UnsubscribeTokenService>();
+        services.AddHostedService<Notifications.CampaignSendWorker>();
         services.AddHostedService<SubscriptionExpiryWorker>();
         services.AddHostedService<Payments.PayTrTransferWorker>();
         services.AddHostedService<PersonalDataMaintenanceWorker>();
+        services.AddHostedService<SubscriptionRenewalReminderWorker>();
 
         return services;
     }

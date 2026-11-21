@@ -134,6 +134,19 @@ builder.Services.AddRateLimiter(options =>
             }));
 
     // Sitedeki iletişim formu (giriş gerektirmez): IP başına 30 dakikada 5 talep.
+    // Garson çağırma: masadaki misafir düğmeye art arda basarsa personel ekranı
+    // bildirimle dolmasın. Hız sınırlayıcı kimlik doğrulamadan önce çalıştığı için IP başına.
+    options.AddPolicy("waiter-call", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "bilinmeyen",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 6,
+                Window = TimeSpan.FromMinutes(5),
+                QueueLimit = 0,
+                AutoReplenishment = true,
+            }));
+
     options.AddPolicy("contact", httpContext =>
         RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "bilinmeyen",
@@ -151,6 +164,16 @@ builder.Services.AddRateLimiter(options =>
     // Diğerlerinin aksine IP başına bölümlenir: tek bir sabit pencere paylaşılsaydı
     // bir saldırgan kotayı doldurup bütün müşterilerin girişini engelleyebilirdi.
     // Gerçek istemci IP'si için UseForwardedHeaders bu ara katmandan önce çalışır.
+    // Giriş: aynı restoranın Wi-Fi'ındaki personel tek IP'den gelir. Şifre denemeye karşı
+    // asıl koruma hesap + IP başına sayaçtır (LoginAttemptGuard); bu sınır yalnızca toplu saldırıyı keser.
+    options.AddPolicy("login", httpContext => IpLimiter(httpContext, 40, TimeSpan.FromMinutes(5)));
+
+    // QR menü açılışı: dolu bir restoranda onlarca misafir aynı IP'den okutur.
+    options.AddPolicy("qr-session", httpContext => IpLimiter(httpContext, 150, TimeSpan.FromMinutes(5)));
+
+    // Token yenileme ve çıkış: açık her panel düzenli olarak yeniler.
+    options.AddPolicy("token-refresh", httpContext => IpLimiter(httpContext, 200, TimeSpan.FromMinutes(5)));
+
     options.AddPolicy("auth", httpContext =>
         RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "bilinmeyen",
@@ -346,3 +369,15 @@ app.MapControllers();
 app.MapHub<OrderHub>("/hubs/orders").RequireAuthorization();
 
 app.Run();
+
+/// <summary>IP başına sabit pencereli hız sınırı. Gerçek istemci IP'si için UseForwardedHeaders önce çalışır.</summary>
+static RateLimitPartition<string> IpLimiter(HttpContext httpContext, int permitLimit, TimeSpan window)
+    => RateLimitPartition.GetFixedWindowLimiter(
+        partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "bilinmeyen",
+        factory: _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = permitLimit,
+            Window = window,
+            QueueLimit = 0,
+            AutoReplenishment = true,
+        });

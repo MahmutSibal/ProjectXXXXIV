@@ -12,6 +12,7 @@ import LegalPage from '../pages/Legal/LegalPage.jsx';
 
 
 import AdminSupport from '../pages/AdminSupport/AdminSupport.jsx';
+import AdminCardPayments from '../pages/AdminCardPayments/AdminCardPayments.jsx';
 import ProtectedRoute from './ProtectedRoute.jsx';
 import { ROLES } from '../api/auth.js';
 
@@ -65,12 +66,14 @@ import SuperAdminUsers from '../pages/SuperAdminUsers/SuperAdminUsers.jsx';
 import SuperAdminWhatsApp from '../pages/SuperAdminWhatsApp/SuperAdminWhatsApp.jsx';
 import SuperAdminAuditLogs from '../pages/SuperAdminAuditLogs/SuperAdminAuditLogs.jsx';
 import SuperAdminSubscriptions from '../pages/SuperAdminSubscriptions/SuperAdminSubscriptions.jsx';
+import SuperAdminPlans from '../pages/SuperAdminPlans/SuperAdminPlans.jsx';
+import SuperAdminCampaigns from '../pages/SuperAdminCampaigns/SuperAdminCampaigns.jsx';
+import CampaignUnsubscribe from '../pages/CampaignUnsubscribe/CampaignUnsubscribe.jsx';
 
 /* Müşteri (QR menü) sayfası */
 
 import CustomerMenu from '../pages/CustomerMenu/CustomerMenu.jsx';
 import Account from '../pages/Account/Account.jsx';
-import CustomerMenuDesign from '../pages/CustomerMenu/CustomerMenuDesign.jsx';
 
 function NotFound() {
   return (
@@ -177,6 +180,8 @@ export default function AppRouter() {
 <Route path="mesafeli-satis-sozlesmesi" element={<LegalPage />} />
 <Route path="iptal-ve-iade-politikasi" element={<LegalPage />} />
 <Route path="kampanya-bildirimleri" element={<LegalPage />} />
+<Route path="telif-hakki" element={<LegalPage />} />
+<Route path="kampanya-iptal" element={<CampaignUnsubscribe />} />
         </Route>
 
         {/* Navbar ve footer kullanılmayan üyelik sayfaları */}
@@ -199,13 +204,6 @@ export default function AppRouter() {
         <Route
           path="/menu/:restaurantId/:tableNo"
           element={<CustomerMenu />}
-        />
-
-        {/* Yeni QR menü tasarımının önizlemesi. Sabit örnek verilerle çalışır, sunucuya
-            bağlı değildir; gerçek veriye bağlanınca /menu rotasının yerini alacak. */}
-        <Route
-          path="/menu-onizleme"
-          element={<CustomerMenuDesign />}
         />
 
         {/* Admin route'ları */}
@@ -293,6 +291,11 @@ export default function AppRouter() {
           <Route
             path="subscription"
             element={<AdminSubscription />}
+          />
+
+          <Route
+            path="card-payments"
+            element={<AdminCardPayments />}
           />
         </Route>
         </Route>
@@ -399,6 +402,8 @@ export default function AppRouter() {
             element={<SuperAdminSubscriptions />}
           />
           <Route path="transfers" element={<SuperAdminTransfers />} />
+          <Route path="plans" element={<SuperAdminPlans />} />
+          <Route path="campaigns" element={<SuperAdminCampaigns />} />
         </Route>
         </Route>
 

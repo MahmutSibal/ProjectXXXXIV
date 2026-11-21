@@ -11,6 +11,8 @@ import { toPage, MAX_PAGE_SIZE } from '../../api/pagination.js';
 import TableQrCode from '../../components/TableQrCode.jsx';
 import { buildTableMenuUrl } from '../../lib/qr.js';
 import './KitchenTables.css';
+import WaiterCallAlerts from '../../components/WaiterCallAlerts.jsx';
+import { useWaiterCalls } from '../../hooks/useWaiterCalls.js';
 
 function deriveOrderStatus(table, orders) {
   if (table.status !== 'Occupied') {
@@ -68,9 +70,11 @@ export default function KitchenTables() {
 
   // Masa doluluk durumu AÇIK siparişlerden türetiliyor; sipariş geldiğinde
   // veya durumu değiştiğinde masa görünümü de tazelenmeli.
+  const waiterCalls = useWaiterCalls();
   useOrderRealtime({
     enabled: Boolean(user?.restaurantId),
     onChange: loadData,
+    onWaiterCalled: waiterCalls.onWaiterCalled,
   });
 
   const tablesWithStatus = useMemo(
@@ -115,6 +119,7 @@ export default function KitchenTables() {
 
   return (
     <div className="max-w-[1400px] mx-auto flex flex-col gap-lg">
+      <WaiterCallAlerts calls={waiterCalls.calls} onDismiss={waiterCalls.dismiss} />
       <section className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-md">
         <div>
           <h2 className="font-headline-lg text-headline-lg text-on-background mb-2">

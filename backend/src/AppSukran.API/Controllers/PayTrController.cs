@@ -44,6 +44,19 @@ public sealed class PayTrController(IMediator mediator, IPayTrService payTr, IOp
             request.RestaurantId, request.Plan, request.BillingPeriodMonths, request.ToBuyer(),
             request.ReturnPath ?? "/admin/subscription", ClientIp(), BackendBaseUrl()), cancellationToken));
 
+    /// <summary>Restoranın kartla alınan ödemeleri (son N gün).</summary>
+    [HttpGet("restaurants/{restaurantId}/payments")]
+    [Authorize(Roles = "SuperAdmin,RestaurantOwner")]
+    public async Task<ActionResult<IReadOnlyCollection<CardPaymentListItem>>> List(string restaurantId, [FromQuery] int days = 30, CancellationToken cancellationToken = default)
+        => Ok(await mediator.Send(new GetCardPaymentsQuery(restaurantId, days), cancellationToken));
+
+    /// <summary>Kart ödemesini (tamamen veya kısmen) PayTR üzerinden karta iade eder.</summary>
+    [HttpPost("payments/{merchantOid}/refund")]
+    [Authorize(Roles = "SuperAdmin,RestaurantOwner")]
+    [EnableRateLimiting("payments-write")]
+    public async Task<ActionResult<CardPaymentListItem>> Refund(string merchantOid, [FromBody] RefundCardPaymentRequest request, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new RefundCardPaymentCommand(merchantOid, request.AmountMinor, request.Reason), cancellationToken));
+
     /// <summary>Ödemenin sonucu (sayfa, PayTR'den döndükten sonra bunu sorgular).</summary>
     [HttpGet("payments/{merchantOid}")]
     [Authorize]
@@ -81,19 +94,14 @@ public sealed class PayTrController(IMediator mediator, IPayTrService payTr, IOp
         var path = await mediator.Send(new GetCardPaymentReturnUrlQuery(merchantOid, result == "ok"), cancellationToken);
         var target = settings.Value.AppBaseUrl.TrimEnd('/') + path;
 
-        // PayTR'nin ödeme sayfası uygulamamızın içinde (iframe) açılır; dönüş de o çerçevede
-        // yüklenir. Bu küçük sayfa ANA pencereyi uygulamaya yönlendirir. Hedef adres yalnızca
+        // Müşteri PayTR'nin sayfasına tam sayfa gider; dönüşte doğrudan uygulamaya yönlendirilir.
+        // Eskiden burada script'li bir ara sayfa vardı, ama güvenlik başlığı (CSP default-src
+        // 'none') sayfa içi script'i engellediği için müşteri "dönülüyor..." yazısında kalıyordu.
+        // 303: PayTR dönüşü POST olsa bile tarayıcı uygulamayı GET ile açar. Hedef yalnızca
         // yapılandırılmış uygulama adresi + kayıtlı uygulama içi yoldur (açık yönlendirme yok).
-        var encoded = System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(target);
-        var html = $$"""
-            <!doctype html><html lang="tr"><head><meta charset="utf-8"><title>Yönlendiriliyor</title></head>
-            <body style="font-family:sans-serif;text-align:center;padding-top:40px">
-            <p>Ödeme sayfasından dönülüyor...</p>
-            <script>var t="{{encoded}}";try{window.top.location.href=t;}catch(e){window.location.href=t;}</script>
-            <noscript><a href="{{System.Net.WebUtility.HtmlEncode(target)}}">Devam etmek için tıklayın</a></noscript>
-            </body></html>
-            """;
-        return Content(html, "text/html; charset=utf-8");
+        Response.Headers.Location = target;
+        Response.Headers.CacheControl = "no-store";
+        return StatusCode(StatusCodes.Status303SeeOther);
     }
 
     private string ClientIp()
@@ -108,6 +116,9 @@ public sealed class PayTrController(IMediator mediator, IPayTrService payTr, IOp
 }
 
 public sealed record PayTrStatusResponse(bool Available, bool TestMode);
+
+/// <param name="AmountMinor">İade tutarı (kuruş). Boşsa kalan tutarın tamamı.</param>
+public sealed record RefundCardPaymentRequest(long? AmountMinor, string? Reason);
 
 /// <summary>Ödeme yapanın iletişim bilgileri: PayTR'ye iletilir, saklanmaz.</summary>
 public abstract record PayTrBuyerRequest(string? Email, string? FullName, string? Address, string? Phone)

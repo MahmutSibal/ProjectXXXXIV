@@ -43,6 +43,8 @@ public sealed record PayTrTransferRequest(
 
 public sealed record PayTrTransferResult(bool Success, string? Reference, string? ErrorCode, string? ErrorMessage);
 
+public sealed record PayTrRefundResult(bool Success, bool IsTest, string? ErrorCode, string? ErrorMessage);
+
 /// <summary>
 /// PayTR iFrame API ve Platform Transfer API istemcisi. iFrame API'de kart formu ve
 /// 3D Secure PayTR'nin sayfasındadır; kart bilgisi uygulamamızda hiç girilmez.
@@ -68,4 +70,7 @@ public interface IPayTrService
     bool VerifyCallback(string merchantOid, string status, string totalAmount, string hash);
 
     Task<PayTrTransferResult> RequestTransferAsync(PayTrTransferRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>Ödemenin tamamını veya bir kısmını karta iade eder (PayTR İade API).</summary>
+    Task<PayTrRefundResult> RefundAsync(string merchantOid, long amountMinor, string referenceNo, CancellationToken cancellationToken = default);
 }

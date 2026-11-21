@@ -219,6 +219,9 @@ function PublicLayout() {
               <Link to="/mesafeli-satis-sozlesmesi">
                 Mesafeli Satış Sözleşmesi
               </Link>
+              <Link to="/telif-hakki">
+                Telif Hakkı
+              </Link>
               <Link to="/iptal-ve-iade-politikasi">
   İptal ve İade Politikası
 </Link>
@@ -233,22 +236,16 @@ function PublicLayout() {
                 info@sukranapp.com
               </a>
 
-              <a href="tel:+900000000000">
-                +90 (000) 000 00 00
+              <a href="tel:+905389469680">
+                +90 538 946 96 80
               </a>
-              <address className="public-footer__description not-italic">
-  <strong>Örnek adres</strong><br />
-  Örnek Mahallesi, Şükran Sokak No: 12<br />
-  Bergama / İzmir
-</address>
-
               <span className="public-footer__address">
-                İzmir, Türkiye
+                Şanlıurfa, Türkiye
               </span>
 
               <div className="public-footer__socials">
                 <a
-                  href="#instagram"
+                  href="https://www.instagram.com/sukran_app?avpt=ZGh0cjhudm9pb3d2"
                   aria-label="Instagram"
                   className="public-footer__social-link"
                 >
@@ -258,7 +255,7 @@ function PublicLayout() {
                 </a>
 
                 <a
-                  href="#linkedin"
+                  href="https://www.linkedin.com/in/%C5%9F%C3%BCkran-a-71ba70223?utm_source=share_via&utm_content=profile&utm_medium=member_android"
                   aria-label="LinkedIn"
                   className="public-footer__social-link"
                 >
@@ -287,6 +284,10 @@ function PublicLayout() {
 
             <span>
               Restoran teknolojileri, sadeleştirildi.
+            </span>
+
+            <span>
+              Kodlama ve yazılım: Mahmut Sibal
             </span>
           </div>
         </div>

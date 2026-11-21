@@ -53,6 +53,12 @@ public sealed class Subscription : AggregateRoot
     /// <summary>Son tahsilat hatasının kullanıcıya gösterilebilir açıklaması.</summary>
     public string? LastPaymentError { get; set; }
 
+    /// <summary>
+    /// Yenileme hatırlatması hangi dönem sonu için gönderildi. Aynı dönem için ikinci kez
+    /// gönderilmesin diye tutulur (dönem uzayınca yeni hatırlatma gider).
+    /// </summary>
+    public DateTime? RenewalReminderSentFor { get; set; }
+
     public List<SubscriptionPayment> Payments { get; set; } = [];
 
     /// <summary>

@@ -146,6 +146,7 @@ if (-not [string]::IsNullOrWhiteSpace($InstanceName)) {
     $vars['Instance__Name'] = $InstanceName
 }
 
+
 if (-not [string]::IsNullOrWhiteSpace($WhatsAppBaseUrl)) {
     $whatsAppToken = [Environment]::GetEnvironmentVariable('WHATSAPP_SERVICE_TOKEN')
 
@@ -177,11 +178,15 @@ if (-not [string]::IsNullOrWhiteSpace($smtpPassword)) {
         throw "SUKRAN_SMTP_PASSWORD verildi ama SUKRAN_EMAIL_USERNAME veya SUKRAN_EMAIL_FROM eksik."
     }
 
+    $vars['Email__AppBaseUrl']   = $FrontendOrigin[0].TrimEnd('/')
     $vars['Email__Enabled']      = 'true'
     $vars['Email__Host']         = $emailHost
     $vars['Email__Port']         = $emailPort
     $vars['Email__Username']     = $emailUser
     $vars['Email__FromAddress']  = $emailFrom
+    # İletişim formu bildirimlerinin gideceği adres; boşsa gönderici adresine gider.
+    $emailNotify = [Environment]::GetEnvironmentVariable('SUKRAN_EMAIL_NOTIFY')
+    if (-not [string]::IsNullOrWhiteSpace($emailNotify)) { $vars['Email__NotificationAddress'] = $emailNotify.Trim() }
     $vars['SUKRAN_SMTP_PASSWORD'] = $smtpPassword
 }
 

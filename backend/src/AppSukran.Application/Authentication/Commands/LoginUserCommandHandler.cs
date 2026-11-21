@@ -11,7 +11,8 @@ public sealed class LoginUserCommandHandler(
     IPasswordHashingService passwordHashingService,
     ITokenService tokenService,
     IRefreshTokenService refreshTokenService,
-    ICurrentUserService currentUserService)
+    ICurrentUserService currentUserService,
+    ILoginAttemptGuard loginAttemptGuard)
     : IRequestHandler<LoginUserCommand, TokenResponse>
 {
     public async Task<TokenResponse> Handle(LoginUserCommand request, CancellationToken cancellationToken)
@@ -19,14 +20,25 @@ public sealed class LoginUserCommandHandler(
         // E-posta her yazma yolunda küçük harfe çevrilerek saklanır; aramayı da
         // normalize edip veritabanına bırakıyoruz (Users.Email üzerinde tekil indeks var).
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
-        var user = await unitOfWork.Repository<User>()
-            .FirstOrDefaultAsync(candidate => candidate.Email == normalizedEmail && candidate.IsActive, cancellationToken)
-            ?? throw new InvalidOperationException("Invalid credentials.");
+        var ipAddress = currentUserService.IpAddress;
 
-        if (!passwordHashingService.VerifyPassword(request.Password, user.PasswordHash))
+        // Art arda hatalı denemeden sonra kısa bekleme. Kilit e-posta + IP başınadır.
+        if (loginAttemptGuard.GetRemainingLockout(normalizedEmail, ipAddress) is { } remaining)
         {
+            var minutes = Math.Max(1, (int)Math.Ceiling(remaining.TotalMinutes));
+            throw new InvalidOperationException($"Çok fazla hatalı deneme yapıldı. Lütfen {minutes} dakika sonra tekrar deneyin veya şifrenizi sıfırlayın.");
+        }
+
+        var user = await unitOfWork.Repository<User>()
+            .FirstOrDefaultAsync(candidate => candidate.Email == normalizedEmail && candidate.IsActive, cancellationToken);
+
+        if (user is null || !passwordHashingService.VerifyPassword(request.Password, user.PasswordHash))
+        {
+            loginAttemptGuard.RegisterFailure(normalizedEmail, ipAddress);
             throw new InvalidOperationException("Invalid credentials.");
         }
+
+        loginAttemptGuard.Reset(normalizedEmail, ipAddress);
 
         var refreshToken = refreshTokenService.GenerateRefreshToken();
         var refreshTokenHash = refreshTokenService.HashRefreshToken(refreshToken);

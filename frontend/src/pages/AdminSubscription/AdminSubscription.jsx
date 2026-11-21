@@ -45,12 +45,12 @@ export default function AdminSubscription() {
     });
 
   // PayTR açıksa paket kartla ödenir; kapalıysa seçim ekibe talep olarak gider.
-  const [payTr, setPayTr] = useState({ available: false, testMode: false });
+  const [payTr, setPayTr] = useState({ available: false });
   const [payingPlan, setPayingPlan] = useState(null);
   const [paymentReturn] = useState(() => readPaymentReturnParams());
 
   useEffect(() => {
-    payTrApi.getStatus().then(setPayTr).catch(() => setPayTr({ available: false, testMode: false }));
+    payTrApi.getStatus().then(setPayTr).catch(() => setPayTr({ available: false }));
   }, []);
 
   // PayTR'den dönüş: sonuç yalnızca PayTR'nin sunucuya bildirimiyle kesinleşir.
@@ -275,8 +275,13 @@ export default function AdminSubscription() {
 
                       {isAnnual && plan.annualSavings > 0 && (
                         <p className="text-[11px] text-on-surface-variant mt-1">
-                          <s>{formatKurus(plan.annualListTotal)}</s> · %{plan.annualDiscountPercent} indirim,{' '}
-                          {formatKurus(plan.annualSavings)} kazanç
+                          <s>{formatKurus(plan.annualListTotal)}</s> · {formatKurus(plan.annualSavings)} kazanç
+                        </p>
+                      )}
+
+                      {!isAnnual && plan.discountPercent > 0 && (
+                        <p className="text-[11px] text-on-surface-variant mt-1">
+                          <s>{formatKurus(plan.monthlyListTotal)}</s> · %{plan.discountPercent} kampanya indirimi
                         </p>
                       )}
                     </>
@@ -341,7 +346,6 @@ export default function AdminSubscription() {
         <CardPaymentDialog
           title={`${payingPlan.displayName} paketi`}
           description={billingPeriodLabel(billingMonths)}
-          testMode={payTr.testMode}
           defaultBuyer={{ fullName: user?.name, email: user?.email, phone: user?.phone, address: user?.address }}
           onSubmit={handleCardPayment}
           onCancel={() => setPayingPlan(null)}

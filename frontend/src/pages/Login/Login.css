@@ -840,3 +840,15 @@
     transition-duration: 0.01ms !important;
   }
 }
+.login-slow-note {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  text-align: center;
+  color: #8a6d1f;
+}
+
+.login-input input[readonly] {
+  opacity: 0.75;
+  cursor: progress;
+}

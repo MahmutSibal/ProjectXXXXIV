@@ -106,6 +106,9 @@ function Register() {
   const [isAgreementAccepted, setIsAgreementAccepted] =
     useState(false);
 
+  // Kampanya e-postası için isteğe bağlı ve AYRI açık rıza (varsayılan kapalı).
+  const [marketingConsent, setMarketingConsent] = useState(false);
+
   const [isSubmitting, setIsSubmitting] =
     useState(false);
 
@@ -196,6 +199,7 @@ function Register() {
       address: String(formData.get('address') ?? '').trim(),
       longitude: Number(formData.get('longitude')) || 0,
       latitude: Number(formData.get('latitude')) || 0,
+      marketingConsent,
     };
 
     // Telefon doğrulaması açıksa hesap AÇILMADAN önce numara doğrulanır.
@@ -443,6 +447,7 @@ function Register() {
               className="register-form"
               onSubmit={handleSubmit}
               noValidate
+              autoComplete="off"
             >
               <div className="register-field register-field--full">
                 <label htmlFor="register-business-name">
@@ -530,7 +535,7 @@ function Register() {
                       type="email"
                       placeholder="ornek@isletme.com"
                       required
-                      autoComplete="email"
+                      autoComplete="off"
                     />
                   </div>
                 </div>
@@ -592,7 +597,7 @@ function Register() {
       value={password}
       onChange={(event) => setPassword(event.target.value)}
       placeholder="En az 8 karakter"
-      autoComplete="new-password"
+      autoComplete="off"
       required
     />
 
@@ -658,6 +663,28 @@ function Register() {
                       KVKK Aydınlatma Metni
                     </Link>
                     ’ni okudum.
+                  </span>
+                </label>
+
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={marketingConsent}
+                    onChange={(event) =>
+                      setMarketingConsent(event.target.checked)
+                    }
+                  />
+
+                  <span>
+                    Kampanya ve duyuru e-postaları almak istiyorum (isteğe bağlı;{' '}
+                    <Link
+                      to="/kampanya-bildirimleri"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      bilgilendirme
+                    </Link>
+                    ).
                   </span>
                 </label>
               </div>

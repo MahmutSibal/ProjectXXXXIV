@@ -16,9 +16,11 @@ import { connectOrderHub } from '../api/realtime.js';
  * @param {() => string} [secenekler.getAccessToken] Token kaynağı; QR müşterisi için gerekir.
  * @param {() => Promise<any>|void} [secenekler.onRefundChange] İade talepleri listesini
  *   yeniden yükleyen işlev; aynı hub bağlantısı kullanılır, ikinci bağlantı açılmaz.
+ * @param {(call: {tableNo:number, reason:number, note?:string, calledAt:string}) => void} [secenekler.onWaiterCalled]
+ *   Masadan garson çağrıldığında (personel ekranları).
  * @returns {{ status: 'connected'|'reconnecting'|'disconnected' }}
  */
-export function useOrderRealtime({ enabled, onChange, getAccessToken, onRefundChange }) {
+export function useOrderRealtime({ enabled, onChange, getAccessToken, onRefundChange, onWaiterCalled }) {
   const [status, setStatus] = useState('disconnected');
 
   // Callback'i ref'te tutuyoruz: her render'da yeni bir işlev gelse bile
@@ -32,6 +34,11 @@ export function useOrderRealtime({ enabled, onChange, getAccessToken, onRefundCh
   useEffect(() => {
     onRefundChangeRef.current = onRefundChange;
   }, [onRefundChange]);
+
+  const onWaiterCalledRef = useRef(onWaiterCalled);
+  useEffect(() => {
+    onWaiterCalledRef.current = onWaiterCalled;
+  }, [onWaiterCalled]);
 
   const tokenRef = useRef(getAccessToken);
   useEffect(() => {
@@ -60,6 +67,8 @@ export function useOrderRealtime({ enabled, onChange, getAccessToken, onRefundCh
       onRefundRequestChanged: () => {
         Promise.resolve(onRefundChangeRef.current?.()).catch(() => {});
       },
+      // Masadan garson çağrısı: yalnızca personel bağlantılarına gelir.
+      onWaiterCalled: (call) => onWaiterCalledRef.current?.(call),
       // Bağlantının koptuğu sürede yayınlanan olaylar geri gelmez; yeniden
       // bağlanınca listeyi baştan çekmek tek doğru telafi.
       onReconnected: () => {

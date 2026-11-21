@@ -61,6 +61,8 @@ public sealed class RegisterBusinessCommandHandler(
                 // Kayıtta girilen telefon saklanır; fatura bilgileri gibi formlar bunu
                 // yeniden sormaz. (Eskiden yalnızca denetim kaydına yazılıp kayboluyordu.)
                 Phone = PhoneNumber.Normalize(request.Phone),
+                MarketingConsent = request.MarketingConsent,
+                MarketingConsentAt = request.MarketingConsent ? DateTime.UtcNow : null,
             };
             await userRepository.InsertAsync(user, cancellationToken);
 

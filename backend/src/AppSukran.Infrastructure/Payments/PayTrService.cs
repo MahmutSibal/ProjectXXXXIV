@@ -29,6 +29,7 @@ public sealed class PayTrService(
     private string TokenUrl => $"{BaseUrl}/odeme/api/get-token";
     private string PaymentPageBaseUrl => $"{BaseUrl}/odeme/guvenli/";
     private string TransferUrl => $"{BaseUrl}/odeme/platform/transfer";
+    private string RefundUrl => $"{BaseUrl}/odeme/iade";
 
     private PayTrSettings Settings => options.Value;
 
@@ -175,6 +176,52 @@ public sealed class PayTrService(
         {
             logger.LogError(exception, "[PayTR] Transfer isteği başarısız ({MerchantOid})", request.MerchantOid);
             return new PayTrTransferResult(false, null, "network", "PayTR'ye ulaşılamadı.");
+        }
+    }
+
+    /// <summary>
+    /// İmza: HMACSHA256(merchant_id + merchant_oid + return_amount + merchant_salt, merchant_key).
+    /// Tutar ondalık ayraç nokta ile ("11.97" veya "150").
+    /// </summary>
+    public async Task<PayTrRefundResult> RefundAsync(string merchantOid, long amountMinor, string referenceNo, CancellationToken cancellationToken = default)
+    {
+        EnsureConfigured();
+        var s = Settings;
+        var returnAmount = FormatAmount(amountMinor);
+        var token = Sign(string.Concat(s.MerchantId, merchantOid, returnAmount, s.MerchantSalt));
+
+        using var content = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["merchant_id"] = s.MerchantId,
+            ["merchant_oid"] = merchantOid,
+            ["return_amount"] = returnAmount,
+            ["paytr_token"] = token,
+            ["reference_no"] = referenceNo,
+        });
+
+        try
+        {
+            using var response = await httpClient.PostAsync(RefundUrl, content, cancellationToken);
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            using var json = JsonDocument.Parse(body);
+            var root = json.RootElement;
+            var status = root.TryGetProperty("status", out var st) ? st.GetString() : null;
+            var isTest = root.TryGetProperty("is_test", out var t) && t.ToString() == "1";
+
+            if (string.Equals(status, "success", StringComparison.OrdinalIgnoreCase))
+            {
+                return new PayTrRefundResult(true, isTest, null, null);
+            }
+
+            var errNo = root.TryGetProperty("err_no", out var en) ? en.ToString() : null;
+            var errMsg = root.TryGetProperty("err_msg", out var em) ? em.ToString() : body;
+            logger.LogWarning("[PayTR] İade reddedildi {MerchantOid}: {Error}", merchantOid, errMsg);
+            return new PayTrRefundResult(false, isTest, errNo, errMsg);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            logger.LogError(exception, "[PayTR] İade isteği başarısız ({MerchantOid})", merchantOid);
+            return new PayTrRefundResult(false, false, "network", "PayTR'ye ulaşılamadı.");
         }
     }
 

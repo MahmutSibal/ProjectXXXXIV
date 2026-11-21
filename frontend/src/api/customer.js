@@ -48,3 +48,17 @@ export const customerReviewsApi = {
   getByRestaurant: (restaurantId) => customerApi.get(`/reviews/restaurant/${restaurantId}`),
   create: (payload) => customerApi.post('/reviews', payload),
 };
+
+// Masadaki müşterinin iade talebi; restoran ve masa QR oturum token'ından alınır.
+// { content, method, iban?, accountHolderName? } -> { id }
+export const customerRefundsApi = {
+  create: (payload) => customerApi.post('/refund-requests', payload),
+};
+
+/** Backend'deki WaiterCallReason enum'ı. */
+export const WaiterCallReason = { Service: 0, Bill: 1 };
+
+// Garson çağırma: yalnızca restoranın personel ekranlarına anlık bildirim gider.
+export const customerWaiterApi = {
+  call: (reason = WaiterCallReason.Service, note = null) => customerApi.post('/waiter-calls', { reason, note }),
+};

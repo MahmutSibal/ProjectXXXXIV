@@ -36,6 +36,12 @@ public sealed class EmailSettings
     /// </summary>
     public int CodeLifetimeSeconds { get; set; } = 600;
 
+    /// <summary>
+    /// Görselli/GIF'li (HTML) kampanya e-postası. VARSAYILAN KAPALI: kapalıyken panelde seçenek
+    /// görünmez ve sunucu bu tür gönderimi reddeder. Açmak için Email__RichCampaignsEnabled=true.
+    /// </summary>
+    public bool RichCampaignsEnabled { get; set; }
+
     public bool IsConfigured =>
         !string.IsNullOrWhiteSpace(Host)
         && !string.IsNullOrWhiteSpace(Username)

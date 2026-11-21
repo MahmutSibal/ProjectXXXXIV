@@ -69,7 +69,9 @@ public static class SubscriptionMapping
                 MonthlyTotal: 0, AnnualListTotal: 0, AnnualTotal: 0, AnnualSavings: 0,
                 AnnualDiscountPercent: PlanCatalog.AnnualDiscountPercent,
                 PriceVersion: PlanCatalog.PriceVersion,
-                Features: definition.Features.ToResponse());
+                Features: definition.Features.ToResponse(),
+                IsHighlighted: definition.IsHighlighted,
+                Bullets: definition.BulletList);
         }
 
         var monthly = PlanCatalog.Quote(definition.Plan, 1);
@@ -87,9 +89,15 @@ public static class SubscriptionMapping
             annual.ListTotal,
             annual.Total,
             annual.DiscountAmount,
-            annual.DiscountPercent,
+            // Genel yıllık indirim oranı (dönem seçicideki "%X indirim" etiketi için). Kampanya
+            // indirimi ayrı alanda (DiscountPercent); yıllık tutarlar ikisini birlikte içerir.
+            PlanCatalog.AnnualDiscountPercent,
             PlanCatalog.PriceVersion,
-            definition.Features.ToResponse());
+            definition.Features.ToResponse(),
+            MonthlyListTotal: monthly.ListTotal,
+            DiscountPercent: definition.DiscountPercent,
+            IsHighlighted: definition.IsHighlighted,
+            Bullets: definition.BulletList);
     }
 
     public static PriceQuoteResponse ToResponse(this PriceQuote quote)

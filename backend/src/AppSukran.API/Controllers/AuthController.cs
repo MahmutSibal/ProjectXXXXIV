@@ -15,7 +15,10 @@ namespace AppSukran.API.Controllers;
 [EnableRateLimiting("auth")]
 public sealed class AuthController(IMediator mediator) : ControllerBase
 {
+    // Restoranın Wi-Fi'ındaki bütün misafirler aynı IP'den QR okutur; giriş/kayıt
+    // sınırını paylaşsaydı 11. misafir menüyü açamazdı.
     [HttpPost("qr-session")]
+    [EnableRateLimiting("qr-session")]
     public async Task<ActionResult<QrSessionResponse>> CreateQrSession([FromBody] CreateQrSessionRequest request, CancellationToken cancellationToken)
     {
         var result = await mediator.Send(new CreateQrSessionCommand(request.RestaurantId, request.TableNo, request.QrToken), cancellationToken);
@@ -43,13 +46,17 @@ public sealed class AuthController(IMediator mediator) : ControllerBase
         var result = await mediator.Send(
             new RegisterBusinessCommand(
                 request.OwnerName, request.Email, request.Password, request.BusinessName,
-                request.Phone, request.Address, request.Longitude, request.Latitude, request.PhoneVerificationTicket),
+                request.Phone, request.Address, request.Longitude, request.Latitude, request.PhoneVerificationTicket,
+                request.MarketingConsent),
             cancellationToken);
         SetRefreshCookie(result.RefreshToken, result.RefreshTokenExpiresAt);
         return Ok(result);
     }
 
+    // Kaba kuvvete karşı asıl koruma hesap + IP başına deneme sayacıdır (ILoginAttemptGuard);
+    // IP sınırı aynı ağdaki personelin vardiya başında birlikte girebileceği kadar geniştir.
     [HttpPost("login")]
+    [EnableRateLimiting("login")]
     public async Task<ActionResult<TokenResponse>> Login([FromBody] LoginUserRequest request, CancellationToken cancellationToken)
     {
         var result = await mediator.Send(new LoginUserCommand(request.Email, request.Password), cancellationToken);
@@ -57,7 +64,9 @@ public sealed class AuthController(IMediator mediator) : ControllerBase
         return Ok(result);
     }
 
+    // Açık her panel oturumu süresi dolunca token yeniler; giriş sınırını tüketmemeli.
     [HttpPost("refresh")]
+    [EnableRateLimiting("token-refresh")]
     public async Task<ActionResult<TokenResponse>> Refresh([FromBody] RefreshTokenRequest request, CancellationToken cancellationToken)
     {
         var refreshToken = request.RefreshToken;
@@ -93,6 +102,7 @@ public sealed class AuthController(IMediator mediator) : ControllerBase
     }
 
     [HttpPost("logout")]
+    [EnableRateLimiting("token-refresh")]
     public async Task<IActionResult> Logout([FromBody] RefreshTokenRequest? request, CancellationToken cancellationToken)
     {
         var refreshToken = request?.RefreshToken;
@@ -137,7 +147,8 @@ public sealed record RegisterUserRequest(string Name, string Email, string Passw
 public sealed record RegisterBusinessRequest(
     string OwnerName, string Email, string Password, string BusinessName,
     string Phone, string Address, double Longitude, double Latitude,
-    string? PhoneVerificationTicket = null);
+    string? PhoneVerificationTicket = null,
+    bool MarketingConsent = false);
 public sealed record LoginUserRequest(string Email, string Password);
 public sealed record ForgotPasswordRequest(string? Email);
 public sealed record ResetPasswordRequest(string? Token, string? NewPassword);

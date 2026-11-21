@@ -13,6 +13,11 @@ export const payTrApi = {
    */
   startSubscriptionPayment: (payload) => api.post('/paytr/subscription-payments', payload),
   getPayment: (merchantOid) => api.get(`/paytr/payments/${encodeURIComponent(merchantOid)}`),
+  /** Restoranın kartla alınan ödemeleri (son N gün). */
+  listPayments: (restaurantId, days = 30) => api.get(`/paytr/restaurants/${restaurantId}/payments?days=${days}`),
+  /** Karta iade (PayTR). amountMinor boşsa kalanın tamamı. */
+  refund: (merchantOid, amountMinor, reason) =>
+    api.post(`/paytr/payments/${encodeURIComponent(merchantOid)}/refund`, { amountMinor, reason }),
 };
 
 /**

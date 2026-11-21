@@ -1,5 +1,6 @@
 using AppSukran.Application.Abstractions.Persistence;
 using AppSukran.Application.Abstractions.Security;
+using AppSukran.Application.Common.Security;
 using AppSukran.Domain.Entities;
 using MediatR;
 
@@ -7,7 +8,8 @@ namespace AppSukran.Application.Staff.Commands;
 
 public sealed class SetStaffActiveCommandHandler(
     IUnitOfWork unitOfWork,
-    ICurrentUserService currentUserService) : IRequestHandler<SetStaffActiveCommand>
+    ICurrentUserService currentUserService,
+    ISubscriptionGuard subscriptionGuard) : IRequestHandler<SetStaffActiveCommand>
 {
     public async Task Handle(SetStaffActiveCommand request, CancellationToken cancellationToken)
     {
@@ -25,6 +27,12 @@ public sealed class SetStaffActiveCommandHandler(
         if (user.RestaurantId != restaurantId || !StaffRoles.IsStaffRole(user.Role))
         {
             throw new UnauthorizedAccessException("You cannot manage this user.");
+        }
+
+        // Pasif hesabı yeniden açmak da yeni hesap eklemek gibi paket limitine tabidir.
+        if (request.IsActive && !user.IsActive)
+        {
+            await subscriptionGuard.EnsureCanAddStaffAsync(restaurantId, user.Role, cancellationToken);
         }
 
         user.IsActive = request.IsActive;

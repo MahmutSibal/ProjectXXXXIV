@@ -38,6 +38,12 @@ public sealed class ChangePlanCommandHandler(
         var subscription = subscriptions.FirstOrDefault()
             ?? throw new InvalidOperationException("Bu işletmeye ait abonelik kaydı bulunamadı.");
 
+        if (!PlanCatalog.Get(request.Plan).IsVisible && subscription.Plan != request.Plan
+            && !currentUserService.IsInRole(nameof(UserRole.SuperAdmin)))
+        {
+            throw new InvalidOperationException("Bu paket şu anda satışta değil. Lütfen başka bir paket seçin.");
+        }
+
         // Tutar YALNIZCA paket koduna göre burada hesaplanır. İstemci fiyat göndermez;
         // gönderse bile kullanılmaz.
         var quote = PlanCatalog.Quote(request.Plan, request.BillingPeriodMonths);

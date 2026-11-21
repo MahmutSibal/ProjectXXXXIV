@@ -5,7 +5,7 @@ import PayTrBadge from './PayTrBadge.jsx';
  * Kartla ödeme öncesi iletişim bilgileri (PayTR her ödemede zorunlu tutar; biz saklamayız).
  * Kart bilgisi BURADA SORULMAZ: bir sonraki adımda PayTR'nin güvenli ödeme sayfasında girilir.
  */
-export default function CardPaymentDialog({ title, description, defaultBuyer, testMode, onSubmit, onCancel }) {
+export default function CardPaymentDialog({ title, description, defaultBuyer, onSubmit, onCancel }) {
   const [buyer, setBuyer] = useState({
     fullName: defaultBuyer?.fullName ?? '',
     email: defaultBuyer?.email ?? '',
@@ -77,7 +77,6 @@ export default function CardPaymentDialog({ title, description, defaultBuyer, te
             Şükran App kart bilgilerinizi görmez ve saklamaz.
           </p>
           <div className="flex justify-center"><PayTrBadge compact /></div>
-          {testMode && <p className="text-[11px] text-error">Test modu: gerçek çekim yapılmaz.</p>}
 
           {error && (
             <div className="flex items-start gap-2 text-error text-body-sm">

@@ -340,12 +340,16 @@ gönderdiği tutar kullanılmaz — tutar paket koduna göre sunucuda yeniden he
 
 | Paket | Aylık | Yıllık (liste) | Yıllık (%10 indirimli) | Sipariş | Panel |
 |---|---|---|---|---|---|
-| Lite | 1.900 TL | 22.800 TL | **20.520 TL** | Yok | Yok |
-| Pro | 3.990 TL | 47.880 TL | **43.092 TL** | 1.500/dönem | 1 mutfak + 1 garson |
-| Business | 7.990 TL | 95.880 TL | **86.292 TL** | 5.000/dönem | Tümü |
-| Enterprise | Teklif | — | — | Özel | Özel |
+| Bronz | 1.900 TL | 22.800 TL | **20.520 TL** | Sınırsız | 1 mutfak |
+| Silver | 3.990 TL | 47.880 TL | **43.092 TL** | 1.000/dönem | 1 mutfak + 1 garson |
+| Gold | 7.990 TL | 95.880 TL | **86.292 TL** | 3.000/dönem | 3 mutfak, garson sınırsız |
+| Kurumsal | Teklif | — | — | Özel | Özel |
 
-14 günlük ücretsiz deneme **yalnızca Pro** pakette sunulur.
+Paket adları, fiyatlar ve limitler SuperAdmin > Paketler ekranından da değiştirilebilir
+(veritabanında saklanır; koddaki değerler varsayılandır). Kod adları (lite, pro, business,
+enterprise) değişmez.
+
+14 günlük ücretsiz deneme **yalnızca Silver** pakette sunulur.
 
 Fiyat değiştiğinde `PlanCatalog.PriceVersion` artırılır. Bu sürüm her aboneliğe ve
 her ödeme kaydına yazılır; hangi kaydın hangi tarifeyle ücretlendirildiği izlenebilir.

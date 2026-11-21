@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth, homePathForRole } from '../../context/AuthContext.jsx';
 import { authApi } from '../../api/auth.js';
 import { ApiError } from '../../api/client.js';
+import { EMAIL_PATTERN, loginErrorMessage } from './loginErrors.js';
 import './Login.css';
 
 const loginFeatures = [
@@ -20,6 +21,8 @@ const loginFeatures = [
   },
 ];
 
+const SLOW_LOGIN_MS = 6000;
+
 export default function Login({ recovery = false, resetPassword = false }) {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -32,52 +35,58 @@ export default function Login({ recovery = false, resetPassword = false }) {
   const [formError, setFormError] = useState('');
   const [isLoginSuccessful, setIsLoginSuccessful] = useState(false);
 
-  const isFormValid =
-    email.trim().length > 0 &&
-    password.trim().length >= 6;
+  const [isSlow, setIsSlow] = useState(false);
+  // State güncellemesi bir sonraki çizime kadar gecikir; Enter'a ya da düğmeye çok hızlı
+  // art arda basılırsa ikinci istek de giderdi. Ref anında değişir, çift gönderimi keser.
+  const submittingRef = useRef(false);
+  const slowTimerRef = useRef(null);
+
+  useEffect(() => () => clearTimeout(slowTimerRef.current), []);
+
+  const isBusy = isSubmitting || isLoginSuccessful;
+  // Eski hesapların şifresi kısa olabilir; uzunluk kuralı yalnızca kayıtta uygulanır.
+  const isFormValid = email.trim().length > 0 && password.length > 0;
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (submittingRef.current || isLoginSuccessful) return;
 
+    const normalizedEmail = email.trim().toLowerCase();
     setFormError('');
-    setIsLoginSuccessful(false);
 
-    if (!email.trim()) {
+    if (!normalizedEmail) {
       setFormError('Lütfen e-posta adresinizi girin.');
       return;
     }
 
-    if (!email.includes('@')) {
-      setFormError('Lütfen geçerli bir e-posta adresi girin.');
+    if (!EMAIL_PATTERN.test(normalizedEmail)) {
+      setFormError('Lütfen geçerli bir e-posta adresi girin (ör. isim@ornek.com).');
       return;
     }
 
-    if (!password.trim()) {
+    if (!password) {
       setFormError('Lütfen şifrenizi girin.');
       return;
     }
 
-    if (password.length < 6) {
-      setFormError('Şifreniz en az 6 karakter olmalıdır.');
-      return;
-    }
-
+    submittingRef.current = true;
     setIsSubmitting(true);
+    setIsSlow(false);
+    clearTimeout(slowTimerRef.current);
+    slowTimerRef.current = setTimeout(() => setIsSlow(true), SLOW_LOGIN_MS);
 
     try {
-      const profile = await login(email.trim(), password);
+      const profile = await login(normalizedEmail, password);
+      // Başarılıysa düğme kilitli kalır: yönlendirme bitene kadar tekrar basılamaz.
       setIsLoginSuccessful(true);
       const redirectTo = location.state?.from?.pathname ?? homePathForRole(profile.role);
       navigate(redirectTo, { replace: true });
     } catch (error) {
-      setFormError(
-        error instanceof ApiError
-          ? error.status === 401
-            ? 'E-posta veya şifre hatalı.'
-            : error.message
-          : 'Giriş yapılamadı. Lütfen tekrar deneyin.',
-      );
+      submittingRef.current = false;
+      setFormError(loginErrorMessage(error));
     } finally {
+      clearTimeout(slowTimerRef.current);
+      setIsSlow(false);
       setIsSubmitting(false);
     }
   };
@@ -222,6 +231,8 @@ export default function Login({ recovery = false, resetPassword = false }) {
               className="login-form"
               onSubmit={handleSubmit}
               noValidate
+              aria-busy={isBusy}
+              autoComplete="off"
             >
               <div className="login-field">
                 <label htmlFor="loginEmail">
@@ -247,7 +258,12 @@ export default function Login({ recovery = false, resetPassword = false }) {
                       setIsLoginSuccessful(false);
                     }}
                     placeholder="isletme@sukran.app"
-                    autoComplete="email"
+                    autoComplete="off"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    inputMode="email"
+                    readOnly={isBusy}
                     required
                   />
                 </div>
@@ -277,7 +293,11 @@ export default function Login({ recovery = false, resetPassword = false }) {
                       setIsLoginSuccessful(false);
                     }}
                     placeholder="••••••••"
-                    autoComplete="current-password"
+                    autoComplete="off"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    readOnly={isBusy}
                     required
                   />
 
@@ -330,12 +350,18 @@ export default function Login({ recovery = false, resetPassword = false }) {
               <button
                 className="login-submit"
                 type="submit"
-                disabled={!isFormValid || isSubmitting}
+                disabled={!isFormValid || isBusy}
+                aria-live="polite"
               >
-                {isSubmitting ? (
+                {isLoginSuccessful ? (
                   <>
                     <span className="login-submit__spinner" />
-                    <span>Kontrol ediliyor</span>
+                    <span>Giriş başarılı, yönlendiriliyor…</span>
+                  </>
+                ) : isSubmitting ? (
+                  <>
+                    <span className="login-submit__spinner" />
+                    <span>Giriş yapılıyor…</span>
                   </>
                 ) : (
                   <>
@@ -350,6 +376,12 @@ export default function Login({ recovery = false, resetPassword = false }) {
                   </>
                 )}
               </button>
+
+              {isSlow && (
+                <p className="login-slow-note" role="status">
+                  Sunucu yanıtı biraz gecikiyor, lütfen bekleyin. Tekrar basmanıza gerek yok.
+                </p>
+              )}
             </form>
 
             <div className="login-role-info">
@@ -435,7 +467,7 @@ function PasswordRecoveryCard() {
         </div>
       )}
 
-      <form className="login-form" onSubmit={handleSubmit}>
+      <form className="login-form" onSubmit={handleSubmit} autoComplete="off">
         <div className="login-field">
           <label htmlFor="businessRecoveryEmail">E-posta adresi</label>
           <div className="login-input">
@@ -444,7 +476,7 @@ function PasswordRecoveryCard() {
               id="businessRecoveryEmail"
               name="email"
               type="email"
-              autoComplete="email"
+              autoComplete="off"
               placeholder="ornek@isletme.com"
               required
               value={email}
@@ -536,12 +568,12 @@ function ResetPasswordCard() {
           <span>Şifreniz değiştirildi. Giriş ekranına yönlendiriliyorsunuz…</span>
         </div>
       ) : (
-        <form className="login-form" onSubmit={handleSubmit}>
+        <form className="login-form" onSubmit={handleSubmit} autoComplete="off">
           <div className="login-field">
             <label htmlFor="newPassword">Yeni şifre</label>
             <div className="login-input">
               <span className="login-input__icon material-symbols-outlined" aria-hidden="true">lock</span>
-              <input id="newPassword" type="password" autoComplete="new-password" required minLength={8}
+              <input id="newPassword" type="password" autoComplete="off" required minLength={8}
                 value={password} onChange={(e) => setPassword(e.target.value)} />
             </div>
           </div>
@@ -549,7 +581,7 @@ function ResetPasswordCard() {
             <label htmlFor="newPasswordAgain">Yeni şifre (tekrar)</label>
             <div className="login-input">
               <span className="login-input__icon material-symbols-outlined" aria-hidden="true">lock</span>
-              <input id="newPasswordAgain" type="password" autoComplete="new-password" required minLength={8}
+              <input id="newPasswordAgain" type="password" autoComplete="off" required minLength={8}
                 value={passwordAgain} onChange={(e) => setPasswordAgain(e.target.value)} />
             </div>
           </div>

@@ -15,6 +15,12 @@ public interface IEmailService
     string AppBaseUrl { get; }
 
     Task SendAsync(string toAddress, string subject, string textBody, CancellationToken cancellationToken = default);
+
+    /// <summary>Kampanya (ticari) e-postası: tek tıkla abonelikten çıkış için List-Unsubscribe başlığı eklenir.</summary>
+    Task SendMarketingAsync(string toAddress, string subject, string textBody, string unsubscribeUrl, string? htmlBody = null, CancellationToken cancellationToken = default);
+
+    /// <summary>Görselli (HTML) kampanya e-postası açık mı? Varsayılan kapalıdır.</summary>
+    bool RichCampaignsEnabled { get; }
 }
 
 /// <summary>Kullanıcıya gösterilebilecek gönderim hataları.</summary>
