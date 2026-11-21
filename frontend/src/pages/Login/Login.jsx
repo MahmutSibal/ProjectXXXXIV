@@ -232,6 +232,7 @@ export default function Login({ recovery = false, resetPassword = false }) {
               onSubmit={handleSubmit}
               noValidate
               aria-busy={isBusy}
+              autoComplete="off"
             >
               <div className="login-field">
                 <label htmlFor="loginEmail">
@@ -257,7 +258,7 @@ export default function Login({ recovery = false, resetPassword = false }) {
                       setIsLoginSuccessful(false);
                     }}
                     placeholder="isletme@sukran.app"
-                    autoComplete="username"
+                    autoComplete="off"
                     autoCapitalize="none"
                     autoCorrect="off"
                     spellCheck={false}
@@ -292,7 +293,7 @@ export default function Login({ recovery = false, resetPassword = false }) {
                       setIsLoginSuccessful(false);
                     }}
                     placeholder="••••••••"
-                    autoComplete="current-password"
+                    autoComplete="off"
                     autoCapitalize="none"
                     autoCorrect="off"
                     spellCheck={false}
@@ -466,7 +467,7 @@ function PasswordRecoveryCard() {
         </div>
       )}
 
-      <form className="login-form" onSubmit={handleSubmit}>
+      <form className="login-form" onSubmit={handleSubmit} autoComplete="off">
         <div className="login-field">
           <label htmlFor="businessRecoveryEmail">E-posta adresi</label>
           <div className="login-input">
@@ -475,7 +476,7 @@ function PasswordRecoveryCard() {
               id="businessRecoveryEmail"
               name="email"
               type="email"
-              autoComplete="email"
+              autoComplete="off"
               placeholder="ornek@isletme.com"
               required
               value={email}
@@ -567,12 +568,12 @@ function ResetPasswordCard() {
           <span>Şifreniz değiştirildi. Giriş ekranına yönlendiriliyorsunuz…</span>
         </div>
       ) : (
-        <form className="login-form" onSubmit={handleSubmit}>
+        <form className="login-form" onSubmit={handleSubmit} autoComplete="off">
           <div className="login-field">
             <label htmlFor="newPassword">Yeni şifre</label>
             <div className="login-input">
               <span className="login-input__icon material-symbols-outlined" aria-hidden="true">lock</span>
-              <input id="newPassword" type="password" autoComplete="new-password" required minLength={8}
+              <input id="newPassword" type="password" autoComplete="off" required minLength={8}
                 value={password} onChange={(e) => setPassword(e.target.value)} />
             </div>
           </div>
@@ -580,7 +581,7 @@ function ResetPasswordCard() {
             <label htmlFor="newPasswordAgain">Yeni şifre (tekrar)</label>
             <div className="login-input">
               <span className="login-input__icon material-symbols-outlined" aria-hidden="true">lock</span>
-              <input id="newPasswordAgain" type="password" autoComplete="new-password" required minLength={8}
+              <input id="newPasswordAgain" type="password" autoComplete="off" required minLength={8}
                 value={passwordAgain} onChange={(e) => setPasswordAgain(e.target.value)} />
             </div>
           </div>

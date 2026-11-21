@@ -52,6 +52,35 @@ public sealed class SubscriptionGuard(IUnitOfWork unitOfWork, ICurrentUserServic
         }
     }
 
+    public async Task EnsureCanAddStaffAsync(string restaurantId, UserRole role, CancellationToken cancellationToken = default)
+    {
+        var subscription = await LoadActiveAsync(restaurantId, cancellationToken);
+        if (subscription is null)
+        {
+            return;
+        }
+
+        var definition = PlanCatalog.Get(subscription.Plan);
+        var (limit, label) = role == UserRole.Kitchen
+            ? (definition.Features.MaxKitchenPanels, "mutfak paneli")
+            : (definition.Features.MaxWaiterPanels, "garson paneli");
+
+        if (limit is null)
+        {
+            return;
+        }
+
+        var current = await unitOfWork.Repository<User>()
+            .CountAsync(user => user.RestaurantId == restaurantId && user.Role == role && user.IsActive, cancellationToken);
+
+        if (current >= limit.Value)
+        {
+            throw new SubscriptionRequiredException(limit.Value == 0
+                ? $"{definition.DisplayName} paketinde {label} bulunmuyor. Paketinizi yükselterek ekleyebilirsiniz."
+                : $"{definition.DisplayName} paketi en fazla {limit.Value} {label} içeriyor. Daha fazlası için paketinizi yükseltin.");
+        }
+    }
+
     public async Task EnsureCanCreateOrderAsync(string restaurantId, CancellationToken cancellationToken = default)
     {
         var subscription = await LoadActiveAsync(restaurantId, cancellationToken);
@@ -65,8 +94,8 @@ public sealed class SubscriptionGuard(IUnitOfWork unitOfWork, ICurrentUserServic
         if (!definition.Features.HasOrdering)
         {
             throw new SubscriptionRequiredException(
-                $"{definition.DisplayName} paketi yalnızca QR menü içerir; sipariş alınamaz. " +
-                "Sipariş sistemi için Pro veya Business paketine geçin.");
+                $"{definition.DisplayName} paketinde sipariş sistemi bulunmuyor; yalnızca QR menü gösterilir. " +
+                "Sipariş almak için paketinizi yükseltin.");
         }
 
         var limit = definition.Features.MaxQrOrdersPerPeriod;

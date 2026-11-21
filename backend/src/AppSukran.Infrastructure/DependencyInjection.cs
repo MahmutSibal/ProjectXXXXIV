@@ -119,6 +119,11 @@ public static class DependencyInjection
         services.AddScoped<IRestaurantSearchService, RestaurantSearchService>();
         services.AddHostedService<DatabaseMigrationInitializer>();
         services.AddHostedService<SuperAdminSeeder>();
+        services.AddHostedService<PlanCatalogRefreshWorker>();
+        services.AddSingleton<Notifications.CampaignQueue>();
+        services.AddSingleton<AppSukran.Application.Campaigns.ICampaignQueue>(sp => sp.GetRequiredService<Notifications.CampaignQueue>());
+        services.AddSingleton<AppSukran.Application.Campaigns.IUnsubscribeTokenService, Notifications.UnsubscribeTokenService>();
+        services.AddHostedService<Notifications.CampaignSendWorker>();
         services.AddHostedService<SubscriptionExpiryWorker>();
         services.AddHostedService<Payments.PayTrTransferWorker>();
         services.AddHostedService<PersonalDataMaintenanceWorker>();

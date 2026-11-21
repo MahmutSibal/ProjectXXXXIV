@@ -263,7 +263,11 @@ public sealed class StartSubscriptionCardPaymentCommandHandler(
 
         var subscriptions = await unitOfWork.Repository<Subscription>()
             .FindAsync(subscription => subscription.RestaurantId == request.RestaurantId, cancellationToken);
-        _ = subscriptions.FirstOrDefault() ?? throw new InvalidOperationException("Bu işletmeye ait abonelik kaydı bulunamadı.");
+        var currentSubscription = subscriptions.FirstOrDefault() ?? throw new InvalidOperationException("Bu işletmeye ait abonelik kaydı bulunamadı.");
+        if (!PlanCatalog.Get(request.Plan).IsVisible && currentSubscription.Plan != request.Plan)
+        {
+            throw new InvalidOperationException("Bu paket şu anda satışta değil. Lütfen başka bir paket seçin.");
+        }
 
         // Tutar YALNIZCA sunucuda, paket koduna göre hesaplanır.
         var quote = PlanCatalog.Quote(request.Plan, request.BillingPeriodMonths);
@@ -337,7 +341,15 @@ public sealed class HandlePayTrCallbackCommandHandler(
                 payment.Status = CardPaymentStatus.Succeeded;
                 payment.PaidTotalMinor = long.TryParse(request.TotalAmount, out var total) ? total : payment.AmountMinor;
 
-                if (payment.Purpose == CardPaymentPurpose.TableBill)
+                if (payment.TestMode)
+                {
+                    // Test modunda PayTR "başarılı" bildirebilir ama GERÇEK para çekilmez.
+                    // Bu yüzden ne abonelik aktifleştirilir ne de hesap ödenmiş sayılır;
+                    // yalnızca rezerve edilmiş kalemler serbest bırakılır. (Canlı modda bu dal çalışmaz.)
+                    payment.FailReason = "Test modu ödemesi: gerçek tahsilat yapılmadığından abonelik/hesap işlenmedi.";
+                    await ReleaseReservedItemsAsync(payment, cancellationToken);
+                }
+                else if (payment.Purpose == CardPaymentPurpose.TableBill)
                 {
                     await ApplyToBillAsync(payment, cancellationToken);
                     payment.TransferStatus = CardPaymentTransferStatus.Pending;

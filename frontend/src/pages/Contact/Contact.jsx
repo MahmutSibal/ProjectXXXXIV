@@ -36,14 +36,14 @@ const contactCards = [
     icon: 'call',
     title: 'Telefon',
     description: 'Hafta içi 09.00–18.00',
-    value: '+90 (000) 000 00 00',
-    href: 'tel:+900000000000',
+    value: '+90 538 946 96 80',
+    href: 'tel:+905389469680',
   },
   {
     icon: 'location_on',
     title: 'Konum',
     description: 'Türkiye genelinde dijital hizmet',
-    value: 'İzmir, Türkiye',
+    value: 'Şanlıurfa, Türkiye',
   },
   {
     icon: 'headset_mic',
@@ -806,7 +806,7 @@ function Contact() {
 
                 <div>
                   <strong>Genel Merkez</strong>
-                  <p>İzmir, Türkiye</p>
+                  <p>Şanlıurfa, Türkiye</p>
                 </div>
               </div>
 
@@ -829,7 +829,7 @@ function Contact() {
             </div>
 
             <a
-              href="https://www.google.com/maps/search/?api=1&query=Izmir%2C%20Turkey"
+              href="https://www.google.com/maps/search/?api=1&query=%C5%9Eanl%C4%B1urfa%2C%20T%C3%BCrkiye"
               target="_blank"
               rel="noreferrer"
               className="contact-button contact-button--outline"
@@ -846,9 +846,12 @@ function Contact() {
             className="contact-location__map"
             data-reveal
           >
-            <img
-              src="/images/iletisim-harita.jpg"
-              alt="İzmir harita görünümü"
+            <iframe
+              title="Şükran App konum haritası"
+              src="https://www.google.com/maps?q=%C5%9Eanl%C4%B1urfa%2C%20T%C3%BCrkiye&output=embed"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              allowFullScreen
             />
 
             <div className="contact-location__marker">
@@ -857,7 +860,7 @@ function Contact() {
               </span>
 
               <strong>Şükran App</strong>
-              <small>İzmir, Türkiye</small>
+              <small>Şanlıurfa, Türkiye</small>
             </div>
           </div>
         </div>

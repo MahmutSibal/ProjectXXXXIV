@@ -30,6 +30,9 @@ public sealed class CreateStaffCommandHandler(
             throw new InvalidOperationException("Only Kitchen or Waiter roles can be assigned to staff.");
         }
 
+        // Paketin mutfak/garson paneli sayısı sınırı (SuperAdmin panelinden ayarlanır).
+        await subscriptionGuard.EnsureCanAddStaffAsync(restaurantId, request.Role, cancellationToken);
+
         var repository = unitOfWork.Repository<User>();
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
         if (await repository.AnyAsync(user => user.Email == normalizedEmail, cancellationToken))

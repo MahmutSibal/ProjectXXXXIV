@@ -17,4 +17,6 @@ public sealed record RegisterBusinessCommand(
     double Longitude,
     double Latitude,
     /// <summary>WhatsApp ile telefon doğrulandığında alınan tek kullanımlık jeton.</summary>
-    string? PhoneVerificationTicket = null) : IRequest<TokenResponse>;
+    string? PhoneVerificationTicket = null,
+    /// <summary>Kampanya e-postası için isteğe bağlı açık rıza.</summary>
+    bool MarketingConsent = false) : IRequest<TokenResponse>;

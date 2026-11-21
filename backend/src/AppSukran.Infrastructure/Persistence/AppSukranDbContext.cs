@@ -36,6 +36,9 @@ public sealed class AppSukranDbContext : DbContext
     public DbSet<PlatformPaymentSettings> PlatformPaymentSettings => Set<PlatformPaymentSettings>();
     public DbSet<RestaurantPaymentSettings> RestaurantPaymentSettings => Set<RestaurantPaymentSettings>();
     public DbSet<MaintenanceSettings> MaintenanceSettings => Set<MaintenanceSettings>();
+    public DbSet<PlanSetting> PlanSettings => Set<PlanSetting>();
+    public DbSet<PlanCatalogSettings> PlanCatalogSettings => Set<PlanCatalogSettings>();
+    public DbSet<Campaign> Campaigns => Set<Campaign>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

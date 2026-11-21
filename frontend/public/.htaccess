@@ -1,0 +1,59 @@
+# sukranapp.com (cPanel / Apache) için ayarlar. Vite bu dosyayı dist/ içine kopyalar.
+# MonsterASP (IIS) bu dosyayı yok sayar; orada aynı işi web.config yapar.
+
+Options -Indexes
+DirectoryIndex index.html
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # www.sukranapp.com -> sukranapp.com (tek adres: SEO ve giriş oturumu için)
+  RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+  RewriteRule ^ https://%1%{REQUEST_URI} [R=301,L,NE]
+
+  # http -> https. Sunucu bir vekil arkasındaysa HTTPS değişkeni "off" görünebilir;
+  # X-Forwarded-Proto da kontrol edilir ki yönlendirme döngüsü olmasın.
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L,NE]
+
+  # SPA yönlendirmesi: sunucuda /giris-yap gibi bir dosya yoktur; var olmayan her yol
+  # index.html'e gider, uygulama kendi içinde yönlendirir. Gerçek dosyalar (js, css,
+  # görsel) normal sunulur.
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "DENY"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Strict-Transport-Security "max-age=31536000"
+
+  # index.html hiç önbelleğe alınmaz: yeni sürüm yüklenince herkes hemen görür.
+  # assets/ altındaki dosyaların adı her derlemede değişir; uzun süre önbelleklenebilir.
+  <FilesMatch "^index\.html$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+  </FilesMatch>
+</IfModule>
+
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/html "access plus 0 seconds"
+</IfModule>
+
+<IfModule mod_headers.c>
+  <If "%{REQUEST_URI} =~ m#^/assets/#">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </If>
+</IfModule>
+
+# Sunucu yapılandırma dosyaları dışarıdan okunmasın
+<FilesMatch "^(web\.config|\.htaccess)$">
+  Require all denied
+</FilesMatch>
+
+AddType application/manifest+json .webmanifest
+AddType image/webp .webp
+AddType font/woff2 .woff2

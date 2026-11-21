@@ -1,165 +1,213 @@
 import { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
-const pages = {
-  '/kampanya-bildirimleri': {
-    title: 'Kampanya Bildirimleri Bilgilendirmesi',
-    intro: 'Şükran App müşteri hesabındaki isteğe bağlı kampanya bildirimi tercihi.',
-    sections: [
-      [
-        'Hangi bildirimler bu tercihe bağlı?',
-        'Bu tercih, kampanyalar, indirimler ve özel fırsatlar hakkında e-posta veya SMS ile bilgilendirilmek isteyen müşteriler içindir.',
-      ],
-      [
-        'Tercih nasıl verilir?',
-        'Üyelik formundaki kampanya bildirimi kutusu isteğe bağlıdır. Kutuyu boş bırakarak da üyelik oluşturabilirsiniz.',
-      ],
-      [
-        'Tercihimi nasıl değiştiririm?',
-        'Bildirim tercihinizi değiştirmek için kullanılacak kanal, kampanya gönderimi devreye alındığında burada ve ilgili iletide gösterilecektir.',
-      ],
-    ],
-  },
+const company = {
+  name: 'Şükran App',
+  service: 'Sukran App',
+  taxOffice: 'Topçu Meydanı Vergi Dairesi',
+  taxNumber: '0440652208',
+  address: 'Şanlıurfa, Türkiye',
+};
 
+const companyInformation =
+  `Hizmet sağlayıcı ${company.name}. ` +
+  `Vergi dairesi ${company.taxOffice}. ` +
+  `Vergi numarası ${company.taxNumber}. ` +
+  `Adres ${company.address}.`;
+
+const pages = {
   '/kvkk': {
-    title: "KVKK Aydınlatma Metni",
-    intro: "6698 sayılı Kişisel Verilerin Korunması Kanunu (KVKK) 10. madde kapsamında Şükran App kullanımı sırasında işlenen kişisel veriler hakkında bilgilendirme.",
+    title: 'KVKK Aydınlatma Metni',
+    intro:
+      '6698 sayılı Kişisel Verilerin Korunması Kanunu kapsamında kişisel verilerinizin işlenmesine ilişkin bilgilendirme.',
     sections: [
       [
-        "Veri sorumlusu",
-        "Veri sorumlusu [tam ticari unvan / ad soyad], adresi [resmî adres], e-posta [KVKK başvuru e-postası]. QR menü ile verilen siparişlerde siparişi hazırlayan restoran, kendi müşteri ilişkisi bakımından ayrıca veri sorumlusudur.",
+        'Veri sorumlusunun kimliği',
+        `${companyInformation} Bu metin, Sukran App hizmeti kapsamında Şükran App tarafından yürütülen kişisel veri işleme faaliyetlerini kapsar. Restoranların kendi faaliyetleri kapsamında yürüttükleri işlemler için ilgili işletmenin aydınlatması ayrıca geçerlidir.`,
       ],
       [
-        "QR menüden sipariş veren müşteriler",
-        "Sipariş içeriği ve isteğe bağlı olarak siparişi verenin adı; kartla ödemede ad soyad, e-posta, telefon ve adres; yorum yazarsanız yorumunuz ve görünen adınız. Kartla ödemede iletişim bilgileri yalnızca ödeme kuruluşu PayTR'ye iletilir, Şükran App'te saklanmaz.",
+        'İşlenen kişisel veriler ve toplama yöntemi',
+        'Kullandığınız özelliklere bağlı olarak ad, soyad, e-posta, telefon, adres, hesap bilgileri, işletme ve masa bilgileri, sipariş içeriği, seçilen ekstralar, müşteri notları, işlem durumu, yorum ve destek talepleri işlenebilir. Veriler üyelik, sipariş, iletişim ve destek formları üzerinden elektronik ortamda ve uygulama kullanımı sırasında oluşan işlem kayıtları yoluyla elde edilir.',
       ],
       [
-        "Kart bilgileri",
-        "Kart numarası, son kullanma tarihi, güvenlik kodu (CVV) ve kart sahibi adı PayTR'nin güvenli ödeme sayfasında girilir. Şükran App bu bilgileri görmez, işlemez ve saklamaz.",
+        'İşleme amaçları ve hukuki sebepler',
+        'Hesabın oluşturulması, hizmete erişim, siparişin yürütülmesi ve sözleşmeye ilişkin destek işlemleri, bir sözleşmenin kurulması veya ifasıyla doğrudan ilgili olması şartıyla Kanun’un 5/2-c maddesine dayanır. Mevzuatın gerektirdiği kayıt ve bildirimler 5/2-a ve 5/2-ç, uyuşmazlık kayıtları bir hakkın tesisi, kullanılması veya korunması amacıyla 5/2-e kapsamında işlenebilir. Hizmet güvenliği ve kötüye kullanımın önlenmesi için gerekli kayıtlar, temel hak ve özgürlüklerinize zarar vermemek şartıyla 5/2-f kapsamında değerlendirilebilir. Açık rızaya dayanan işlemler için rıza ayrıca alınır.',
       ],
       [
-        "Üye müşteriler, işletme sahipleri ve personel",
-        "Ad soyad, e-posta, telefon, adres ve şifrenin geri döndürülemez özeti (şifrenin kendisi saklanmaz); isteğe bağlı kampanya bildirimi tercihi. İşletme sahiplerinden ayrıca fatura için T.C. kimlik numarası (veritabanında şifreli tutulur) ve varsa MERSİS numarası; restorana ödeme aktarımı için IBAN ve hesap sahibi adı.",
+        'Kişisel verilerin aktarılması',
+        'Sipariş ve masa bilgileri, siparişi hazırlayan işletmeyle siparişin yerine getirilmesi amacıyla paylaşılabilir. Ödeme özelliğinin kullanıldığı işlemlerde gerekli bilgiler, tahsilat ve iade süreçleri için ilgili ödeme hizmeti sağlayıcısına iletilebilir. Teknik hizmet sağlayıcılarına erişim, hizmetin yürütülmesi için gereken kapsamla sınırlandırılır. Kanunen yetkili kurumlara, hukuki yükümlülüklerin gerektirdiği bilgiler aktarılabilir. Yurt dışına aktarım söz konusu olduğunda Kanun’un 9. maddesindeki şartlar gözetilir.',
       ],
       [
-        "İade talepleri, doğrulama ve teknik kayıtlar",
-        "İade talebinde IBAN ve hesap sahibi adı; kayıt sırasında telefon numarası veya e-posta adresi ile tek kullanımlık doğrulama kodunun özeti; güvenlik ve kötüye kullanımı önleme amacıyla oturum kayıtları ve işlem kayıtları. Kartla ödemede IP adresiniz dolandırıcılık kontrolü için PayTR'ye iletilir.",
+        'KİŞİSEL VERİLERİNİZİN GÜVENLİĞİ',
+        'Kişisel verilerinizin korunmasında, ilgili gizlilik ve veri güvenliği mevzuatıyla uyumlu teknik ve idari tedbirler esas alınır. Teknolojinin durumu, uygulama maliyetleri, verilerin niteliği ve işleme riskleri dikkate alınarak imha, kayıp, değişiklik, izinsiz açıklama veya izinsiz erişim risklerine karşı uygun önlemler belirlenir. Kişisel verilere erişim, görevi gereği erişmesi gereken yetkili kişilerle sınırlandırılır. Veriler, saklamayı gerektiren işleme şartlarının ve yasal saklama yükümlülüklerinin sona ermesi üzerine silinir, yok edilir veya anonim hâle getirilir.',
       ],
       [
-        "İşleme amaçları ve hukuki sebepler",
-        "Hesabın açılması ve yönetimi, siparişin alınıp hazırlanması, ödemenin alınması ve restorana aktarılması, iade ve destek taleplerinin yürütülmesi: sözleşmenin kurulması ve ifası (KVKK m.5/2-c). Fatura düzenlenmesi ve kayıtların saklanması: hukuki yükümlülük (m.5/2-ç). Hesap ve ödeme güvenliği, kötüye kullanımın önlenmesi: meşru menfaat (m.5/2-f). Kampanya ve tanıtım iletileri: yalnızca açık rızanız ile (m.5/1).",
+        'Saklama süresi',
+        'Kişisel veriler, ilgili hizmetin yürütülmesi için gerekli süre ve uygulanabilir mevzuatın öngördüğü saklama süreleri boyunca tutulur. Hesap kapatma talebi, kanunen saklanması gereken kayıtların derhâl silinmesi sonucunu doğurmayabilir.',
       ],
       [
-        "Kimlere aktarılır",
-        "Siparişi hazırlayan restoran; ödeme kuruluşu PayTR Ödeme ve Elektronik Para Kuruluşu A.Ş.; e-posta gönderim hizmeti Brevo (sunucuları Avrupa Birliği'nde); doğrulama mesajları için WhatsApp (Meta); barındırma hizmeti [barındırma sağlayıcısı ve ülkesi]; talep hâlinde yetkili kamu kurum ve kuruluşları. Yurt dışına aktarım KVKK m.9 kapsamında [standart sözleşme / açık rıza] ile yapılır.",
-      ],
-      [
-        "Saklama süreleri",
-        "Doğrulama kayıtları 30 gün; süresi dolan oturum kayıtları 30 gün; iade talebindeki IBAN ve hesap sahibi adı talep kapandıktan 90 gün sonra silinir. Fatura, ödeme ve sipariş kayıtları Vergi Usul Kanunu gereği yasal süre boyunca saklanır. Hesabınızı sildiğinizde ad, e-posta, telefon ve adresiniz hemen silinir.",
-      ],
-      [
-        "Haklarınız",
-        "KVKK m.11 uyarınca verilerinizin işlenip işlenmediğini öğrenme, bilgi talep etme, düzeltilmesini veya silinmesini isteme, aktarıldığı üçüncü kişileri öğrenme, itiraz etme ve zararın giderilmesini talep etme haklarına sahipsiniz. Hesabınızı \"Hesabım\" sayfasından kendiniz silebilir, diğer talepleriniz için [KVKK başvuru e-postası] adresine yazabilirsiniz.",
+        'Haklarınız ve başvuru',
+        `Kanun’un 11. maddesi kapsamında verilerinizin işlenip işlenmediğini öğrenme, bilgi talep etme, işleme amacını ve amaca uygun kullanımı öğrenme, aktarılan kişileri bilme, eksik veya yanlış verilerin düzeltilmesini, şartları oluştuğunda silinmesini veya yok edilmesini isteme haklarına sahipsiniz. Ayrıca bu işlemlerin üçüncü kişilere bildirilmesini isteyebilir, yalnızca otomatik analiz sonucu aleyhinize çıkan sonuca itiraz edebilir ve hukuka aykırı işleme nedeniyle zararınızın giderilmesini talep edebilirsiniz. Başvurunuzu kimliğinizi ve talebinizi belirten bir dilekçeyle ${company.service} adına ${company.address} adresine iletebilirsiniz. Başvurular mevzuatta belirtilen usul ve süreler içinde değerlendirilir.`,
       ],
     ],
   },
 
   '/gizlilik-politikasi': {
-    title: "Gizlilik Politikası",
-    intro: "Şükran App'te hangi bilgilerin neden tutulduğu ve nasıl korunduğu.",
+    title: 'Gizlilik Politikası',
+    intro:
+      'Sukran App kullanımında hesap, sipariş ve iletişim bilgilerinin gizliliğine ilişkin açıklamalar.',
     sections: [
+      ['Hizmet sağlayıcı', companyInformation],
       [
-        "Hesap ve masa oturumu",
-        "Hesap bilgileriniz giriş ve hesap yönetimi için kullanılır. QR bağlantısı menüyü ilgili restoran ve masa ile eşleştirir; masa oturumu restoran masayı kapattığında sona erer.",
+        'Hesap ve oturum bilgileri',
+        'Üyelik bilgileri hesap işlemleri ve hizmete erişim için kullanılır. QR bağlantısındaki işletme ve masa bilgileri, menünün ve müşteri işlemlerinin ilgili masayla eşleştirilmesini sağlar. Giriş bilgilerinizi başkalarıyla paylaşmamanız ve ortak cihazlardan çıkış yapmanız önerilir.',
       ],
       [
-        "Ödeme",
-        "Kartla ödeme PayTR üzerinden alınır. Kart bilgileri PayTR'nin sayfasında girilir; Şükran App kart bilgilerini görmez ve saklamaz. Ödeme için zorunlu olan ad, e-posta, telefon ve adres yalnızca PayTR'ye iletilir.",
+        'Sipariş, yorum ve destek bilgileri',
+        'Sipariş içeriği, adetler, ekstralar ve notlar siparişin yürütülmesi için kullanılır. Yorumlar, değerlendirmeler ve destek açıklamaları ilgili işlemlerin incelenmesi amacıyla işlenir. Serbest metin alanlarına işlem için gerekli olmayan hassas bilgileri yazmayın.',
       ],
       [
-        "Güvenlik",
-        "Şifreler geri döndürülemez biçimde, T.C. kimlik numaraları şifreli saklanır. Tüm bağlantılar HTTPS ile şifrelidir. Personel yalnızca kendi restoranının, müşteri yalnızca kendi masasının bilgilerine erişebilir.",
+        'Ödeme bilgileri',
+        'Ödeme özelliğinin sunulduğu işlemlerde gerekli bilgiler ilgili ödeme hizmeti sağlayıcısının altyapısı üzerinden işlenebilir. Ödeme ve iade durumu sipariş veya işlem kaydıyla ilişkilendirilebilir. Kart şifresi, tek kullanımlık doğrulama kodu ve benzeri bilgiler destek formlarında paylaşılmamalıdır.',
       ],
       [
-        "Tarayıcıda tutulan bilgiler",
-        "Oturumunuzu açık tutmak için oturum anahtarı ve QR masa oturumu tarayıcınızın yerel depolamasında tutulur. Reklam veya takip amaçlı çerez kullanılmaz.",
+        'Tarayıcıda tutulan bilgiler',
+        'Oturum, sepet ve kullanıcı tercihleri gibi işlevler için tarayıcı depolama yöntemleri kullanılabilir. Tarayıcı verilerinin silinmesi, kaydedilmiş sepet veya tercihlerin kaybolmasına neden olabilir.',
       ],
       [
-        "Saklama ve silme",
-        "Amacı biten veriler otomatik olarak silinir (ayrıntılar KVKK Aydınlatma Metni'nde). Hesabınızı \"Hesabım\" sayfasından silebilirsiniz.",
-      ],
-      [
-        "Kampanya tercihleri",
-        "Üyelik ekranındaki kampanya bildirimi tercihi isteğe bağlıdır; vermeseniz de hizmetten yararlanırsınız. Ticari ileti gönderimi başladığında tercihinizi her iletideki bağlantıdan veya hesabınızdan değiştirebilirsiniz.",
+        'Kampanya tercihi ve başvuru',
+        `Kampanya bildirimi tercihi üyelikten ayrı ve isteğe bağlıdır. Gizlilik ve kişisel veri taleplerinizi ${company.name} adına ${company.address} adresine iletebilirsiniz. Kişisel verilerin işlenmesine ilişkin ayrıntılar KVKK Aydınlatma Metni’nde açıklanır.`,
       ],
     ],
   },
 
   '/kullanim-kosullari': {
     title: 'Kullanım Koşulları',
-    intro: 'Şükran App’in QR menü, müşteri hesabı ve işletme paneli kullanımına ilişkin koşullar.',
+    intro:
+      'Sukran App’in QR menü, müşteri hesabı ve işletme paneli kullanımına ilişkin koşullar.',
     sections: [
+      ['Hizmet sağlayıcı', companyInformation],
       [
-        'QR menü ve masa seçimi',
-        'Sipariş vermeden önce ekrandaki işletme adını ve masa numarasını kontrol edin. Menüdeki ürün içerikleri, ekstralar, fiyatlar ve stok bilgileri ilgili işletmenin kayıtlarından gösterilir.',
+        'Hizmetin kapsamı',
+        'Sukran App; işletmelerin dijital menü, masa, ürün ve sipariş süreçlerini yönetmelerine, müşterilerin ise sunulan özellikler kapsamında menüyü incelemelerine ve işlem yapmalarına olanak sağlar. Kullanılabilir özellikler işletmenin hizmet kapsamına göre değişebilir.',
       ],
       [
-        'Hesap ve işletme paneli',
-        'Hesap bilgilerinizi güncel tutun. İşletme paneline erişimi olan kullanıcılar kendi yetkileri kapsamındaki menü, masa, sipariş ve personel işlemlerini yürütür. Giriş bilgilerini yalnızca yetkili kullanıcılar kullanmalıdır.',
+        'Hesap ve yetkiler',
+        'Kullanıcılar hesap bilgilerini doğru ve güncel tutmalıdır. İşletme panelindeki işlemler, kullanıcıya tanımlanan yetkiler kapsamında yürütülür. Başkasının hesabına izinsiz erişim, hizmeti aksatma veya gerçeğe aykırı işlem oluşturma amacıyla kullanım yapılamaz.',
       ],
       [
-        'Sipariş ve alerjen bilgileri',
-        'Onaylamadan önce ürün adetlerini, ekstraları ve toplam tutarı kontrol edin. Alerjiniz veya özel beslenme gereksiniminiz varsa siparişten önce ilgili işletmeden içerik bilgisi alın.',
+        'Menü ve sipariş',
+        'Müşteri, siparişten önce işletme ve masa bilgisini, ürün içeriğini, adetleri, ekstra ücretlerini ve toplam tutarı kontrol etmelidir. Ürün hazırlama ve servis süreçleri ilgili işletme tarafından yürütülür. Alerjen ve özel beslenme ihtiyaçları için sipariş öncesinde işletmeden bilgi alınmalıdır.',
       ],
       [
-        'İletişim ve destek',
-        'Teknik sorunları Şükran App iletişim kanalından, ürün hazırlama ve servisle ilgili talepleri siparişin verildiği işletmeye veya sipariş ekranında gösterilen destek kanalına iletebilirsiniz.',
+        'Ödeme, iptal ve iade',
+        'Ödeme seçeneği sunulan işlemlerde, ödeme yöntemi ve toplam tutar onaydan önce gösterilir. İptal veya iade talebi sipariş numarasıyla ilgili işletmeye ya da uygulamada gösterilen destek kanalına iletilebilir. Ayrıntılar İptal ve İade Politikası’nda açıklanır.',
+      ],
+      [
+        'Hizmet sürekliliği ve haklar',
+        'Bakım, bağlantı veya teknik arızalar erişimi geçici olarak etkileyebilir. Kullanıcıların mevzuattan doğan hakları saklıdır. Koşullardaki değişiklikler yayımlandıkları tarihten sonraki kullanım için uygulanır ve geçmiş işlemlere ilişkin kazanılmış hakları ortadan kaldırmaz.',
       ],
     ],
   },
 
   '/mesafeli-satis-sozlesmesi': {
     title: 'Mesafeli Satış Sözleşmesi',
-    intro: 'QR menü üzerinden verilebilen restoran siparişleri için örnek sözleşme metni.',
+    intro:
+      'Sukran App üzerinden gerçekleştirilen işlemlerde taraflar, sipariş ve ödeme koşulları.',
     sections: [
+      ['Platform hizmet sağlayıcısı', companyInformation],
       [
-        'Taraflar',
-        'Satıcı veya sağlayıcı [siparişi karşılayan işletmenin ticari unvanı, adresi ve iletişim bilgileri]. Alıcı, sipariş sırasında bilgilerini ileten müşteridir. Şükran App’in işlemdeki rolü [doğrulanmış platform rolü] alanında belirtilir.',
+        'Satıcı ve alıcı',
+        'QR menü üzerinden verilen yiyecek ve içecek siparişinde satıcı, siparişi karşılayan ilgili işletmedir. İşletmenin unvanı, adresi ve iletişim bilgileri işlem öncesinde müşteriye sunulmalıdır. Alıcı, siparişi oluşturan kişidir. Sukran App yazılım hizmetinin doğrudan satıldığı işlemlerde sağlayıcı Şükran App’tir.',
       ],
       [
-        'Siparişin konusu ve bedeli',
-        'Siparişin içeriği; seçilen ürünler, adetler, fiyatlı ekstralar, varsa ücretler ve ödenecek toplam tutardan oluşur. Siparişe özel tutar ve ödeme yöntemi, sipariş onayından önce müşteriye gösterilir.',
+        'Sözleşmenin konusu ve sipariş özeti',
+        'İşlemin konusu, müşteri tarafından seçilen ürün veya hizmetlerdir. Ürün veya hizmetin temel özellikleri, miktarı, seçilen ekstralar, vergiler dâhil toplam bedel ve varsa diğer ücretler işlem onayından önce gösterilir. Yazılım hizmetlerinde seçilen paket ve kullanım dönemi sipariş özetinde belirtilir.',
       ],
       [
-        'Hazırlama ve servis',
-        'Masaya servis edilen siparişte işletme ve masa bilgileri sipariş ekranında gösterilir. Hazırlama, servis veya teslim koşulları ilgili sipariş için ayrıca belirtilir.',
+        'Ödeme ve ifa',
+        'Ödeme, işlem ekranında sunulan yöntemle gerçekleştirilir. Tahsilat sonucu ilgili işlem kaydıyla ilişkilendirilir. Restoran siparişlerinde hazırlama ve servis ilgili işletme tarafından yürütülür. Yazılım hizmetlerinde erişim kapsamı ve başlangıcı seçilen hizmet koşullarına göre belirlenir.',
       ],
       [
-        'İptal, iade ve uyuşmazlıklar',
-        'İptal ve iade başvurusu için sipariş numarası ile ilgili işletmeye veya gösterilen destek kanalına ulaşın. Siparişe uygulanacak koşullar ürün veya hizmet türüne, işlemin durumuna ve geçerli tüketici hükümlerine göre belirlenir.',
+        'Cayma hakkı ve ürünün niteliği',
+        'Cayma hakkı ve istisnaları, işlemin niteliği ve uygulanabilir mevzuata göre belirlenir. Çabuk bozulabilen veya son kullanma tarihi geçebilecek ürünler cayma hakkı istisnasına girebilir. Hizmetin cayma süresi dolmadan ifasına başlanması gereken durumlarda ilgili bilgilendirme ve onay süreçleri ayrıca yürütülür. Ayıplı, eksik veya yanlış ifaya ilişkin yasal haklar saklıdır.',
+      ],
+      [
+        'Başvuru ve uyuşmazlıklar',
+        'Siparişe ilişkin talepler sipariş numarasıyla satıcıya, platform hizmetiyle ilgili talepler Şükran App’e iletilebilir. Tüketiciler, uyuşmazlığın niteliği ve yürürlükteki başvuru şartlarına göre tüketici hakem heyetlerine veya tüketici mahkemelerine başvurabilir.',
       ],
     ],
   },
 
   '/iptal-ve-iade-politikasi': {
     title: 'İptal ve İade Politikası',
-    intro: 'QR menü üzerinden oluşturulan restoran siparişlerine ilişkin iptal ve iade talepleri.',
+    intro:
+      'Restoran siparişleri ve Sukran App hizmetlerine ilişkin iptal ve iade başvuruları.',
+    sections: [
+      ['Hizmet sağlayıcı', companyInformation],
+      [
+        'Talep oluşturma',
+        `Siparişe ilişkin talebinizi uygulamadaki Destek ve İade ekranından veya ilgili işletmenin iletişim kanalından iletebilirsiniz. Sipariş numarasını, işletme ve masa bilgisini, etkilenen ürünü ve talebinizin nedenini belirtin. Sukran App hizmetine ilişkin yazılı başvurularınızı ${company.name} adına ${company.address} adresine gönderebilirsiniz.`,
+      ],
+      [
+        'Restoran siparişinin iptali',
+        'İptal talebinizi mümkün olan en kısa sürede işletmeye iletin. Talep, ürünün niteliği, hazırlama ve servis durumu ile uygulanabilir mevzuat dikkate alınarak değerlendirilir. Başvurunun sonucu ilgili işletme veya destek kanalı üzerinden bildirilir.',
+      ],
+      [
+        'Eksik, yanlış veya ayıplı ürün',
+        'Siparişin eksik, yanlış veya ayıplı olması durumunda etkilenen ürünü ve sorunu belirtin. İnceleme sonucunda uygulanacak çözüm, olayın koşulları ve müşterinin yasal hakları dikkate alınarak belirlenir.',
+      ],
+      [
+        'Yazılım hizmeti ve paket işlemleri',
+        'Paket iptali ve ücret iadesi talepleri, satın alınan hizmetin dönemi, ifa durumu, işlem sırasında sunulan koşullar ve varsa uygulanabilir cayma hükümleri kapsamında değerlendirilir.',
+      ],
+      [
+        'İadenin gerçekleştirilmesi',
+        'Onaylanan iadeler, işlemde kullanılan ödeme yöntemine ve ilgili ödeme kuruluşunun süreçlerine uygun olarak yürütülür. İadenin hesaba yansıması finans kuruluşuna göre değişebilir. İade yöntemi tercihi, tek başına iadenin onaylandığı veya gerçekleştirildiği anlamına gelmez.',
+      ],
+    ],
+  },
+
+  '/kampanya-bildirimleri': {
+    title: 'Kampanya Bildirimleri Bilgilendirmesi',
+    intro: 'Sukran App hesabındaki isteğe bağlı kampanya e-postası tercihi.',
+    sections: [
+      ['Hizmet sağlayıcı', companyInformation],
+      [
+        'Bildirimlerin kapsamı',
+        'Kampanya, indirim, yeni özellik ve özel fırsat duyuruları, yalnızca bu tercihi açıkça verdiğiniz durumda e-posta ile gönderilir. Bu tercih isteğe bağlıdır; vermemeniz hizmetten yararlanmanızı etkilemez.',
+      ],
+      [
+        'Açık rıza ve kayıt',
+        'Tercih, kayıt formundaki ayrı onay kutusuyla ya da Hesabım sayfasından verilir. Rızanın verildiği tarih, ispat amacıyla kaydedilir. İşlemsel e-postalar (doğrulama kodu, şifre sıfırlama, abonelik bildirimi) bu tercihe bağlı değildir.',
+      ],
+      [
+        'Tercihten vazgeçme',
+        'Her kampanya e-postasının altında gönderici bilgileri ve tek tıkla çıkış bağlantısı bulunur. Tercihinizi istediğiniz zaman Hesabım sayfasından da kapatabilirsiniz; kapattığınızda yeni kampanya e-postası gönderilmez.',
+      ],
+    ],
+  },
+
+  '/telif-hakki': {
+    title: 'Telif Hakkı ve Yazılım Künyesi',
+    intro:
+      'Sukran App platform yazılımının geliştiricisi ve yazarlık (telif) hakları hakkında bilgilendirme.',
     sections: [
       [
-        'Talep nasıl oluşturulur?',
-        'QR menüdeki Destek Talebi ekranından veya siparişin verildiği işletmenin iletişim kanalından başvurun. Sipariş numarası, işletme adı, masa numarası ve talebinizin nedenini belirtin.',
+        'Yazılımın geliştiricisi',
+        'Sukran App platformunun yazılımı (kaynak kod, arayüz tasarımı, veri modeli ve mimari dâhil) Mahmut Sibal tarafından geliştirilmiştir. Yazılımın kodlama ve geliştirme işi bu kişiye aittir; uygulama alt bilgisinde (footer) yer alan “Kodlama ve yazılım: Mahmut Sibal” künyesi bu yazarlığı belirtir.',
       ],
       [
-        'Sipariş iptali',
-        'Siparişinizi iptal etmek istiyorsanız ilgili işletmeye mümkün olan en kısa sürede ulaşın. İşletme, siparişin hazırlama ve servis durumunu kontrol ederek talebi değerlendirir ve sonucu size bildirir.',
+        'Telif hakkı',
+        'Yazılımın kaynak kodu üzerindeki eser sahipliğinden doğan manevi haklar, 5846 sayılı Fikir ve Sanat Eserleri Kanunu kapsamında eserin yazarı Mahmut Sibal’a aittir. Eser sahibinin adının eserde belirtilmesi (künye) ve kaynak gösterilmesi hakkı saklıdır. Yazılımın mali haklarının (kullanım, çoğaltma, yayma) kime ait olduğu, taraflar arasındaki yazılı sözleşmeye göre belirlenir.',
       ],
       [
-        'Eksik, yanlış veya sorunlu ürün',
-        'Teslim edilen ürün siparişinizden farklıysa, eksikse veya ürünle ilgili sorun varsa hangi ürünün etkilendiğini belirtin. Talep değerlendirilirken sipariş kaydı ve ilgili tüketici hakları dikkate alınır.',
+        'İzin ve kullanım',
+        'Bu yazılımın tamamının veya bir bölümünün izinsiz kopyalanması, çoğaltılması, dağıtılması veya türev çalışma oluşturulması, ilgili sözleşme ve yürürlükteki mevzuat kapsamında değerlendirilir. Künye bilgisinin kaldırılması ya da değiştirilmesi, eser sahibinin haklarına halel getirmez.',
       ],
       [
-        'Ödeme iadesi',
-        'İade onaylandığında iade tutarı ve işlemin durumu ilgili ödeme kaydı üzerinden takip edilir. Ödemenin hesabınıza yansıma süresi, kullanılan ödeme yöntemi ve finans kuruluşuna göre değişebilir.',
+        'İletişim',
+        'Telif hakkı, yazarlık veya lisans ile ilgili taleplerinizi platform üzerindeki iletişim kanallarından iletebilirsiniz. Bu metin genel bir bilgilendirmedir ve hukuki görüş niteliği taşımaz.',
       ],
     ],
   },
@@ -198,7 +246,12 @@ export default function LegalPage() {
           </p>
         </header>
 
-        <div className="space-y-6 px-5 py-6 sm:px-9 sm:py-8">
+        <div className="space-y-6 px-5 py-6 sm:px-9 sm:py-8">
+          <div className="rounded-xl border border-[#DFE4E0] bg-[#F8F9FA] p-4 text-sm leading-7 text-[#404943]">
+  <p className="font-bold text-[#002819]">{company.name}</p>
+  <p>{company.taxOffice} · VKN {company.taxNumber}</p>
+  <address className="not-italic">{company.address}</address>
+</div>
 
           {page.sections.map(([heading, content]) => (
             <section key={heading}>

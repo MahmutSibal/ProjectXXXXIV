@@ -1,4 +1,5 @@
 using AppSukran.Application.Abstractions.Persistence;
+using AppSukran.Application.Abstractions.Security;
 using AppSukran.Application.Common.Models;
 using AppSukran.Application.Common.Security;
 using AppSukran.Domain.Entities;
@@ -36,17 +37,33 @@ public sealed class GetAllSubscriptionsQueryHandler(IUnitOfWork unitOfWork)
     }
 }
 
-public sealed class GetPlanOptionsQueryHandler : IRequestHandler<GetPlanOptionsQuery, IReadOnlyCollection<PlanOptionResponse>>
+public sealed class GetPlanOptionsQueryHandler(IUnitOfWork unitOfWork, ICurrentUserService currentUserService)
+    : IRequestHandler<GetPlanOptionsQuery, IReadOnlyCollection<PlanOptionResponse>>
 {
-    public Task<IReadOnlyCollection<PlanOptionResponse>> Handle(GetPlanOptionsQuery request, CancellationToken cancellationToken)
+    public async Task<IReadOnlyCollection<PlanOptionResponse>> Handle(GetPlanOptionsQuery request, CancellationToken cancellationToken)
     {
         // Deneme paketi satın alınamaz, listelenmez. Fiyat/indirim hesapları
         // ToOption() içinde, yani sunucuda yapılır.
-        IReadOnlyCollection<PlanOptionResponse> options = PlanCatalog.Purchasable
-            .Select(definition => definition.ToOption())
-            .ToList();
+        var definitions = PlanCatalog.Purchasable.ToList();
 
-        return Task.FromResult(options);
+        // Satıştan kaldırılmış (gizlenmiş) pakette olan abone kendi paketini listede görmeye
+        // devam eder; böylece mevcut paketini yenileyebilir.
+        var restaurantId = currentUserService.RestaurantId;
+        if (!string.IsNullOrWhiteSpace(restaurantId))
+        {
+            var subscription = (await unitOfWork.Repository<Subscription>()
+                .FindAsync(item => item.RestaurantId == restaurantId, cancellationToken)).FirstOrDefault();
+            if (subscription is not null
+                && subscription.Plan != SubscriptionPlan.Trial
+                && definitions.All(definition => definition.Plan != subscription.Plan))
+            {
+                definitions.Add(PlanCatalog.Get(subscription.Plan));
+                definitions = definitions.OrderBy(definition => definition.MonthlyPrice).ToList();
+            }
+        }
+
+        IReadOnlyCollection<PlanOptionResponse> options = definitions.Select(definition => definition.ToOption()).ToList();
+        return options;
     }
 }
 

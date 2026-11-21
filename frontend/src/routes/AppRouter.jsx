@@ -66,6 +66,9 @@ import SuperAdminUsers from '../pages/SuperAdminUsers/SuperAdminUsers.jsx';
 import SuperAdminWhatsApp from '../pages/SuperAdminWhatsApp/SuperAdminWhatsApp.jsx';
 import SuperAdminAuditLogs from '../pages/SuperAdminAuditLogs/SuperAdminAuditLogs.jsx';
 import SuperAdminSubscriptions from '../pages/SuperAdminSubscriptions/SuperAdminSubscriptions.jsx';
+import SuperAdminPlans from '../pages/SuperAdminPlans/SuperAdminPlans.jsx';
+import SuperAdminCampaigns from '../pages/SuperAdminCampaigns/SuperAdminCampaigns.jsx';
+import CampaignUnsubscribe from '../pages/CampaignUnsubscribe/CampaignUnsubscribe.jsx';
 
 /* Müşteri (QR menü) sayfası */
 
@@ -177,6 +180,8 @@ export default function AppRouter() {
 <Route path="mesafeli-satis-sozlesmesi" element={<LegalPage />} />
 <Route path="iptal-ve-iade-politikasi" element={<LegalPage />} />
 <Route path="kampanya-bildirimleri" element={<LegalPage />} />
+<Route path="telif-hakki" element={<LegalPage />} />
+<Route path="kampanya-iptal" element={<CampaignUnsubscribe />} />
         </Route>
 
         {/* Navbar ve footer kullanılmayan üyelik sayfaları */}
@@ -397,6 +402,8 @@ export default function AppRouter() {
             element={<SuperAdminSubscriptions />}
           />
           <Route path="transfers" element={<SuperAdminTransfers />} />
+          <Route path="plans" element={<SuperAdminPlans />} />
+          <Route path="campaigns" element={<SuperAdminCampaigns />} />
         </Route>
         </Route>
 

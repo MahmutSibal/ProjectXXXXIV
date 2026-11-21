@@ -38,6 +38,14 @@ public sealed class UsersController(IMediator mediator) : ControllerBase
         return Ok(new { userId });
     }
 
+    /// <summary>Yeni platform yöneticisi hesabı (yalnızca mevcut SuperAdmin).</summary>
+    [HttpPost("super-admin")]
+    public async Task<IActionResult> CreateSuperAdmin([FromBody] CreateSuperAdminRequest request, CancellationToken cancellationToken)
+    {
+        var userId = await mediator.Send(new CreateSuperAdminCommand(request.Name, request.Email, request.Password), cancellationToken);
+        return Ok(new { userId });
+    }
+
     [HttpPut("{userId}/role")]
     public async Task<IActionResult> UpdateRole(string userId, [FromBody] UpdateUserRoleRequest request, CancellationToken cancellationToken)
     {
@@ -61,5 +69,6 @@ public sealed class UsersController(IMediator mediator) : ControllerBase
 }
 
 public sealed record CreateUserRequest(string Name, string Email, string Password, AppSukran.Domain.Enums.UserRole Role, string? RestaurantId = null);
+public sealed record CreateSuperAdminRequest(string Name, string Email, string Password);
 public sealed record UpdateUserRoleRequest(AppSukran.Domain.Enums.UserRole Role, string? RestaurantId = null);
 public sealed record ResetUserPasswordRequest(string NewPassword);

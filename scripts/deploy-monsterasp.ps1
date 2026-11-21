@@ -1,12 +1,14 @@
 ﻿<#
 .SYNOPSIS
-    Ana backend, yedek backend ve frontend'i MonsterASP'a tek komutla yayınlar.
+    Ana backend, yedek backend(ler) ve frontend'i (cPanel + MonsterASP) tek komutla yayınlar.
 
 .DESCRIPTION
     Sıra bilerek böyledir:
-      1. Yedek backend  -> sağlıklı mı? Değilse DURUR, ana sunucuya dokunulmaz.
+      1. Yedek backend(ler) -> sağlıklı mı? Değilse DURUR, ana sunucuya dokunulmaz.
+         (-Backup2Profile verilirse ikinci yedek de aynı kontrolden geçer.)
       2. Ana backend    -> sağlıklı mı?
-      3. Frontend
+      3. Frontend (MonsterASP, eski adres $FrontendHost: cPanel doğrulanınca $SiteDomain'e 301 yönlendirir)
+      4. Frontend (cPanel, $SiteDomain) - scripts\publish-cpanel.ps1 ile (cPanel API, HTTPS)
 
     Sırlar: ortam değişkenleri (bkz. DEPLOYMENT.md 3.1) tanımlı değilse, canlıdaki ana
     sunucunun web.config'inden OKUNUR. Böylece yedek, ana sunucuyla birebir aynı
@@ -34,6 +36,8 @@
 param(
     [string]$PrimaryProfile,
     [string]$BackupProfile,
+    # İkinci yedek backend (isteğe bağlı). Verilmezse yalnızca tek yedek kullanılır.
+    [string]$Backup2Profile,
     [string]$FrontendProfile,
 
     [string]$PrimaryHost  = 'mahmutapp.tryasp.net',
@@ -44,22 +48,72 @@ param(
     # oradan çözülmezse genel adla (dbXXXXX.public.databaseasp.net) bir dize verin.
     [string]$BackupDbConnection,
 
-    # Masa QR kodlarına gömülen adres. Basılmış QR kodlarıyla AYNI olmalı.
+    # İkinci yedeğin adresi; boşsa yayın profilindeki site adı kullanılır.
+    [string]$Backup2Host,
+    # İkinci yedek için veritabanı dizesi; boşsa -BackupDbConnection, o da boşsa ana dize.
+    [string]$Backup2DbConnection,
+
+    # Sitenin asıl alan adı (cPanel'de yayınlanır). PayTR dönüşü, e-posta bağlantıları ve
+    # yeni QR kodları bu adrese gider. Eski $FrontendHost da çalışmaya devam eder
+    # (basılmış eski QR kodları için). Boş verilirse yalnızca $FrontendHost kullanılır.
+    [string]$SiteDomain = 'sukranapp.com',
+
+    # Masa QR kodlarına gömülen adres. Boşsa https://$SiteDomain.
     [string]$PublicAppUrl,
 
-    [switch]$SkipDeploy
+    # Hesabın bulunduğu cPanel sunucusu (HTTPS API). Bkz. scripts\publish-cpanel.ps1.
+    [string]$CpanelUrl = 'https://welltechub.com:2083',
+
+    # cPanel'e yüklemeyi atla (yalnızca zip hazırlanır).
+    [switch]$SkipCpanel,
+
+    # E-posta gönderici adresi (Brevo'da doğrulanmış olmalı, ör. noreply@sukranapp.com) ve
+    # iletişim formu bildirimlerinin gideceği adres (ör. info@sukranapp.com). Bir kez verilmeleri
+    # yeterli: canlıya yazılır, sonraki yayınlarda canlıdan aynen taşınır.
+    [string]$EmailFrom,
+    [string]$EmailNotificationAddress,
+
+    [switch]$SkipDeploy,
+
+    # Sunucu açılmazsa (HTTP 500.30) hata ayrıntısını sunucudaki logs\stdout dosyasına yazdırır.
+    # Sorun bulununca kapatın.
+    [switch]$EnableStdoutLog
 )
 
 $ErrorActionPreference = 'Stop'
+# Elle verilen e-posta adresleri canlıdan okunan değerlerin önüne geçer.
+if ($EmailFrom) { $env:SUKRAN_EMAIL_FROM = $EmailFrom.Trim() }
+if ($EmailNotificationAddress) { $env:SUKRAN_EMAIL_NOTIFY = $EmailNotificationAddress.Trim() }
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $msdeploy = 'C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe'
 $primaryOut = Join-Path $root 'publish\primary'
 $backupOut  = Join-Path $root 'publish\backup'
+$backup2Out = Join-Path $root 'publish\backup2'
 $frontendOut = Join-Path $root 'frontend\dist'
+$redirectOut = Join-Path $root 'publish\redirect'
 
-if (-not $PublicAppUrl) { $PublicAppUrl = "https://$FrontendHost" }
+if (-not $PublicAppUrl) { $PublicAppUrl = if ($SiteDomain) { "https://$SiteDomain" } else { "https://$FrontendHost" } }
+$siteZip = if ($SiteDomain) { Join-Path $root "publish\$SiteDomain-site.zip" } else { $null }
 
 function Write-Step([string]$text) { Write-Host "`n=== $text ===" -ForegroundColor Cyan }
+
+# cPanel'e yüklenecek zip. Compress-Archive (PowerShell 5.1) klasör ayırıcısını "\" yazar;
+# Linux'ta açılınca "assets\index.js" adlı tek dosyalar oluşur. Bu yüzden girişler "/" ile yazılır.
+function New-SiteZip([string]$SourceDir, [string]$ZipPath) {
+    Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
+    New-Item -ItemType Directory -Force -Path (Split-Path $ZipPath) | Out-Null
+    if (Test-Path $ZipPath) { Remove-Item $ZipPath -Force }
+    $base = (Resolve-Path $SourceDir).Path.TrimEnd('\') + '\'
+    $zip = [System.IO.Compression.ZipFile]::Open($ZipPath, 'Create')
+    try {
+        # web.config yalnızca IIS içindir; Apache'de .htaccess kullanılır.
+        Get-ChildItem $SourceDir -Recurse -File -Force | Where-Object { $_.Name -ne 'web.config' } | ForEach-Object {
+            $entry = $_.FullName.Substring($base.Length).Replace('\', '/')
+            [void][System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $_.FullName, $entry, 'Optimal')
+        }
+    }
+    finally { $zip.Dispose() }
+}
 
 # --- Yayın profilleri -------------------------------------------------------
 
@@ -75,6 +129,8 @@ function Read-PublishProfile([string]$path) {
 
     [pscustomobject]@{
         Site     = $p.msdeploySite
+        # Sitenin genel adresi (ör. mahmutapp.runasp.net); msdeploySite ise iç koddur (site12345).
+        AppHost  = ([string]$p.destinationAppUrl -replace '^https?://', '' -replace '/.*$', '')
         Endpoint = "https://$server/msdeploy.axd?site=$($p.msdeploySite)"
         User     = $p.userName
         Password = $p.userPWD
@@ -101,18 +157,18 @@ function Invoke-MsDeploy([string[]]$arguments) {
     return $output
 }
 
-function Publish-Folder($profile, [string]$sourceDir) {
+function Publish-Folder($profile, [string]$sourceDir, [switch]$AllowDelete) {
     $arguments = @(
         '-verb:sync',
         "-source:contentPath=$sourceDir",
         (Get-DestinationArgs $profile 'contentPath' $profile.Site),
         # Kopyalarken siteyi "bakımda" sayfasına alır; kilitli DLL hatasını önler.
         '-enableRule:AppOffline',
-        # Sunucudaki fazla dosyaları silme: işletme görselleri (wwwroot\uploads) korunur.
-        '-enableRule:DoNotDeleteRule',
         '-retryAttempts:3',
         '-retryInterval:3000'
     )
+    # Backend'de sunucudaki fazla dosyalar silinmez: işletme görselleri (wwwroot\uploads) korunur.
+    if (-not $AllowDelete) { $arguments += '-enableRule:DoNotDeleteRule' }
     $output = Invoke-MsDeploy $arguments
     ($output -split "`n" | Where-Object { $_ -match 'Total changes|Toplam değişiklik' }) | ForEach-Object { Write-Host "  $($_.Trim())" }
 }
@@ -181,6 +237,11 @@ if (-not $SkipDeploy) {
         if ([string]::IsNullOrWhiteSpace($pair[1])) { throw "-$($pair[0]) profili verilmedi (-PrimaryProfile, -BackupProfile, -FrontendProfile)." }
         $script:profiles[$pair[0]] = Read-PublishProfile $pair[1]
     }
+    if ($Backup2Profile) {
+        $script:profiles['backup2'] = Read-PublishProfile $Backup2Profile
+        if (-not $Backup2Host) { $Backup2Host = $script:profiles['backup2'].AppHost }
+        if (-not $Backup2Host) { throw '-Backup2Host verilmedi ve yayın profilinden okunamadı.' }
+    }
 }
 
 # --- Sırlar ve ayarlar ------------------------------------------------------
@@ -188,7 +249,12 @@ if (-not $SkipDeploy) {
 Write-Step 'Ayarlar'
 
 $whatsAppBaseUrl = $null
-$frontendOrigins = @("https://$FrontendHost")
+# İlk adres uygulamanın ana adresidir (PayTR dönüşü, e-posta bağlantıları).
+$frontendOrigins = if ($SiteDomain) {
+    @("https://$SiteDomain", "https://www.$SiteDomain", "https://$FrontendHost")
+} else {
+    @("https://$FrontendHost")
+}
 
 if ([string]::IsNullOrWhiteSpace($env:SUKRAN_DB_CONNECTION) -or [string]::IsNullOrWhiteSpace($env:JWT_SIGNING_KEY)) {
     if ($SkipDeploy) { throw 'Ortam değişkenleri tanımlı değil ve -SkipDeploy ile canlıdan okunamaz.' }
@@ -229,6 +295,7 @@ if ([string]::IsNullOrWhiteSpace($env:SUKRAN_DB_CONNECTION) -or [string]::IsNull
             'SUKRAN_EMAIL_PORT'     = 'Email__Port'
             'SUKRAN_EMAIL_USERNAME' = 'Email__Username'
             'SUKRAN_EMAIL_FROM'     = 'Email__FromAddress'
+            'SUKRAN_EMAIL_NOTIFY'   = 'Email__NotificationAddress'
         }
         foreach ($envName in $emailMap.Keys) {
             $liveName = $emailMap[$envName]
@@ -247,7 +314,7 @@ if ([string]::IsNullOrWhiteSpace($env:SUKRAN_DB_CONNECTION) -or [string]::IsNull
 
 Write-Host "  CORS          : $($frontendOrigins -join ', ')"
 Write-Host "  WhatsApp      : $(if ($whatsAppBaseUrl) { $whatsAppBaseUrl } else { 'kapalı' })"
-Write-Host "  E-posta       : $(if ($env:SUKRAN_SMTP_PASSWORD) { "açık ($(if ($env:SUKRAN_EMAIL_FROM) { $env:SUKRAN_EMAIL_FROM } else { 'gönderici eksik' }))" } else { 'kapalı' })"
+Write-Host "  E-posta       : $(if ($env:SUKRAN_SMTP_PASSWORD) { "açık (gönderen $(if ($env:SUKRAN_EMAIL_FROM) { $env:SUKRAN_EMAIL_FROM } else { 'eksik' }), bildirim $(if ($env:SUKRAN_EMAIL_NOTIFY) { $env:SUKRAN_EMAIL_NOTIFY } else { 'gönderen adresine' }))" } else { 'kapalı' })"
 $payTrReady = $env:SUKRAN_PAYTR_MERCHANT_ID -and $env:SUKRAN_PAYTR_MERCHANT_KEY -and $env:SUKRAN_PAYTR_MERCHANT_SALT
 $payTrTestText = if ($env:SUKRAN_PAYTR_TEST_MODE -eq 'false') { 'CANLI - gerçek para' } else { 'TEST modu' }
 $payTrTransferText = if ($env:SUKRAN_PAYTR_TRANSFERS -eq 'true') { 'açık' } else { 'kapalı' }
@@ -256,6 +323,7 @@ Write-Host "  QR adresi     : $PublicAppUrl"
 
 $commonArgs = @{ FrontendOrigin = $frontendOrigins }
 if ($whatsAppBaseUrl) { $commonArgs.WhatsAppBaseUrl = $whatsAppBaseUrl }
+if ($EnableStdoutLog) { $commonArgs.EnableStdoutLog = $true }
 
 try {
     # --- Derleme ------------------------------------------------------------
@@ -273,6 +341,18 @@ try {
         $env:SUKRAN_DB_CONNECTION = $originalDb
     }
 
+    if ($Backup2Host) {
+        Write-Step 'Backend derleniyor (ikinci yedek)'
+        try {
+            $db2 = if ($Backup2DbConnection) { $Backup2DbConnection } elseif ($BackupDbConnection) { $BackupDbConnection } else { $null }
+            if ($db2) { $env:SUKRAN_DB_CONNECTION = $db2 }
+            & (Join-Path $PSScriptRoot 'publish-monsterasp.ps1') -SiteHost $Backup2Host -InstanceName 'backup2' -OutputPath $backup2Out @commonArgs
+        }
+        finally {
+            $env:SUKRAN_DB_CONNECTION = $originalDb
+        }
+    }
+
     Write-Step 'Frontend derleniyor'
     Push-Location (Join-Path $root 'frontend')
     # npm/vite uyarıları stderr'e yazar; 5.1'de 'Stop' bunları hata sayar.
@@ -281,7 +361,8 @@ try {
     try {
         # Vite değerleri derleme anında koda gömer.
         $env:VITE_API_BASE_URL = "https://$PrimaryHost/api"
-        $env:VITE_API_FALLBACK_URLS = "https://$BackupHost/api"
+        # Sıra önemlidir: ana sunucu düşerse önce birinci, o da düşerse ikinci yedeğe geçilir.
+        $env:VITE_API_FALLBACK_URLS = (@("https://$BackupHost/api") + $(if ($Backup2Host) { @("https://$Backup2Host/api") } else { @() })) -join ','
         $env:VITE_PUBLIC_APP_URL = $PublicAppUrl
         & npm ci --no-audit --no-fund
         if ($LASTEXITCODE -ne 0) { throw 'npm ci başarısız.' }
@@ -294,6 +375,12 @@ try {
         Remove-Item env:VITE_API_BASE_URL, env:VITE_API_FALLBACK_URLS, env:VITE_PUBLIC_APP_URL -ErrorAction SilentlyContinue
     }
 
+    if ($siteZip) {
+        Write-Step "cPanel paketi hazırlanıyor ($SiteDomain)"
+        New-SiteZip -SourceDir $frontendOut -ZipPath $siteZip
+        Write-Host "  Hazır: $siteZip" -ForegroundColor Green
+    }
+
     if ($SkipDeploy) {
         Write-Host "`n-SkipDeploy: derleme tamam, hiçbir şey gönderilmedi." -ForegroundColor Yellow
         return
@@ -301,7 +388,9 @@ try {
 
     # --- Yayın --------------------------------------------------------------
 
-    Write-Step "1/3 Yedek backend -> $BackupHost"
+    $total = 3 + $(if ($Backup2Host) { 1 } else { 0 }) + $(if ($SiteDomain -and -not $SkipCpanel) { 1 } else { 0 })
+    $step = 1
+    Write-Step "$step/$total Yedek backend -> $BackupHost"
     Publish-Folder $script:profiles['backup'] $backupOut
     try {
         Wait-Healthy $BackupHost 'backup'
@@ -312,22 +401,90 @@ try {
                "dbXXXXX.public.databaseasp.net adresli bir dize verin (bkz. DEPLOYMENT.md 4.1).")
     }
 
-    Write-Step "2/3 Ana backend -> $PrimaryHost"
+    if ($Backup2Host) {
+        $step++
+        Write-Step "$step/$total İkinci yedek backend -> $Backup2Host"
+        Publish-Folder $script:profiles['backup2'] $backup2Out
+        try {
+            Wait-Healthy $Backup2Host 'backup2'
+        }
+        catch {
+            throw ("İkinci yedek sağlıklı değil; ANA SUNUCUYA DOKUNULMADI. $($_.Exception.Message)`n" +
+                   "Veritabanı iç adı bu sunucudan çözülmüyor olabilir: -Backup2DbConnection ile " +
+                   "dbXXXXX.public.databaseasp.net adresli bir dize verin.")
+        }
+    }
+
+    $step++
+    Write-Step "$step/$total Ana backend -> $PrimaryHost"
     Publish-Folder $script:profiles['primary'] $primaryOut
     Wait-Healthy $PrimaryHost 'primary'
 
-    Write-Step "3/3 Frontend -> $FrontendHost"
-    Publish-Folder $script:profiles['frontend'] $frontendOut
-    $page = Invoke-WebRequest "https://$FrontendHost/" -UseBasicParsing -TimeoutSec 60
-    if ($page.StatusCode -ne 200) { throw "Frontend $($page.StatusCode) döndü." }
-    Write-Host "  $FrontendHost yanıt veriyor (200)" -ForegroundColor Green
+    # Önce asıl site (cPanel). Eski adres, yeni site doğrulanmadan yönlendirmeye çevrilmez.
+    $cpanelOk = $true
+    if ($SiteDomain -and -not $SkipCpanel) {
+        $step++
+        Write-Step "$step/$total Frontend -> $SiteDomain (cPanel)"
+        try {
+            & (Join-Path $PSScriptRoot 'publish-cpanel.ps1') -SourceDir $frontendOut -SiteDomain $SiteDomain -CpanelUrl $CpanelUrl
+        }
+        catch {
+            # Backend zaten yayında; eski adres de olduğu gibi çalışmaya devam eder.
+            $cpanelOk = $false
+            Write-Host "  cPanel yüklemesi başarısız: $($_.Exception.Message)" -ForegroundColor Red
+        }
+    }
+
+    $step++
+    $redirectOld = $SiteDomain -and -not $SkipCpanel -and $cpanelOk
+    if ($redirectOld) {
+        Write-Step "$step/$total Eski adres $FrontendHost -> $SiteDomain yönlendirmesi"
+        # Eski adrese (ör. basılmış QR kodları) gelen herkes aynı yol ve sorguyla yeni adrese gider.
+        New-Item -ItemType Directory -Force -Path $redirectOut | Out-Null
+        Get-ChildItem $redirectOut -Force | Remove-Item -Recurse -Force
+        $redirectConfig = @"
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <system.webServer>
+    <rewrite>
+      <rules>
+        <rule name="Yeni adrese yonlendir" stopProcessing="true">
+          <match url="(.*)" />
+          <action type="Redirect" url="https://$SiteDomain/{R:1}" redirectType="Permanent" appendQueryString="true" />
+        </rule>
+      </rules>
+    </rewrite>
+  </system.webServer>
+</configuration>
+"@
+        [IO.File]::WriteAllText((Join-Path $redirectOut 'web.config'), $redirectConfig, (New-Object Text.UTF8Encoding($false)))
+        Publish-Folder $script:profiles['frontend'] $redirectOut -AllowDelete
+        # PowerShell 5.1 yönlendirmeyi güvenilir okuyamaz; curl.exe ile başlık okunur.
+        $location = ((& (Join-Path $env:SystemRoot 'System32\curl.exe') -sS -I --max-time 60 "https://$FrontendHost/giris-yap?x=1") |
+            Where-Object { $_ -match '^(?i)location:' } | Select-Object -First 1) -replace '^(?i)location:\s*', ''
+        $location = ([string]$location).Trim()
+        if ($location -ne "https://$SiteDomain/giris-yap?x=1") { throw "Yönlendirme beklenen adrese gitmiyor: '$location'" }
+        Write-Host "  $FrontendHost -> $location (301)" -ForegroundColor Green
+    }
+    else {
+        Write-Step "$step/$total Frontend -> $FrontendHost"
+        # Frontend sitesinde korunacak dosya yok (görseller backend'de): fazla dosyalar silinir.
+        Publish-Folder $script:profiles['frontend'] $frontendOut -AllowDelete
+        $page = Invoke-WebRequest "https://$FrontendHost/" -UseBasicParsing -TimeoutSec 60
+        if ($page.StatusCode -ne 200) { throw "Frontend $($page.StatusCode) döndü." }
+        Write-Host "  $FrontendHost yanıt veriyor (200)" -ForegroundColor Green
+    }
 
     Write-Host "`nYayın tamamlandı." -ForegroundColor Green
+    if ($siteZip -and ($SkipCpanel -or -not $cpanelOk)) {
+        Write-Host ("`nSON ADIM: $siteZip dosyasını cPanel > Dosya Yöneticisi ile $SiteDomain " +
+                    "klasörüne yükleyip 'Extract' ile açın. Ardından https://$SiteDomain adresini kontrol edin.") -ForegroundColor Yellow
+    }
 }
 finally {
     if (-not $SkipDeploy) {
         # Bu klasörlerdeki web.config'ler sırları AÇIK METİN taşır.
-        foreach ($dir in $primaryOut, $backupOut) {
+        foreach ($dir in $primaryOut, $backupOut, $backup2Out) {
             if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }
         }
     }

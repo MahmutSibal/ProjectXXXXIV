@@ -46,7 +46,8 @@ public sealed class AuthController(IMediator mediator) : ControllerBase
         var result = await mediator.Send(
             new RegisterBusinessCommand(
                 request.OwnerName, request.Email, request.Password, request.BusinessName,
-                request.Phone, request.Address, request.Longitude, request.Latitude, request.PhoneVerificationTicket),
+                request.Phone, request.Address, request.Longitude, request.Latitude, request.PhoneVerificationTicket,
+                request.MarketingConsent),
             cancellationToken);
         SetRefreshCookie(result.RefreshToken, result.RefreshTokenExpiresAt);
         return Ok(result);
@@ -146,7 +147,8 @@ public sealed record RegisterUserRequest(string Name, string Email, string Passw
 public sealed record RegisterBusinessRequest(
     string OwnerName, string Email, string Password, string BusinessName,
     string Phone, string Address, double Longitude, double Latitude,
-    string? PhoneVerificationTicket = null);
+    string? PhoneVerificationTicket = null,
+    bool MarketingConsent = false);
 public sealed record LoginUserRequest(string Email, string Password);
 public sealed record ForgotPasswordRequest(string? Email);
 public sealed record ResetPasswordRequest(string? Token, string? NewPassword);

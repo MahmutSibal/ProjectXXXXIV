@@ -89,7 +89,6 @@ export default function AdminCardPayments() {
                     <td className="p-3">{p.refundedMinor > 0 ? formatKurus(p.refundedMinor) : '-'}</td>
                     <td className="p-3">
                       {p.status === CardPaymentStatus.Succeeded ? 'Başarılı' : 'Başarısız'}
-                      {p.testMode && <span className="ml-1 text-[11px] text-on-surface-variant">(test)</span>}
                     </td>
                     <td className="p-3">{TRANSFER_LABEL[p.transferStatus] ?? '-'}</td>
                     <td className="p-3 text-right">

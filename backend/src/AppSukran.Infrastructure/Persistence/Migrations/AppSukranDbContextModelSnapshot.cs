@@ -141,6 +141,72 @@ namespace AppSukran.Infrastructure.Persistence.Migrations
                     b.ToTable("BillingProfiles");
                 });
 
+            modelBuilder.Entity("AppSukran.Domain.Entities.Campaign", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(5000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ButtonText")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<string>("ButtonUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedByUserId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("FailedCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ImageUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsRich")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("RecipientCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SentCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.ToTable("Campaigns");
+                });
+
             modelBuilder.Entity("AppSukran.Domain.Entities.CardPayment", b =>
                 {
                     b.Property<string>("Id")
@@ -635,6 +701,115 @@ namespace AppSukran.Infrastructure.Persistence.Migrations
                     b.HasIndex("Phone", "CreatedAt");
 
                     b.ToTable("PhoneVerifications");
+                });
+
+            modelBuilder.Entity("AppSukran.Domain.Entities.PlanCatalogSettings", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<int>("AnnualDiscountPercent")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PriceVersion")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<int>("TrialDays")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PlanCatalogSettings");
+                });
+
+            modelBuilder.Entity("AppSukran.Domain.Entities.PlanSetting", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("Bullets")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DiscountPercent")
+                        .HasColumnType("int");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<bool>("HasDetailedReports")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("HasEvents")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("HasOrdering")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsHighlighted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsVisible")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<int?>("MaxKitchenPanels")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("MaxQrOrdersPerPeriod")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("MaxTables")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("MaxWaiterPanels")
+                        .HasColumnType("int");
+
+                    b.Property<long>("MonthlyPrice")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Plan")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Plan")
+                        .IsUnique();
+
+                    b.ToTable("PlanSettings");
                 });
 
             modelBuilder.Entity("AppSukran.Domain.Entities.PlatformPaymentSettings", b =>

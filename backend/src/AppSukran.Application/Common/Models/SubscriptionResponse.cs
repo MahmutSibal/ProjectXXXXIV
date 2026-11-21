@@ -59,7 +59,13 @@ public sealed record PlanOptionResponse(
     long AnnualSavings,
     int AnnualDiscountPercent,
     string PriceVersion,
-    PlanFeaturesResponse Features);
+    PlanFeaturesResponse Features,
+    // İndirimsiz aylık liste fiyatı; kampanya indirimi varsa kartta üstü çizili gösterilir.
+    long MonthlyListTotal = 0,
+    // Paketin kampanya indirimi (%).
+    int DiscountPercent = 0,
+    bool IsHighlighted = false,
+    IReadOnlyList<string>? Bullets = null);
 
 public sealed record PlanFeaturesResponse(
     bool HasQrMenu,

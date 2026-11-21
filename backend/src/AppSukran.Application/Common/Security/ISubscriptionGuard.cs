@@ -1,3 +1,4 @@
+using AppSukran.Domain.Enums;
 namespace AppSukran.Application.Common.Security;
 
 /// <summary>
@@ -16,6 +17,9 @@ public interface ISubscriptionGuard
 
     /// <summary>Paketin ilgili özelliği içerip içermediğini denetler.</summary>
     Task EnsureFeatureAsync(string restaurantId, SubscriptionFeature feature, CancellationToken cancellationToken = default);
+
+    /// <summary>Paketin mutfak/garson paneli (personel hesabı) sayısı sınırını denetler.</summary>
+    Task EnsureCanAddStaffAsync(string restaurantId, UserRole role, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Sipariş oluşturulabilir mi? Hem paketin sipariş sistemi içerip içermediğini

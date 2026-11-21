@@ -8,6 +8,8 @@ const menuItems = [
   ['support_agent', 'Destek Talepleri', '/super-admin/support'],
   ['report', 'İşletme Şikayetleri', '/super-admin/complaints'],
   ['card_membership', 'Abonelikler', '/super-admin/subscriptions'],
+  ['sell', 'Paketler', '/super-admin/plans'],
+  ['campaign', 'Kampanyalar', '/super-admin/campaigns'],
   ['swap_horiz', 'Transfer İşlemi', '/super-admin/transfers'],
   ['group', 'Kullanıcılar', '/super-admin/users'],
   ['chat', 'WhatsApp', '/super-admin/whatsapp'],

@@ -106,31 +106,13 @@ const orderSteps = [
 ];
 
 /**
- * Paketlerin PAZARLAMA metinleri. Fiyat/limit burada TUTULMAZ; tek kaynak
- * backend'dir (GET /api/subscriptions/plans). Anahtarlar backend'in "code" alanı.
+ * Paket adı, açıklaması, fiyatı, indirimi, kart maddeleri ve "öne çıkan" işareti
+ * SuperAdmin > Paketler'den yönetilir ve backend'den gelir (GET /api/subscriptions/plans).
+ * Burada yalnızca buton metinleri durur; anahtar backend'in "code" alanıdır.
  */
-const planCopy = {
-  lite: {
-    description: 'QR menüyle hızlı bir başlangıç yapmak isteyen işletmeler için.',
-    features: ['QR Menü', 'Masa Yönetimi', 'Ürün ve Kategori Yönetimi'],
-    buttonText: 'Kayıt Ol',
-  },
-  pro: {
-    description: 'Sipariş sürecini dijitalleştirmek isteyen restoranlar için.',
-    features: ['QR Sipariş ve Ödeme', 'Online Ödeme', 'Mutfak ve Garson Panelleri'],
-    buttonText: 'Hemen Başla',
-    featured: true,
-  },
-  business: {
-    description: 'Tüm hizmetleri ve panelleri kullanmak isteyen işletmeler için.',
-    features: ['Tüm Paneller', 'Gelişmiş Raporlama', 'Öncelikli Destek'],
-    buttonText: 'Kayıt Ol',
-  },
-  enterprise: {
-    description: 'Çok şubeli ve özel entegrasyon ihtiyacı olan kurumsal işletmeler için.',
-    features: ['Çoklu Şube Yönetimi', 'API ve Özel Entegrasyon', 'Kurumsal Destek'],
-    buttonText: 'İletişime Geç',
-  },
+const planButtonText = {
+  pro: 'Hemen Başla',
+  enterprise: 'İletişime Geç',
 };
 
 function Services() {
@@ -537,20 +519,21 @@ function Services() {
             )}
 
             {plans.map((plan) => {
-              const copy = planCopy[plan.code] ?? {};
+              const featured = Boolean(plan.isHighlighted);
+              const buttonText = planButtonText[plan.code] ?? (plan.isQuoteOnly ? 'İletişime Geç' : 'Kayıt Ol');
               const total = isYearly ? plan.annualTotal : plan.monthlyTotal;
 
               return (
                 <article
                   className={`services-price-card ${
-                    copy.featured
+                    featured
                       ? 'services-price-card--featured'
                       : ''
                   }`}
                   key={plan.code}
                   data-reveal
                 >
-                  {copy.featured && (
+                  {featured && (
                     <span className="services-price-card__popular">
                       En Çok Tercih Edilen
                     </span>
@@ -561,7 +544,7 @@ function Services() {
                   <h3 lang="en">{plan.displayName}</h3>
 
                   <p className="services-price-card__description">
-                    {copy.description ?? plan.summary}
+                    {plan.summary}
                   </p>
 
                   <div className="services-price-card__price">
@@ -577,13 +560,18 @@ function Services() {
 
                   {isYearly && !plan.isQuoteOnly && plan.annualSavings > 0 && (
                     <small className="services-price-card__yearly-note">
-                      <s>₺{formatPrice(plan.annualListTotal)}</s> · %{plan.annualDiscountPercent} indirim,
-                      {' '}₺{formatPrice(plan.annualSavings)} kazanç
+                      <s>₺{formatPrice(plan.annualListTotal)}</s> · ₺{formatPrice(plan.annualSavings)} kazanç
+                    </small>
+                  )}
+
+                  {!isYearly && !plan.isQuoteOnly && plan.discountPercent > 0 && (
+                    <small className="services-price-card__yearly-note">
+                      <s>₺{formatPrice(plan.monthlyListTotal)}</s> · %{plan.discountPercent} kampanya indirimi
                     </small>
                   )}
 
                   <ul className="services-price-card__features">
-                    {(copy.features ?? []).map((feature) => (
+                    {(plan.bullets ?? []).map((feature) => (
                       <li key={feature}>
                         <span className="material-symbols-outlined">
                           check
@@ -597,12 +585,12 @@ function Services() {
                   <Link
                     to={plan.isQuoteOnly ? '/iletisim' : '/kayit-ol'}
                     className={`services-button services-price-card__button ${
-                      copy.featured
+                      featured
                         ? 'services-button--brass'
                         : 'services-button--dark-outline'
                     }`}
                   >
-                    {copy.buttonText ?? 'Kayıt Ol'}
+                    {buttonText}
                   </Link>
                 </article>
               );

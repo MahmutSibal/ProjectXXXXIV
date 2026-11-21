@@ -12,19 +12,104 @@ const HOME_BY_ROLE = {
   [ROLES.Waiter]: '/kitchen',
 };
 
-const inputClass = 'w-full bg-white border border-neutral-300 rounded-lg py-2.5 px-3 text-sm outline-none focus:border-emerald-800';
+const ROLE_LABEL = {
+  [ROLES.RestaurantOwner]: 'İşletme Sahibi',
+  [ROLES.SuperAdmin]: 'Platform Yöneticisi',
+  [ROLES.Kitchen]: 'Mutfak Personeli',
+  [ROLES.Waiter]: 'Garson',
+  [ROLES.Customer]: 'Müşteri',
+};
+
+const inputClass =
+  'w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3.5 text-sm text-neutral-900 outline-none transition-colors focus:border-emerald-700 focus:bg-white focus:ring-2 focus:ring-emerald-700/15 placeholder:text-neutral-400';
+
+function initials(name) {
+  const parts = (name ?? '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+/** Metin + yanında şifre göster/gizle düğmesi olan alan. */
+function PasswordField({ value, onChange, placeholder, autoFocus }) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <div className="relative">
+      <input
+        type={visible ? 'text' : 'password'}
+        autoComplete="off"
+        placeholder={placeholder}
+        className={`${inputClass} pr-11`}
+        value={value}
+        onChange={onChange}
+        autoFocus={autoFocus}
+      />
+      <button
+        type="button"
+        onClick={() => setVisible((v) => !v)}
+        className="absolute inset-y-0 right-0 flex items-center px-3 text-neutral-400 hover:text-neutral-700"
+        aria-label={visible ? 'Şifreyi gizle' : 'Şifreyi göster'}
+        tabIndex={-1}
+      >
+        <span className="material-symbols-outlined text-[20px]">{visible ? 'visibility_off' : 'visibility'}</span>
+      </button>
+    </div>
+  );
+}
+
+function Feedback({ message }) {
+  if (!message) return null;
+  return (
+    <p
+      role="status"
+      className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm ${
+        message.ok ? 'bg-emerald-50 text-emerald-800' : 'bg-red-50 text-red-700'
+      }`}
+    >
+      <span className="material-symbols-outlined text-[18px]">{message.ok ? 'check_circle' : 'error'}</span>
+      {message.text}
+    </p>
+  );
+}
+
+function Card({ icon, title, subtitle, danger, children }) {
+  return (
+    <section
+      className={`rounded-2xl bg-white p-5 sm:p-6 shadow-sm border ${danger ? 'border-red-200' : 'border-neutral-200'}`}
+    >
+      <div className="flex items-start gap-3 mb-4">
+        <div
+          className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center ${
+            danger ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-800'
+          }`}
+        >
+          <span className="material-symbols-outlined">{icon}</span>
+        </div>
+        <div>
+          <h2 className={`text-base font-semibold ${danger ? 'text-red-800' : 'text-neutral-900'}`}>{title}</h2>
+          {subtitle && <p className="text-xs text-neutral-500 mt-0.5">{subtitle}</p>}
+        </div>
+      </div>
+      {children}
+    </section>
+  );
+}
 
 /**
- * Hesabım: şifre değiştirme ve "Hesabımı sil" (KVKK m.11 — kişisel verilerin
- * silinmesini isteme hakkı). Her rol için ortak sayfa.
+ * Hesabım: şifre değiştirme, kampanya tercihi ve "Hesabımı sil" (KVKK m.11 —
+ * kişisel verilerin silinmesini isteme hakkı). Her rol için ortak sayfa.
  */
 export default function Account() {
-  const { user, logout } = useAuth();
+  const { user, logout, refresh } = useAuth();
   const navigate = useNavigate();
 
   const [passwords, setPasswords] = useState({ current: '', next: '' });
   const [passwordMessage, setPasswordMessage] = useState(null);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
+
+  const [marketing, setMarketing] = useState(Boolean(user?.marketingConsent));
+  const [marketingMessage, setMarketingMessage] = useState(null);
+  const [isSavingMarketing, setIsSavingMarketing] = useState(false);
 
   const [deletePassword, setDeletePassword] = useState('');
   const [confirmText, setConfirmText] = useState('');
@@ -54,6 +139,21 @@ export default function Account() {
     }
   };
 
+  const handleMarketing = async (event) => {
+    event.preventDefault();
+    setIsSavingMarketing(true);
+    setMarketingMessage(null);
+    try {
+      await profileApi.updateMe({ name: user?.name ?? '', marketingConsent: marketing });
+      await refresh?.();
+      setMarketingMessage({ ok: true, text: marketing ? 'Kampanya e-postaları açıldı.' : 'Kampanya e-postaları kapatıldı.' });
+    } catch (err) {
+      setMarketingMessage({ ok: false, text: err instanceof ApiError ? err.message : 'Tercih kaydedilemedi.' });
+    } finally {
+      setIsSavingMarketing(false);
+    }
+  };
+
   const handleDelete = async (event) => {
     event.preventDefault();
     if (confirmText.trim().toUpperCase() !== 'SİL' && confirmText.trim().toUpperCase() !== 'SIL') {
@@ -80,60 +180,132 @@ export default function Account() {
   };
 
   return (
-    <main className="min-h-screen bg-neutral-50 px-4 py-10">
-      <div className="mx-auto max-w-lg flex flex-col gap-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold text-neutral-900">Hesabım</h1>
-          <Link to={home} className="text-sm text-emerald-900 hover:underline">Geri dön</Link>
-        </div>
+    <main className="min-h-screen bg-neutral-100 px-4 py-8 sm:py-12">
+      <div className="mx-auto max-w-2xl flex flex-col gap-5">
+        <Link to={home} className="inline-flex items-center gap-1 text-sm font-medium text-emerald-900 hover:underline">
+          <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+          Panele dön
+        </Link>
 
-        <section className="rounded-2xl bg-white p-5 shadow-sm border border-neutral-200">
-          <p className="text-sm text-neutral-600">{user?.name}</p>
-          <p className="text-sm text-neutral-600">{user?.email}</p>
+        {/* Profil başlığı */}
+        <section className="overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-900 to-emerald-800 text-white shadow-sm">
+          <div className="p-6 sm:p-7 flex items-center gap-4">
+            <div className="w-16 h-16 shrink-0 rounded-full bg-white/15 border border-white/20 flex items-center justify-center text-xl font-bold">
+              {initials(user?.name)}
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-xl font-bold truncate">{user?.name || 'Hesabım'}</h1>
+              <p className="text-sm text-emerald-100/90 truncate">{user?.email}</p>
+              <span className="mt-2 inline-block rounded-full bg-white/15 px-3 py-0.5 text-[11px] font-semibold tracking-wide">
+                {ROLE_LABEL[user?.role] ?? 'Hesap'}
+              </span>
+            </div>
+          </div>
         </section>
 
-        <form onSubmit={handlePassword} className="rounded-2xl bg-white p-5 shadow-sm border border-neutral-200 flex flex-col gap-3">
-          <h2 className="text-lg font-semibold text-neutral-900">Şifre değiştir</h2>
-          <input type="password" autoComplete="current-password" placeholder="Mevcut şifre" className={inputClass}
-            value={passwords.current} onChange={(e) => setPasswords((p) => ({ ...p, current: e.target.value }))} />
-          <input type="password" autoComplete="new-password" placeholder="Yeni şifre (en az 8 karakter)" className={inputClass}
-            value={passwords.next} onChange={(e) => setPasswords((p) => ({ ...p, next: e.target.value }))} />
-          {passwordMessage && (
-            <p className={`text-sm ${passwordMessage.ok ? 'text-emerald-800' : 'text-red-700'}`}>{passwordMessage.text}</p>
-          )}
-          <button type="submit" disabled={isSavingPassword}
-            className="self-start rounded-lg bg-emerald-900 px-5 py-2.5 text-sm text-white disabled:opacity-50">
-            {isSavingPassword ? 'Kaydediliyor...' : 'Şifreyi Değiştir'}
-          </button>
-        </form>
-
-        {!isSuperAdmin && (
-          <form onSubmit={handleDelete} className="rounded-2xl bg-white p-5 shadow-sm border border-red-200 flex flex-col gap-3">
-            <h2 className="text-lg font-semibold text-red-800">Hesabımı sil</h2>
-            {isOwner ? (
-              <p className="text-sm text-neutral-700">
-                İşletme hesabınız için silme talebi oluşturulur. Aboneliğiniz ve hakedişleriniz
-                kapatıldıktan sonra kişisel verileriniz silinir. Fatura ve ödeme kayıtları yasal
-                saklama süresi boyunca tutulur.
-              </p>
-            ) : (
-              <p className="text-sm text-neutral-700">
-                Adınız, e-postanız, telefonunuz ve adresiniz kalıcı olarak silinir; yorumlarınızda
-                isminiz yerine &quot;Silinmiş kullanıcı&quot; görünür. Bu işlem geri alınamaz.
-              </p>
-            )}
-            <input type="password" autoComplete="current-password" placeholder="Şifreniz" className={inputClass}
-              value={deletePassword} onChange={(e) => setDeletePassword(e.target.value)} />
-            <input type="text" placeholder="Onaylamak için SİL yazın" className={inputClass}
-              value={confirmText} onChange={(e) => setConfirmText(e.target.value)} />
-            {deleteMessage && (
-              <p className={`text-sm ${deleteMessage.ok ? 'text-emerald-800' : 'text-red-700'}`}>{deleteMessage.text}</p>
-            )}
-            <button type="submit" disabled={isDeleting || !deletePassword}
-              className="self-start rounded-lg bg-red-700 px-5 py-2.5 text-sm text-white disabled:opacity-50">
-              {isDeleting ? 'İşleniyor...' : isOwner ? 'Silme Talebi Gönder' : 'Hesabımı Kalıcı Olarak Sil'}
+        {/* Şifre değiştir */}
+        <Card icon="lock" title="Şifre değiştir" subtitle="Hesabınızı korumak için güçlü bir şifre kullanın.">
+          <form autoComplete="off" onSubmit={handlePassword} className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-neutral-600">Mevcut şifre</label>
+              <PasswordField
+                value={passwords.current}
+                onChange={(e) => setPasswords((p) => ({ ...p, current: e.target.value }))}
+                placeholder="Mevcut şifreniz"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-neutral-600">Yeni şifre</label>
+              <PasswordField
+                value={passwords.next}
+                onChange={(e) => setPasswords((p) => ({ ...p, next: e.target.value }))}
+                placeholder="En az 8 karakter"
+              />
+            </div>
+            <Feedback message={passwordMessage} />
+            <button
+              type="submit"
+              disabled={isSavingPassword}
+              className="self-start rounded-xl bg-emerald-900 px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+            >
+              {isSavingPassword ? 'Kaydediliyor…' : 'Şifreyi Değiştir'}
             </button>
           </form>
+        </Card>
+
+        {/* Kampanya bildirimleri */}
+        <Card icon="campaign" title="Kampanya bildirimleri" subtitle="İsteğe bağlı; istediğiniz zaman kapatabilirsiniz.">
+          <form onSubmit={handleMarketing} className="flex flex-col gap-3">
+            <label className="flex items-start gap-3 rounded-xl border border-neutral-200 bg-neutral-50 p-3 cursor-pointer hover:border-emerald-700/40">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 accent-emerald-800"
+                checked={marketing}
+                onChange={(e) => setMarketing(e.target.checked)}
+              />
+              <span className="text-sm text-neutral-700">
+                Kampanya ve duyuru e-postaları almak istiyorum.{' '}
+                <Link to="/kampanya-bildirimleri" className="text-emerald-900 underline">
+                  Bilgilendirme
+                </Link>
+              </span>
+            </label>
+            <Feedback message={marketingMessage} />
+            <button
+              type="submit"
+              disabled={isSavingMarketing}
+              className="self-start rounded-xl bg-emerald-900 px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+            >
+              {isSavingMarketing ? 'Kaydediliyor…' : 'Tercihi Kaydet'}
+            </button>
+          </form>
+        </Card>
+
+        {/* Hesabı sil */}
+        {!isSuperAdmin && (
+          <Card
+            icon="delete_forever"
+            title="Hesabımı sil"
+            subtitle={isOwner ? 'İşletme hesabınız için silme talebi oluşturulur.' : 'Bu işlem geri alınamaz.'}
+            danger
+          >
+            <form autoComplete="off" onSubmit={handleDelete} className="flex flex-col gap-3">
+              <p className="text-sm text-neutral-600 leading-relaxed">
+                {isOwner
+                  ? 'Aboneliğiniz ve hakedişleriniz kapatıldıktan sonra kişisel verileriniz silinir. Fatura ve ödeme kayıtları yasal saklama süresi boyunca tutulur.'
+                  : 'Adınız, e-postanız, telefonunuz ve adresiniz kalıcı olarak silinir; yorumlarınızda isminiz yerine “Silinmiş kullanıcı” görünür.'}
+              </p>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-neutral-600">Şifreniz</label>
+                <input
+                  type="password"
+                  autoComplete="off"
+                  placeholder="Şifreniz"
+                  className={inputClass}
+                  value={deletePassword}
+                  onChange={(e) => setDeletePassword(e.target.value)}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-neutral-600">Onay</label>
+                <input
+                  type="text"
+                  placeholder="Onaylamak için SİL yazın"
+                  className={inputClass}
+                  value={confirmText}
+                  onChange={(e) => setConfirmText(e.target.value)}
+                />
+              </div>
+              <Feedback message={deleteMessage} />
+              <button
+                type="submit"
+                disabled={isDeleting || !deletePassword}
+                className="self-start rounded-xl bg-red-700 px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                {isDeleting ? 'İşleniyor…' : isOwner ? 'Silme Talebi Gönder' : 'Hesabımı Kalıcı Olarak Sil'}
+              </button>
+            </form>
+          </Card>
         )}
       </div>
     </main>

@@ -58,3 +58,14 @@ export const subscriptionsApi = {
   cancel: (restaurantId) => api.post(`/subscriptions/restaurant/${restaurantId}/cancel`),
   extend: (restaurantId, payload) => api.post(`/subscriptions/restaurant/${restaurantId}/extend`, payload),
 };
+
+/**
+ * SuperAdmin paket yönetimi. Değişiklikler ana sayfadaki paketlere, abonelik ekranına,
+ * ödeme tutarına ve özellik kilitlerine hemen yansır. Tutarlar kuruştur.
+ */
+export const adminPlansApi = {
+  get: () => api.get('/admin/plans'),
+  update: (plan, payload) => api.put(`/admin/plans/${plan}`, payload),
+  reset: (plan) => api.post(`/admin/plans/${plan}/reset`),
+  updateSettings: (payload) => api.put('/admin/plans/settings', payload),
+};

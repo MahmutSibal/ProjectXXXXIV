@@ -11,4 +11,4 @@ Disallow: /hesabim
 Disallow: /sifre-sifirla
 Disallow: /sifremi-unuttum
 
-Sitemap: https://sukranapp.runasp.net/sitemap.xml
+Sitemap: https://sukranapp.com/sitemap.xml

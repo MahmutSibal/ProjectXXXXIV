@@ -4,6 +4,11 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { reportsApi } from '../../api/reports.js';
 import { formatKurus } from '../../api/enums.js';
 import { ApiError } from '../../api/client.js';
+import {
+  subscriptionsApi,
+  SubscriptionStatus,
+  SUBSCRIPTION_STATUS_LABEL,
+} from '../../api/subscriptions.js';
 import './AdminDashboard.css';
 import '../AdminDashboard/AdminDashboard.css';
 
@@ -12,6 +17,7 @@ export default function AdminDashboard() {
   const { user } = useAuth();
   const [summary, setSummary] = useState(null);
   const [daily, setDaily] = useState(null);
+  const [subscription, setSubscription] = useState(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -22,6 +28,15 @@ export default function AdminDashboard() {
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : 'Rapor verileri yüklenemedi.'));
   }, []);
+
+  useEffect(() => {
+    if (!user?.restaurantId) return;
+    // Abonelik türü ve bitiş tarihi panelde gösterilir; hata olursa panel yine açılır.
+    subscriptionsApi
+      .getByRestaurant(user.restaurantId)
+      .then(setSubscription)
+      .catch(() => setSubscription(null));
+  }, [user?.restaurantId]);
 
   return (
     <div className="max-w-[1400px] mx-auto flex flex-col gap-lg">
@@ -38,6 +53,8 @@ export default function AdminDashboard() {
       </section>
 
       {error && <p className="text-error font-body-md text-body-md">{error}</p>}
+
+      {subscription && <SubscriptionBanner subscription={subscription} onGo={() => navigate('/admin/subscription')} />}
 
       {summary && (
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md">
@@ -65,6 +82,45 @@ export default function AdminDashboard() {
         </div>
       </section>
     </div>
+  );
+}
+
+function SubscriptionBanner({ subscription, onGo }) {
+  const trialing = subscription.status === SubscriptionStatus.Trialing;
+  const endDate = trialing && subscription.trialEndsAt ? subscription.trialEndsAt : subscription.currentPeriodEnd;
+  const endText = endDate ? new Date(endDate).toLocaleDateString('tr-TR') : '—';
+  const days = subscription.daysRemaining;
+  const expiringSoon = typeof days === 'number' && days <= 7;
+
+  return (
+    <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-md ambient-shadow flex flex-col sm:flex-row sm:items-center justify-between gap-md border-t-2 border-t-primary-container">
+      <div className="flex items-start gap-3">
+        <div className="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-primary-container shrink-0">
+          <span className="material-symbols-outlined">workspace_premium</span>
+        </div>
+        <div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-label-md text-label-md text-on-surface-variant">Abonelik</span>
+            <span className="font-headline-sm text-headline-sm text-on-background">{subscription.planName}</span>
+            <span className="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant text-[11px] font-bold">
+              {SUBSCRIPTION_STATUS_LABEL[subscription.status]}
+            </span>
+          </div>
+          <p className={`font-body-sm text-body-sm mt-1 ${expiringSoon ? 'text-error' : 'text-on-surface-variant'}`}>
+            {trialing ? 'Deneme bitişi' : 'Dönem bitişi'}: {endText}
+            {typeof days === 'number' && ` (${days} gün kaldı)`}
+          </p>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={onGo}
+        className="self-start sm:self-center rounded-lg border border-outline-variant hover:border-primary-container px-4 py-2 font-label-md text-label-md text-on-background transition-colors"
+      >
+        Aboneliği Yönet
+      </button>
+    </section>
   );
 }
 

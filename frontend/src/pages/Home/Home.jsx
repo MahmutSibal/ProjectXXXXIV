@@ -67,32 +67,13 @@ const platformFeatures = [
 ];
 
 /**
- * Paketlerin PAZARLAMA metinleri. Fiyat, limit ve indirim burada TUTULMAZ —
- * bunların tek kaynağı backend'dir (GET /api/subscriptions/plans).
- * Anahtar, backend'in döndürdüğü "code" alanıyla eşleşir.
+ * Paket adı, açıklaması, fiyatı, indirimi, kart maddeleri ve "öne çıkan" işareti
+ * SuperAdmin > Paketler'den yönetilir ve backend'den gelir (GET /api/subscriptions/plans).
+ * Burada yalnızca buton metinleri durur; anahtar backend'in "code" alanıdır.
  */
-const planCopy = {
-  lite: {
-    description: 'QR menüyle hızlı bir başlangıç yapmak isteyen işletmeler için.',
-    features: ['QR Menü', 'Ürün ve Kategori Yönetimi', 'Masa Yönetimi'],
-    buttonText: 'Kayıt Ol',
-  },
-  pro: {
-    description: 'Sipariş sürecini dijitalleştirmek isteyen restoranlar için.',
-    features: ['QR Sipariş ve Ödeme', 'Mutfak ve Garson Paneli', 'Detaylı Raporlama'],
-    buttonText: 'Hemen Başla',
-    featured: true,
-  },
-  business: {
-    description: 'Tüm hizmetleri ve panelleri kullanmak isteyen işletmeler için.',
-    features: ['Tüm Paneller', 'Gelişmiş Raporlama', 'Öncelikli Teknik Destek'],
-    buttonText: 'Kayıt Ol',
-  },
-  enterprise: {
-    description: 'Çok şubeli ve özel entegrasyon ihtiyacı bulunan işletmeler için.',
-    features: ['Çoklu Şube Yönetimi', 'API ve Özel Entegrasyon', 'Kurumsal Destek'],
-    buttonText: 'İletişime Geç',
-  },
+const planButtonText = {
+  pro: 'Hemen Başla',
+  enterprise: 'İletişime Geç',
 };
 
 /** Enterprise "İletişime Geç" butonunun yönlendirileceği WhatsApp hattı. */
@@ -154,7 +135,7 @@ function Home() {
   // WhatsApp numarası tanımlı değilse iletişim sayfasına düşülür.
   const enterpriseContactHref = ENTERPRISE_WHATSAPP
     ? `https://wa.me/${ENTERPRISE_WHATSAPP.replace(/\D/g, '')}?text=${encodeURIComponent(
-        'Merhaba, Şükran App Enterprise paketi hakkında bilgi almak istiyorum.',
+        'Merhaba, Şükran App Kurumsal paketi hakkında bilgi almak istiyorum.',
       )}`
     : '/iletisim';
   const [activeFaqId, setActiveFaqId] = useState(
@@ -617,20 +598,21 @@ function Home() {
           )}
 
           {plans.map((plan) => {
-            const copy = planCopy[plan.code] ?? {};
+            const featured = Boolean(plan.isHighlighted);
+            const buttonText = planButtonText[plan.code] ?? (plan.isQuoteOnly ? 'İletişime Geç' : 'Kayıt Ol');
             const total = displayedTotal(plan);
 
             return (
               <article
                 className={`home-price-card ${
-                  copy.featured
+                  featured
                     ? 'home-price-card--featured'
                     : ''
                 }`}
                 key={plan.code}
                 data-reveal
               >
-                {copy.featured && (
+                {featured && (
                   <span className="home-price-card__popular">
                     En Çok Tercih Edilen
                   </span>
@@ -642,7 +624,7 @@ function Home() {
                 <h3 lang="en">{plan.displayName}</h3>
 
                 <p className="home-price-card__description">
-                  {copy.description ?? plan.summary}
+                  {plan.summary}
                 </p>
 
                 <div className="home-price-card__price">
@@ -659,12 +641,19 @@ function Home() {
                 {isYearly && !plan.isQuoteOnly && plan.annualSavings > 0 && (
                   <span className="home-price-card__yearly-note">
                     <s>₺{formatPrice(plan.annualListTotal)}</s>{' '}
-                    · %{plan.annualDiscountPercent} indirim, ₺{formatPrice(plan.annualSavings)} kazanç
+                    · ₺{formatPrice(plan.annualSavings)} kazanç
+                  </span>
+                )}
+
+                {!isYearly && !plan.isQuoteOnly && plan.discountPercent > 0 && (
+                  <span className="home-price-card__yearly-note">
+                    <s>₺{formatPrice(plan.monthlyListTotal)}</s>{' '}
+                    · %{plan.discountPercent} kampanya indirimi
                   </span>
                 )}
 
                 <ul className="home-price-card__features">
-                  {(copy.features ?? []).map((feature) => (
+                  {(plan.bullets ?? []).map((feature) => (
                     <li key={feature}>
                       <span className="material-symbols-outlined">
                         check
@@ -683,18 +672,18 @@ function Home() {
                     rel={ENTERPRISE_WHATSAPP ? 'noreferrer noopener' : undefined}
                     className="home-button home-price-card__button home-button--outline-dark"
                   >
-                    {copy.buttonText ?? 'İletişime Geç'}
+                    {buttonText}
                   </a>
                 ) : (
                   <Link
                     to="/kayit-ol"
                     className={`home-button home-price-card__button ${
-                      copy.featured
+                      featured
                         ? 'home-button--brass'
                         : 'home-button--outline-dark'
                     }`}
                   >
-                    {copy.buttonText ?? 'Kayıt Ol'}
+                    {buttonText}
                   </Link>
                 )}
               </article>

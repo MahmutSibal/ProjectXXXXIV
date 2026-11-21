@@ -21,7 +21,15 @@ public sealed class SmtpEmailService(
 
     public string AppBaseUrl => options.Value.AppBaseUrl.TrimEnd('/');
 
-    public async Task SendAsync(string toAddress, string subject, string textBody, CancellationToken cancellationToken = default)
+    public bool RichCampaignsEnabled => IsEnabled && options.Value.RichCampaignsEnabled;
+
+    public Task SendAsync(string toAddress, string subject, string textBody, CancellationToken cancellationToken = default)
+        => SendCoreAsync(toAddress, subject, textBody, null, cancellationToken);
+
+    public Task SendMarketingAsync(string toAddress, string subject, string textBody, string unsubscribeUrl, string? htmlBody = null, CancellationToken cancellationToken = default)
+        => SendCoreAsync(toAddress, subject, textBody, unsubscribeUrl, cancellationToken, htmlBody);
+
+    private async Task SendCoreAsync(string toAddress, string subject, string textBody, string? unsubscribeUrl, CancellationToken cancellationToken, string? htmlBody = null)
     {
         var settings = options.Value;
         if (!IsEnabled)
@@ -39,6 +47,16 @@ public sealed class SmtpEmailService(
             IsBodyHtml = false,
         };
         message.To.Add(toAddress);
+        if (htmlBody is not null && settings.RichCampaignsEnabled)
+        {
+            // Düz metin gövde yedek olarak kalır; HTML görüntüleyen istemciler HTML bölümünü gösterir.
+            message.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(htmlBody, Encoding.UTF8, "text/html"));
+        }
+        if (unsubscribeUrl is not null)
+        {
+            message.Headers.Add("List-Unsubscribe", $"<{unsubscribeUrl}>");
+            message.Headers.Add("List-Unsubscribe-Post", "List-Unsubscribe=One-Click");
+        }
 
         using var client = new SmtpClient(settings.Host, settings.Port)
         {

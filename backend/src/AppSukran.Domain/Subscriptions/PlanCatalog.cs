@@ -24,6 +24,10 @@ public sealed record PlanFeatures(
 /// <param name="MonthlyPrice">Kuruş cinsinden aylık liste fiyatı. Teklif usulü paketlerde 0.</param>
 /// <param name="IsQuoteOnly">Sabit fiyatı yoktur; müşteri iletişime yönlendirilir (Enterprise).</param>
 /// <param name="AllowsTrial">Ücretsiz deneme yalnızca bu pakette sunulur.</param>
+/// <param name="DiscountPercent">Kampanya indirimi (%); her dönemde liste fiyatına uygulanır.</param>
+/// <param name="IsVisible">Kapalıysa satın alınamaz ve listelenmez (mevcut aboneler etkilenmez).</param>
+/// <param name="IsHighlighted">Ana sayfada öne çıkarılır.</param>
+/// <param name="Bullets">Paket kartındaki özellik maddeleri.</param>
 public sealed record PlanDefinition(
     SubscriptionPlan Plan,
     string Code,
@@ -32,13 +36,21 @@ public sealed record PlanDefinition(
     long MonthlyPrice,
     bool IsQuoteOnly,
     bool AllowsTrial,
-    PlanFeatures Features);
+    PlanFeatures Features,
+    int DiscountPercent = 0,
+    bool IsVisible = true,
+    bool IsHighlighted = false,
+    IReadOnlyList<string>? Bullets = null)
+{
+    public IReadOnlyList<string> BulletList => Bullets ?? [];
+}
 
 /// <summary>
 /// Seçilen paket ve dönem için hesaplanmış fiyat. Tahsil edilecek tutar
 /// YALNIZCA burada üretilir; istemciden gelen fiyata asla güvenilmez.
 /// </summary>
 /// <param name="ListTotal">İndirimsiz toplam (aylık fiyat × ay sayısı).</param>
+/// <param name="DiscountPercent">Toplam indirimin liste fiyatına oranı (kampanya + yıllık, yuvarlanmış).</param>
 /// <param name="Total">Gerçekte tahsil edilecek tutar.</param>
 /// <param name="PriceVersion">Bu tutarın hangi fiyat listesinden geldiği (kayıt/denetim için).</param>
 public sealed record PriceQuote(
@@ -50,35 +62,43 @@ public sealed record PriceQuote(
     long Total,
     string PriceVersion);
 
+/// <summary>SuperAdmin'in yaptığı paket ayarlarının tamamı (veritabanından okunur).</summary>
+public sealed record PlanCatalogSnapshot(
+    IReadOnlyCollection<PlanDefinition> Plans,
+    int AnnualDiscountPercent,
+    int TrialDays,
+    string PriceVersion);
+
 /// <summary>
 /// Paketlerin fiyat, kapsam ve limitleri — TEK DOĞRULUK KAYNAĞI.
+///
+/// Koddaki tanımlar VARSAYILANDIR. SuperAdmin panelinden yapılan değişiklikler veritabanında
+/// tutulur ve <see cref="Apply"/> ile buraya yüklenir (uygulama açılışında, değişiklikten hemen
+/// sonra ve diğer sunucular için düzenli aralıklarla). Böylece kilitler, fiyat hesabı, ödeme
+/// tutarı ve paket listesi aynı anda güncellenir.
 ///
 /// Tutarlar kuruş cinsindendir (190_000 = 1.900,00 TL). Frontend fiyat tutmaz;
 /// paket kartlarındaki her değer bu katalogdan türetilip API ile gönderilir.
 /// </summary>
 public static class PlanCatalog
 {
-    /// <summary>
-    /// Yürürlükteki fiyat listesinin sürümü. Fiyat değiştiğinde ARTIRILIR ve
-    /// aboneliğe yazılır; böylece hangi kaydın hangi listeyle ücretlendirildiği
-    /// sonradan izlenebilir.
-    /// </summary>
-    public const string PriceVersion = "2026-07";
+    /// <summary>Koddaki varsayılan fiyat listesinin sürümü.</summary>
+    public const string DefaultPriceVersion = "2026-07";
 
-    /// <summary>Ücretsiz deneme süresi (yalnızca Pro pakette).</summary>
-    public const int TrialDays = 14;
+    /// <summary>Varsayılan ücretsiz deneme süresi.</summary>
+    public const int DefaultTrialDays = 14;
 
-    /// <summary>Yıllık ödemede uygulanan indirim yüzdesi.</summary>
-    public const int AnnualDiscountPercent = 10;
+    /// <summary>Varsayılan yıllık ödeme indirimi (%).</summary>
+    public const int DefaultAnnualDiscountPercent = 10;
 
     /// <summary>Yıllık sayılmak için gereken en az ay sayısı.</summary>
     public const int AnnualPeriodMonths = 12;
 
-    public static readonly PlanDefinition Trial = new(
+    public static readonly PlanDefinition DefaultTrial = new(
         SubscriptionPlan.Trial,
         "trial",
         "Ücretsiz Deneme",
-        "Pro paketin tüm özellikleri, 14 gün ücretsiz.",
+        "Silver paketin özellikleriyle 14 gün ücretsiz.",
         MonthlyPrice: 0,
         IsQuoteOnly: false,
         AllowsTrial: false,
@@ -92,65 +112,69 @@ public static class PlanCatalog
             HasEvents: true,
             MaxTables: null));
 
-    public static readonly PlanDefinition Lite = new(
+    public static readonly PlanDefinition DefaultLite = new(
         SubscriptionPlan.Lite,
         "lite",
-        "Lite",
-        "Yalnızca QR menü. Sipariş sistemi bulunmaz.",
+        "Bronz",
+        "QR menüyle hızlı bir başlangıç yapmak isteyen işletmeler için.",
         MonthlyPrice: 190_000,
         IsQuoteOnly: false,
         AllowsTrial: false,
         new PlanFeatures(
             HasQrMenu: true,
-            HasOrdering: false,
-            MaxQrOrdersPerPeriod: 0,
-            MaxKitchenPanels: 0,
+            HasOrdering: true,
+            MaxQrOrdersPerPeriod: null,
+            MaxKitchenPanels: 1,
             MaxWaiterPanels: 0,
             HasDetailedReports: false,
             HasEvents: false,
-            MaxTables: null));
+            MaxTables: null),
+        Bullets: ["1 mutfak personeli hesabı", "1 işletme admin paneli", "Anlık sipariş takibi", "Dinamik QR menü", "Sipariş geçmişi", "Günlük kazanç takibi", "Kategori ve ürün yönetimi", "Masa ve QR kod yönetimi"]);
 
-    public static readonly PlanDefinition Pro = new(
+    public static readonly PlanDefinition DefaultPro = new(
         SubscriptionPlan.Pro,
         "pro",
-        "Pro",
-        "Sipariş sistemi, 1 mutfak ve 1 garson paneli. 14 gün ücretsiz deneme.",
+        "Silver",
+        "Sipariş sürecini dijitalleştirmek isteyen restoranlar için.",
         MonthlyPrice: 399_000,
         IsQuoteOnly: false,
         AllowsTrial: true,
         new PlanFeatures(
             HasQrMenu: true,
             HasOrdering: true,
-            MaxQrOrdersPerPeriod: 1_500,
+            MaxQrOrdersPerPeriod: 1_000,
             MaxKitchenPanels: 1,
             MaxWaiterPanels: 1,
             HasDetailedReports: true,
-            HasEvents: true,
-            MaxTables: null));
+            HasEvents: false,
+            MaxTables: null),
+        Bullets: ["Aylık 1.000 sipariş", "1 mutfak personeli hesabı", "1 işletme admin paneli", "QR menüden ödeme alma", "Anlık sipariş takibi", "Dinamik QR menü", "Sipariş geçmişi", "Günlük kazanç takibi", "Personel ve rol yönetimi", "Masa ve QR kod yönetimi", "Gelişmiş satış raporları", "Öncelikli teknik destek"]);
 
-    public static readonly PlanDefinition Business = new(
+    public static readonly PlanDefinition DefaultBusiness = new(
         SubscriptionPlan.Business,
         "business",
-        "Business",
-        "Tüm paneller ve hizmetler dahil.",
+        "Gold",
+        "Tüm hizmetleri ve panelleri kullanmak isteyen işletmeler için.",
         MonthlyPrice: 799_000,
         IsQuoteOnly: false,
         AllowsTrial: false,
         new PlanFeatures(
             HasQrMenu: true,
             HasOrdering: true,
-            MaxQrOrdersPerPeriod: 5_000,
-            MaxKitchenPanels: null,
+            MaxQrOrdersPerPeriod: 3_000,
+            MaxKitchenPanels: 3,
             MaxWaiterPanels: null,
             HasDetailedReports: true,
             HasEvents: true,
-            MaxTables: null));
+            MaxTables: null),
+        IsHighlighted: true,
+        Bullets: ["Aylık 3.000 sipariş", "3 mutfak personeli hesabı", "1 işletme admin paneli", "QR menüden ödeme alma", "Etkinlik tablosu", "Sadakat programı", "Restoran yorumları", "Anlık sipariş takibi", "Dinamik QR menü", "Sipariş geçmişi", "Günlük kazanç takibi", "Gelişmiş performans raporları", "Personel ve yetki yönetimi", "Öncelikli teknik destek"]);
 
-    public static readonly PlanDefinition Enterprise = new(
+    public static readonly PlanDefinition DefaultEnterprise = new(
         SubscriptionPlan.Enterprise,
         "enterprise",
-        "Enterprise",
-        "Kurumsal ihtiyaçlar, özel limitler ve entegrasyonlar. Teklif usulü.",
+        "Kurumsal",
+        "Çok şubeli ve özel entegrasyon ihtiyacı bulunan işletmeler için.",
         MonthlyPrice: 0,
         IsQuoteOnly: true,
         AllowsTrial: false,
@@ -162,29 +186,75 @@ public static class PlanCatalog
             MaxWaiterPanels: null,
             HasDetailedReports: true,
             HasEvents: true,
-            MaxTables: null));
+            MaxTables: null),
+        Bullets: ["İşletmeye özel sipariş limiti", "Çoklu şube yönetimi", "Özel mutfak hesapları", "Merkezi yönetim paneli", "Gelişmiş rol ve yetki sistemi", "Şubeler arası performans takibi", "İşletmeye özel raporlama", "Özel ödeme ve POS entegrasyonları", "Markaya özel QR menü tasarımı", "Özel API entegrasyonları", "Kurulum ve veri aktarım desteği", "7/24 öncelikli teknik destek"]);
+
+    /// <summary>Koddaki varsayılan paketler (sıra: deneme, Lite, Pro, Business, Enterprise).</summary>
+    public static IReadOnlyList<PlanDefinition> Defaults { get; } =
+        [DefaultTrial, DefaultLite, DefaultPro, DefaultBusiness, DefaultEnterprise];
+
+    private static readonly PlanCatalogSnapshot DefaultSnapshot =
+        new(Defaults, DefaultAnnualDiscountPercent, DefaultTrialDays, DefaultPriceVersion);
+
+    private static volatile PlanCatalogSnapshot current = DefaultSnapshot;
+
+    /// <summary>
+    /// Yeni ayarları yükler. Gelen listede olmayan paket için varsayılan kullanılır; paketin
+    /// kimliği (kod, teklif usulü, deneme hakkı) değiştirilemez.
+    /// </summary>
+    public static void Apply(PlanCatalogSnapshot snapshot)
+    {
+        var byPlan = snapshot.Plans.ToDictionary(definition => definition.Plan);
+        var merged = Defaults
+            .Select(fallback => byPlan.TryGetValue(fallback.Plan, out var custom)
+                ? custom with { Code = fallback.Code, IsQuoteOnly = fallback.IsQuoteOnly, AllowsTrial = fallback.AllowsTrial }
+                : fallback)
+            .ToList();
+
+        current = new PlanCatalogSnapshot(
+            merged,
+            Math.Clamp(snapshot.AnnualDiscountPercent, 0, 90),
+            Math.Clamp(snapshot.TrialDays, 0, 90),
+            string.IsNullOrWhiteSpace(snapshot.PriceVersion) ? DefaultPriceVersion : snapshot.PriceVersion);
+    }
+
+    /// <summary>Varsayılanlara döner (testler için).</summary>
+    public static void Reset() => current = DefaultSnapshot;
+
+    /// <summary>Yürürlükteki fiyat listesinin sürümü; aboneliğe yazılır.</summary>
+    public static string PriceVersion => current.PriceVersion;
+
+    /// <summary>Ücretsiz deneme süresi (yalnızca deneme hakkı olan pakette).</summary>
+    public static int TrialDays => current.TrialDays;
+
+    /// <summary>Yıllık ödemede uygulanan ek indirim yüzdesi.</summary>
+    public static int AnnualDiscountPercent => current.AnnualDiscountPercent;
+
+    public static PlanDefinition Trial => Get(SubscriptionPlan.Trial);
+    public static PlanDefinition Lite => Get(SubscriptionPlan.Lite);
+    public static PlanDefinition Pro => Get(SubscriptionPlan.Pro);
+    public static PlanDefinition Business => Get(SubscriptionPlan.Business);
+    public static PlanDefinition Enterprise => Get(SubscriptionPlan.Enterprise);
 
     /// <summary>Deneme dahil tüm paketler.</summary>
-    public static IReadOnlyCollection<PlanDefinition> All { get; } =
-        [Trial, Lite, Pro, Business, Enterprise];
+    public static IReadOnlyCollection<PlanDefinition> All => current.Plans;
 
-    /// <summary>Müşterinin satın alabileceği paketler (deneme satılamaz).</summary>
-    public static IReadOnlyCollection<PlanDefinition> Purchasable { get; } =
-        [Lite, Pro, Business, Enterprise];
+    /// <summary>Müşterinin satın alabileceği paketler (deneme ve gizlenmiş paketler hariç).</summary>
+    public static IReadOnlyCollection<PlanDefinition> Purchasable =>
+        current.Plans.Where(definition => definition.Plan != SubscriptionPlan.Trial && definition.IsVisible).ToList();
 
-    public static PlanDefinition Get(SubscriptionPlan plan) => plan switch
+    public static PlanDefinition Get(SubscriptionPlan plan)
     {
-        SubscriptionPlan.Lite => Lite,
-        SubscriptionPlan.Pro => Pro,
-        SubscriptionPlan.Business => Business,
-        SubscriptionPlan.Enterprise => Enterprise,
-        _ => Trial,
-    };
+        var snapshot = current;
+        return snapshot.Plans.FirstOrDefault(definition => definition.Plan == plan)
+            ?? snapshot.Plans.First(definition => definition.Plan == SubscriptionPlan.Trial);
+    }
 
     /// <summary>
     /// Seçilen paket ve dönem için fiyatı hesaplar.
     ///
-    /// Yıllık (12+ ay) seçimde liste tutarına %10 indirim uygulanır:
+    /// Önce paketin kampanya indirimi, ardından yıllık (12+ ay) seçimde yıllık indirim uygulanır.
+    /// Varsayılanlarla (kampanya yok, yıllık %10):
     ///   Lite     1.900 × 12 = 22.800 → 20.520 TL
     ///   Pro      3.990 × 12 = 47.880 → 43.092 TL
     ///   Business 7.990 × 12 = 95.880 → 86.292 TL
@@ -194,7 +264,8 @@ public static class PlanCatalog
     /// </exception>
     public static PriceQuote Quote(SubscriptionPlan plan, int billingPeriodMonths)
     {
-        var definition = Get(plan);
+        var snapshot = current;
+        var definition = snapshot.Plans.FirstOrDefault(candidate => candidate.Plan == plan) ?? Get(plan);
 
         if (definition.IsQuoteOnly)
         {
@@ -205,20 +276,24 @@ public static class PlanCatalog
         var months = billingPeriodMonths < 1 ? 1 : billingPeriodMonths;
         var listTotal = definition.MonthlyPrice * months;
 
-        var isAnnual = months >= AnnualPeriodMonths;
-        var discountPercent = isAnnual ? AnnualDiscountPercent : 0;
-
         // Kuruş cinsinden tam sayı aritmetiği: yüzde hesabında kuruş kaybı olmasın.
-        var discountAmount = listTotal * discountPercent / 100;
+        var campaignPercent = Math.Clamp(definition.DiscountPercent, 0, 90);
+        var afterCampaign = listTotal - (listTotal * campaignPercent / 100);
+
+        var annualPercent = months >= AnnualPeriodMonths ? snapshot.AnnualDiscountPercent : 0;
+        var total = afterCampaign - (afterCampaign * annualPercent / 100);
+
+        var discountAmount = listTotal - total;
+        var effectivePercent = listTotal == 0 ? 0 : (int)Math.Round(discountAmount * 100.0 / listTotal);
 
         return new PriceQuote(
             plan,
             months,
             listTotal,
             discountAmount,
-            discountPercent,
-            listTotal - discountAmount,
-            PriceVersion);
+            effectivePercent,
+            total,
+            snapshot.PriceVersion);
     }
 
     /// <summary>Tahsil edilecek tutar (kuruş). Ödeme akışında bu değer kullanılır.</summary>
