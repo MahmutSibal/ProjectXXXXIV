@@ -1,77 +1,59 @@
 # Şükran App
 
-Şükran App, restoran ve işletmeler için masa, menü, adisyon, sipariş, ödeme ve
-personel operasyonlarını tek panelde birleştiren full-stack bir uygulamadır.
-Müşteriler masa üzerindeki QR kodu okutarak menüye ulaşabilir; işletme
-personeli siparişleri, mutfak akışını ve ödemeleri yönetebilir.
+Şükran App; restoranların işletme, masa, menü, sipariş, adisyon, ödeme ve personel süreçlerini tek bir panelden yönetmesi için geliştirilen full-stack bir uygulamadır. Müşteriler masadaki QR koduyla dijital menüye ulaşabilir; personel siparişleri ve mutfak akışını panelden takip edebilir.
 
-> Bu depo aktif geliştirme ve dağıtım içindir. Production sırlarını (`.env`,
-> bağlantı dizeleri, JWT anahtarları, ödeme anahtarları ve WhatsApp oturum
-> dosyaları) Git'e eklemeyin.
+> **Güvenlik:** Gerçek parolaları, bağlantı dizelerini, imzalama anahtarlarını, ödeme bilgilerini ve WhatsApp oturum verilerini Git'e eklemeyin. Production sırlarını sunucu ortam değişkenlerinde veya güvenli bir secret store'da tutun.
 
 ## İçindekiler
 
-- [Özellikler](#özellikler)
+- [Öne çıkan özellikler](#öne-çıkan-özellikler)
 - [Mimari](#mimari)
 - [Gereksinimler](#gereksinimler)
-- [Projeyi çalıştırma](#projeyi-çalıştırma)
-- [Ortam değişkenleri ve sırlar](#ortam-değişkenleri-ve-sırlar)
-- [Veritabanı](#veritabanı)
+- [Yerel geliştirme](#yerel-geliştirme)
+- [Yapılandırma](#yapılandırma)
+- [Veritabanı ve yedekleme](#veritabanı-ve-yedekleme)
+- [Test ve yayın derlemesi](#test-ve-yayın-derlemesi)
 - [Production dağıtımı](#production-dağıtımı)
 - [Yardımcı betikler](#yardımcı-betikler)
 - [Proje yapısı](#proje-yapısı)
-- [Güvenlik notları](#güvenlik-notları)
+- [Güvenlik](#güvenlik)
 - [Katkı ve lisans](#katkı-ve-lisans)
 
-## Özellikler
+## Öne çıkan özellikler
 
 - İşletme, kullanıcı ve personel yönetimi
-- Rol tabanlı erişim: SuperAdmin, Owner, Garson ve Mutfak
-- Masa ve QR kod yönetimi
-- Müşteri menüsü ve masa üzerinden sipariş oluşturma
-- Adisyon ve sipariş durumlarının canlı takibi
-- Mutfak ekranı ve SignalR tabanlı gerçek zamanlı güncellemeler
-- Nakit/havale ile personel tahsilatı
-- Fake ödeme sağlayıcısı ile yerel test
-- iyzico ile kartlı ödeme entegrasyonu
-- WhatsApp üzerinden telefon doğrulama
-- Denetim kayıtları ve yönetim ekranları
-- ASP.NET Core API ve React/Vite web arayüzü
+- SuperAdmin, Owner, Garson ve Mutfak rolleriyle erişim yönetimi
+- Masa, QR kodu ve müşteri menüsü yönetimi
+- Masa üzerinden sipariş oluşturma ve adisyon takibi
+- SignalR ile canlı sipariş ve mutfak güncellemeleri
+- Nakit, havale ve PayTR üzerinden kartlı ödeme akışları
+- Abonelik, paket ve işletme ayarları
+- E-posta ve isteğe bağlı WhatsApp üzerinden telefon doğrulama
+- Yönetim ekranları, denetim kayıtları ve API
 
 ## Mimari
 
 ```text
-Tarayıcı
-   │
-   ├── frontend/ veya / (React + Vite)
-   │       ├── /api        ─────┐
-   │       ├── /hubs       ─────┤ Vite proxy (geliştirme)
-   │       └── /uploads    ─────┘
-   │                            │
-   ├── services/whatsapp/       │
-   │       WhatsApp doğrulama   │ HTTP
-   │                            ▼
-   └────────────────────── backend/src/AppSukran.API
-                              │
-                              ├── SQL Server
-                              └── MongoDB (kullanılan özelliklere göre)
+Tarayıcı (React + Vite)
+   ├── /api       ─┐
+   ├── /uploads   ─┼── Vite proxy (geliştirme) ── ASP.NET Core API
+   └── /hubs      ─┘                                ├── SQL Server
+                                                    └── MongoDB (yapılandırılan özellikler)
+
+WhatsApp servisi (Node.js + Baileys) ── HTTP ── ASP.NET Core API
 ```
 
-Backend katmanları `Domain`, `Application`, `Infrastructure` ve `API` olarak
-ayrılmıştır. `services/whatsapp`, Baileys kullanan bağımsız Node.js servisidir;
-WhatsApp oturumunu backend'den ayrı tutar.
+Backend, `API`, `Application`, `Domain` ve `Infrastructure` projelerine ayrılmıştır. WhatsApp doğrulama servisi API'den ayrı bir Node.js süreci olarak çalışır ve isteğe bağlıdır.
 
 ## Gereksinimler
 
-- Windows, macOS veya Linux
-- .NET SDK `10.0`
-- Node.js `20+`
-- npm
+- .NET SDK 10
+- Node.js 20 veya üzeri ve npm
 - SQL Server
-- MongoDB (uygulamanın ilgili özellikleri için)
-- WhatsApp doğrulaması kullanılacaksa internete erişebilen ayrı Node.js süreci
+- MongoDB, kullanacağınız özelliklerin yapılandırmasına göre
+- WhatsApp doğrulaması için internet erişimi olan ayrı Node.js süreci
 
-Sürümleri kontrol edin:
+Kurulumları doğrulayın:
 
 ```powershell
 dotnet --version
@@ -79,42 +61,31 @@ node --version
 npm --version
 ```
 
-## Projeyi çalıştırma
+## Yerel geliştirme
 
-### 1. Depoyu klonlayın
+### 1. Depoyu alın
 
 ```powershell
-git clone https://github.com/MahmutSibal/ProjectXXXXIV.git
-cd ProjectXXXXIV
+git clone https://github.com/SukranApp/SukranApp_Web_Application.git
+cd SukranApp_Web_Application
 ```
 
-### 2. Backend bağımlılıklarını kurun ve veritabanını hazırlayın
+### 2. Backend'i yapılandırıp çalıştırın
+
+API'nin yerel geliştirme ayarları `backend/src/AppSukran.API/appsettings.Development.json` dosyasındadır. Kendi SQL Server bağlantınızı ve geliştirme ayarlarınızı kullanın. Hassas değerleri bu dosyaya veya Git'e eklemek yerine ortam değişkenleri ya da .NET User Secrets kullanın.
 
 ```powershell
 cd backend
 dotnet restore
 dotnet ef database update --project src\AppSukran.Infrastructure --startup-project src\AppSukran.API
-```
-
-`dotnet ef` bulunamıyorsa:
-
-```powershell
-dotnet tool restore
-```
-
-### 3. Backend'i başlatın
-
-```powershell
 dotnet run --project src\AppSukran.API
 ```
 
-API varsayılan geliştirme adresi olarak `http://localhost:5021` üzerinden
-çalışacak şekilde yapılandırılmıştır. Swagger etkinse API belgeleri
-`/swagger` adresinden açılabilir.
+API varsayılan olarak `http://localhost:5021` adresinde çalışır. Swagger arayüzü `http://localhost:5021/swagger` adresindedir. `dotnet ef` komutu bulunmuyorsa .NET Entity Framework araçlarını kurun veya yerel araç yapılandırmasını geri yükleyin.
 
-### 4. Frontend'i başlatın
+### 3. Web arayüzünü çalıştırın
 
-Yeni bir terminal açın:
+Yeni bir terminalde depo köküne dönüp:
 
 ```powershell
 cd frontend
@@ -123,13 +94,11 @@ Copy-Item .env.example .env
 npm run dev
 ```
 
-Vite tarafından verilen yerel adresi tarayıcıda açın. Geliştirme ortamında
-`VITE_API_BASE_URL=/api` kullanılması önerilir; `vite.config.js` istekleri
-backend'e yönlendirir.
+Vite'ın bildirdiği adresi açın (varsayılan `http://localhost:5173`). Örnek ayar dosyası API isteklerini `/api` üzerinden gönderir; geliştirme proxy'si istekleri `localhost:5021` adresine yönlendirir.
 
-### 5. WhatsApp servisini başlatın (isteğe bağlı)
+### 4. WhatsApp servisini (isteğe bağlı) çalıştırın
 
-Telefon doğrulaması kullanılacaksa:
+Telefon doğrulamasında WhatsApp kullanılacaksa yeni bir terminalde:
 
 ```powershell
 cd services\whatsapp
@@ -138,166 +107,127 @@ Copy-Item .env.example .env
 npm start
 ```
 
-Servis `/status` endpoint'i üzerinden kontrol edilebilir. İlk çalıştırmada
-WhatsApp oturumu için gereken QR kodu servis loglarında veya servis akışında
-görülür.
+`services/whatsapp/.env` içindeki `WHATSAPP_SERVICE_TOKEN`, backend'de yapılandırılan token ile aynı olmalıdır. Servis varsayılan olarak `5055` portunda çalışır; durumu `/status` endpoint'inden kontrol edilebilir. İlk bağlantı için gereken QR kodu servis çıktısında gösterilir.
 
-### Tüm servisleri başlatma
+### Tüm servisleri başlatma (Windows)
 
-Windows geliştirme ortamında aşağıdaki yardımcı betik kullanılabilir:
+Depo kökünden çalıştırılan betik backend ve frontend'i başlatır; WhatsApp servisini de yapılandırılmışsa başlatır:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\start-all.ps1
 ```
 
-## Ortam değişkenleri ve sırlar
+WhatsApp'ı atlamak için `-SkipWhatsApp`, servis durumunu görmek için `-Status`, betikle başlatılan servisleri durdurmak için `-Stop` seçeneğini kullanın.
 
-Örnek dosyaları kopyalayarak başlayın:
+## Yapılandırma
 
-```powershell
-Copy-Item backend\.env.example backend\.env
-Copy-Item frontend\.env.example frontend\.env
-Copy-Item services\whatsapp\.env.example services\whatsapp\.env
-```
+Örnek ayar şablonları:
 
-Örnek dosyalar yalnızca isimleri ve güvenli varsayılanları gösterir. Gerçek
-değerleri bu dosyalara yazabilirsiniz; `.gitignore` nedeniyle Git'e
-eklenmezler. Production'da sunucu ortam değişkenlerini veya güvenli secret
-store'u tercih edin.
+- `backend/.env.example`
+- `frontend/.env.example`
+- `frontend/.env.production.example`
+- `services/whatsapp/.env.example`
 
-### Backend için temel ayarlar
+Şablonlar gerekli değişken adlarını gösterir; gerçek değerleri içermez. `.env` dosyalarını Git'e eklemeyin. Backend `.env.example` dosyası ASP.NET Core tarafından kendiliğinden yüklenmez; değişkenleri çalışan sürecin ortamında, User Secrets'ta veya dağıtım ortamınızın secret store'unda tanımlayın.
 
-| Değişken | Açıklama |
+### Backend
+
+| Ayar | Amaç |
 |---|---|
-| `ASPNETCORE_ENVIRONMENT` | Geliştirmede `Development`, canlıda `Production` |
-| `JWT_SIGNING_KEY` | En az 32 karakterlik rastgele imzalama anahtarı |
+| `ASPNETCORE_ENVIRONMENT` | Yerelde `Development`, canlıda `Production` |
+| `JWT_SIGNING_KEY` | Güçlü ve benzersiz JWT imzalama anahtarı; production'da en az 32 karakter |
 | `SUKRAN_DB_CONNECTION` | SQL Server bağlantı dizesi |
-| `SUKRAN_SUPERADMIN_PASSWORD` | İlk SuperAdmin parolası |
-| `SUKRAN_IYZICO_API_KEY` | iyzico API anahtarı |
-| `SUKRAN_IYZICO_SECRET_KEY` | iyzico gizli anahtarı |
-| `SUKRAN_WHATSAPP_TOKEN` | WhatsApp servisiyle ortak, en az 24 karakterlik token |
+| `SUKRAN_SUPERADMIN_PASSWORD` | İlk SuperAdmin hesabı için parola |
+| `SUKRAN_WHATSAPP_TOKEN` | Backend'in WhatsApp servisine gönderdiği erişim token'ı |
+| `SUKRAN_PAYTR_MERCHANT_ID` | PayTR kartlı ödemeleri için mağaza numarası |
+| `SUKRAN_PAYTR_MERCHANT_KEY` | PayTR kartlı ödemeleri için mağaza anahtarı |
+| `SUKRAN_PAYTR_MERCHANT_SALT` | PayTR kartlı ödemeleri için mağaza gizli değeri |
+| `Mongo__ConnectionString` | MongoDB kullanılacaksa bağlantı dizesi |
+| `Mongo__DatabaseName` | MongoDB kullanılacaksa veritabanı adı |
 
-Ödeme sağlayıcısı geliştirmede `Fake`, canlıda `Iyzico` olarak ayarlanabilir.
-iyzico sandbox ayarları ve ödeme kuralları için
-[DEPLOYMENT.md](DEPLOYMENT.md) dosyasına bakın.
+ASP.NET Core yapılandırma anahtarları ortam değişkenlerinde `__` ile ayrılabilir; örneğin `ConnectionStrings__DefaultConnection`.
 
-### Frontend ayarları
+### Frontend
 
-`frontend/.env.example`:
+`frontend/.env.example` geliştirme için `VITE_API_BASE_URL=/api` ayarını kullanır. `VITE_PUBLIC_APP_URL`, QR kodlarına eklenecek müşteri arayüzü adresidir; API adresi değildir. Frontend ve API canlıda ayrı alan adlarındaysa `VITE_API_BASE_URL` değerini HTTPS kullanan API adresiyle yapılandırın. İsteğe bağlı `VITE_API_FALLBACK_URLS` yedek API adreslerini virgülle alır.
 
-```env
-VITE_API_BASE_URL=/api
-VITE_PUBLIC_APP_URL=
-```
+Vite değişkenleri derleme sırasında frontend paketine eklenir; buraya gizli anahtar veya parola koymayın.
 
-Canlıda frontend ve API farklı alan adlarındaysa
-`frontend/.env.production.example` içindeki `VITE_API_BASE_URL` değerini API'nin
-HTTPS adresiyle değiştirin. `VITE_PUBLIC_APP_URL`, QR kodlarına gömülecek
-müşteri frontend adresidir; backend adresi değildir.
+### WhatsApp
 
-### WhatsApp ayarları
+Servis `WHATSAPP_SERVICE_TOKEN` ve isteğe bağlı `WHATSAPP_PORT` ayarlarını kullanır. Token, backend tarafında `SUKRAN_WHATSAPP_TOKEN` olarak aynı değerle tanımlanmalıdır. `tokens/` klasörü oturum verisi içerir; depoya eklemeyin ve production sunucusunda koruyun.
 
-`services/whatsapp/.env.example` dosyasındaki token, backend'deki
-`SUKRAN_WHATSAPP_TOKEN` ile aynı olmalıdır. `tokens/` klasörü WhatsApp oturum
-kimliğidir; depoya eklenmemeli ve çalışan production sunucusundan silinmemelidir.
+## Veritabanı ve yedekleme
 
-## Veritabanı
-
-Geliştirmede bağlantı ve varsayılan ayarlar:
-
-- Backend: `backend/src/AppSukran.API/appsettings.Development.json`
-- Production: ortam değişkenleri ve
-  `backend/src/AppSukran.API/appsettings.Production.json`
-
-Migration uygulamak için:
+EF Core migration'larını uygulamak için depo kökünden:
 
 ```powershell
-cd backend
-dotnet ef database update --project src\AppSukran.Infrastructure --startup-project src\AppSukran.API
+dotnet ef database update --project backend/src/AppSukran.Infrastructure --startup-project backend/src/AppSukran.API
 ```
 
-Yedek almak ve yerel veritabanını sıfırlamak için:
+Geliştirme veritabanı ayarları API projesinin `appsettings.Development.json` dosyasından gelir. Production bağlantısını ortam değişkeni veya güvenli yapılandırma sağlayıcısı üzerinden verin.
+
+Windows yardımcı betikleri:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\backup-database.ps1
 powershell -ExecutionPolicy Bypass -File scripts\reset-database.ps1
 ```
 
-`reset-database.ps1` veri kaybına neden olabilir; yalnızca geliştirme
-ortamında ve verilerin yedeği alındıktan sonra çalıştırın.
+`reset-database.ps1` veri silebilir. Yalnızca geliştirme veritabanında, doğru bağlantıyı kontrol ettikten ve yedek aldıktan sonra çalıştırın.
 
-## Production dağıtımı
-
-Production dağıtımının ayrıntılı, sağlayıcıya özel ve güncel adımları
-[DEPLOYMENT.md](DEPLOYMENT.md) içinde tutulur. Bu dosya özellikle şunları
-kapsar:
-
-- Secret ve JWT yapılandırması
-- iyzico sandbox/production ayarları
-- reCAPTCHA yerine kullanılan hız sınırlama kuralları
-- Vercel frontend + MonsterASP backend mimarisi
-- WhatsApp Baileys servisinin IIS üzerinde çalıştırılması
-- `web.config`, `tokens/` ve `logs/` klasörleri için yayınlama uyarıları
-- ngrok ile geçici geliştirme erişimi
-
-Backend yayınlama:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\publish-monsterasp.ps1
-```
-
-WhatsApp servis yayınlama:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\publish-whatsapp.ps1
-```
-
-Canlıya almadan önce:
-
-- [ ] Production secret'ları Git geçmişinde bulunmuyor
-- [ ] `ASPNETCORE_ENVIRONMENT=Production`
-- [ ] Güçlü ve benzersiz `JWT_SIGNING_KEY` tanımlı
-- [ ] SQL Server ve MongoDB bağlantıları doğrulandı
-- [ ] CORS yalnızca gerçek frontend alan adlarına açık
-- [ ] Frontend API adresi HTTPS kullanıyor
-- [ ] iyzico production anahtarları ve callback adresleri test edildi
-- [ ] WhatsApp token'ı backend ve servis arasında aynı
-- [ ] QR kodlarında kullanılan frontend alan adı kesinleşti
-- [ ] `tokens/` ve `logs/` klasörleri deploy sırasında korunuyor
-
-## Yardımcı betikler
-
-| Betik | Amaç |
-|---|---|
-| `scripts/start-all.ps1` | Yerel servisleri birlikte başlatır |
-| `scripts/backup-database.ps1` | Veritabanı yedeği alır |
-| `scripts/reset-database.ps1` | Geliştirme veritabanını sıfırlar |
-| `scripts/publish-monsterasp.ps1` | Backend yayın çıktısı üretir |
-| `scripts/publish-whatsapp.ps1` | WhatsApp servisi yayın çıktısı üretir |
-
-## Test, lint ve build
+## Test ve yayın derlemesi
 
 Frontend:
 
 ```powershell
 cd frontend
+npm ci
 npm run lint
 npm run build
 ```
 
-Alternatif frontend için aynı komutları `Yeni_Frontend` klasöründe çalıştırın.
-
-Backend:
+Backend (depo kökünden):
 
 ```powershell
-cd backend
-dotnet build AppSukran.slnx
-dotnet test AppSukran.slnx
+dotnet build backend/AppSukran.slnx
+dotnet test backend/AppSukran.slnx
 ```
 
-Test hesabı veya API isteği kullanırken gerçek müşteri verileri ve production
-anahtarları kullanmayın. Depoda bulunan `test_login.json` ve
-`test_register.json` dosyaları yalnızca yerel test akışını anlamak içindir.
+Testlerde gerçek müşteri verileri veya production sırları kullanmayın.
+
+## Production dağıtımı
+
+Ortam değişkenleri, veritabanı migration'ları, yayınlama ve servis yapılandırmasının ayrıntıları için [DEPLOYMENT.md](DEPLOYMENT.md) dosyasını izleyin. Dağıtımdan önce:
+
+- [ ] `ASPNETCORE_ENVIRONMENT=Production` olarak ayarlandı.
+- [ ] Güçlü ve benzersiz JWT imzalama anahtarı tanımlandı.
+- [ ] SQL Server ve kullanılan MongoDB bağlantıları doğrulandı.
+- [ ] CORS yalnızca gerçek frontend origin'lerine izin veriyor.
+- [ ] Frontend'in API adresi HTTPS kullanıyor.
+- [ ] Ödeme sağlayıcısı ayarları ve geri dönüş adresleri test edildi.
+- [ ] WhatsApp kullanılıyorsa backend ve servis token'ları eşleşiyor.
+- [ ] QR kodlarında kullanılacak frontend alan adı doğrulandı.
+- [ ] WhatsApp `tokens/` gibi kalıcı çalışma verileri dağıtımda korunuyor.
+
+Yayın betikleri:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\publish-monsterasp.ps1
+powershell -ExecutionPolicy Bypass -File scripts\publish-whatsapp.ps1
+```
+
+## Yardımcı betikler
+
+| Betik | Amaç |
+|---|---|
+| `scripts/start-all.ps1` | Yerel servisleri başlatır, durumlarını kontrol eder ve durdurabilir |
+| `scripts/backup-database.ps1` | Veritabanı yedeği alır |
+| `scripts/reset-database.ps1` | Geliştirme veritabanını sıfırlar |
+| `scripts/create-superadmins.ps1` | SuperAdmin hesaplarının yönetimine yardımcı olur |
+| `scripts/publish-monsterasp.ps1` | Backend yayın çıktısı üretir |
+| `scripts/publish-cpanel.ps1` | cPanel dağıtımı için yayın çıktısı üretir |
+| `scripts/publish-whatsapp.ps1` | WhatsApp servisi yayın çıktısı üretir |
 
 ## Proje yapısı
 
@@ -305,42 +235,38 @@ anahtarları kullanmayın. Depoda bulunan `test_login.json` ve
 .
 ├── backend/
 │   ├── AppSukran.slnx
+│   ├── BACKEND_API_DOKUMANI.md
 │   └── src/
 │       ├── AppSukran.API/
 │       ├── AppSukran.Application/
 │       ├── AppSukran.Domain/
 │       └── AppSukran.Infrastructure/
+├── docs/
+│   └── KVKK_VERI_ENVANTERI.md
 ├── frontend/
+│   ├── brand/
+│   ├── public/
+│   └── src/
 ├── services/
 │   └── whatsapp/
 ├── scripts/
-├── izyco/
 ├── DEPLOYMENT.md
-└── .gitignore
+└── README.md
 ```
 
-`publish/`, `publish-whatsapp/`, `logs/`, `node_modules/`, `bin/`, `obj/`,
-`.vs/`, `dist/` ve gerçek `.env` dosyaları çalışma/deploy çıktılarıdır; kaynak
-kod deposunda tutulmazlar.
+`node_modules/`, `bin/`, `obj/`, `dist/`, `logs/`, `publish/`, gerçek `.env` dosyaları ve WhatsApp oturum verileri çalışma ya da dağıtım verileridir; kaynak kodla birlikte commit edilmemelidir.
 
-## Güvenlik notları
+## Güvenlik
 
-- Secret'ları commit etmeyin; örnek dosyalara yalnızca placeholder yazın.
-- Bir secret yanlışlıkla Git'e girdiyse yalnızca dosyayı silmek yeterli değildir:
-  anahtarı sağlayıcı panelinden hemen yenileyin ve Git geçmişini temizleyin.
-- Production'da varsayılan veya kısa JWT anahtarı kullanmayın.
-- Production API ve frontend için HTTPS zorunludur.
-- CORS'u `*` yapmayın; gerçek frontend origin'lerini açıkça tanımlayın.
-- WhatsApp `tokens/` klasörü hesap oturumuna erişim sağlayabilir; yedeklerini
-  erişim kontrollü saklayın.
-- Ödeme kart bilgilerini uygulama loglarına veya veritabanına yazmayın.
+- Sırları depoya, örnek ayar dosyalarına veya loglara yazmayın.
+- Bir sır Git geçmişine girdiyse yalnızca dosyayı silmek yeterli değildir: ilgili anahtarı/parolayı yenileyin ve geçmişteki kopyaları temizleyin.
+- Production'da varsayılan veya kısa imzalama anahtarı kullanmayın.
+- API ve frontend trafiğini HTTPS üzerinden sunun; CORS'u gerekli origin'lerle sınırlayın.
+- Kart verilerini uygulama loglarına veya veritabanına kaydetmeyin.
+- WhatsApp oturum dosyalarını erişim kontrollü tutun ve yedeklerini güvenli biçimde saklayın.
 
 ## Katkı ve lisans
 
-Değişiklik göndermeden önce ilgili frontend lint/build ve backend build/test
-komutlarını çalıştırın. Büyük özelliklerde önce issue açıp kapsamı netleştirin;
-küçük düzeltmeler doğrudan pull request olarak gönderilebilir.
+Değişiklik göndermeden önce ilgili frontend lint/build ve backend build/test komutlarını çalıştırın. Büyük kapsamlı değişikliklerden önce issue açarak kapsamı netleştirin.
 
-Bu depoda ayrıca bir lisans dosyası bulunmadığı için, açık kaynak kullanım
-hakları için proje sahibiyle iletişime geçin.
-
+Lisans ve kullanım koşulları için depodaki [LICENSE](LICENSE) dosyasına bakın.
