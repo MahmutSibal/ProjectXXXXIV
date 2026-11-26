@@ -43,7 +43,7 @@ const contactCards = [
     icon: 'location_on',
     title: 'Konum',
     description: 'Türkiye genelinde dijital hizmet',
-    value: 'Şanlıurfa, Türkiye',
+    value: 'Eyüp Nebi Mah. 3563. Sk. No: 33/1, Eyyübiye / Şanlıurfa',
   },
   {
     icon: 'headset_mic',
@@ -806,7 +806,7 @@ function Contact() {
 
                 <div>
                   <strong>Genel Merkez</strong>
-                  <p>Şanlıurfa, Türkiye</p>
+                  <p>Eyüp Nebi Mahallesi, 3563. Sokak No: 33/1, Eyyübiye / Şanlıurfa</p>
                 </div>
               </div>
 

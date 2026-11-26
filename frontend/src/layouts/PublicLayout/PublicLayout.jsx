@@ -219,9 +219,6 @@ function PublicLayout() {
               <Link to="/mesafeli-satis-sozlesmesi">
                 Mesafeli Satış Sözleşmesi
               </Link>
-              <Link to="/telif-hakki">
-                Telif Hakkı
-              </Link>
               <Link to="/iptal-ve-iade-politikasi">
   İptal ve İade Politikası
 </Link>
@@ -239,9 +236,11 @@ function PublicLayout() {
               <a href="tel:+905389469680">
                 +90 538 946 96 80
               </a>
-              <span className="public-footer__address">
-                Şanlıurfa, Türkiye
-              </span>
+              <address className="public-footer__address not-italic">
+                Eyüp Nebi Mahallesi, 3563. Sokak<br />
+                No: 33/1<br />
+                Eyyübiye / Şanlıurfa
+              </address>
 
               <div className="public-footer__socials">
                 <a
@@ -284,10 +283,6 @@ function PublicLayout() {
 
             <span>
               Restoran teknolojileri, sadeleştirildi.
-            </span>
-
-            <span>
-              Kodlama ve yazılım: Mahmut Sibal
             </span>
           </div>
         </div>
