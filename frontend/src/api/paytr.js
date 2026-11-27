@@ -21,6 +21,17 @@ export const payTrApi = {
 };
 
 /**
+ * Backend'in döndürdüğü PayTR ödeme adresini sitenin kendi ödeme sayfasına (/odeme) çevirir:
+ * PayTR formu orada Şükran App çerçevesi içinde açılır, adres çubuğunda jeton görünmez.
+ * Beklenmeyen bir adres gelirse olduğu gibi kullanılır.
+ */
+export function toPaymentUrl(paymentPageUrl) {
+  // PayTR jetonunda tire olabilir (ör. "...ddff-905213800").
+  const match = /^https:\/\/www\.paytr\.com\/odeme\/guvenli\/([A-Za-z0-9-]+)$/.exec(paymentPageUrl ?? '');
+  return match ? `/odeme#${match[1]}` : paymentPageUrl;
+}
+
+/**
  * Ödeme sonrası sayfaya dönüldüğünde (?odeme=...&oid=...) kesin sonucu bekler.
  * PayTR sonucu sunucuya ayrıca bildirir; bildirim birkaç saniye gecikebilir.
  */

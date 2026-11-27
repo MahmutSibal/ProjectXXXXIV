@@ -17,6 +17,9 @@ DirectoryIndex index.html
   RewriteCond %{HTTP:X-Forwarded-Proto} !=https
   RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L,NE]
 
+  # PayTR güvenli ödeme sayfası: /odeme -> paytr-gecis.html (bkz. src/api/paytr.js toPaymentUrl)
+  RewriteRule ^odeme/?$ paytr-gecis.html [L]
+
   # SPA yönlendirmesi: sunucuda /giris-yap gibi bir dosya yoktur; var olmayan her yol
   # index.html'e gider, uygulama kendi içinde yönlendirir. Gerçek dosyalar (js, css,
   # görsel) normal sunulur.
@@ -33,7 +36,7 @@ DirectoryIndex index.html
 
   # index.html hiç önbelleğe alınmaz: yeni sürüm yüklenince herkes hemen görür.
   # assets/ altındaki dosyaların adı her derlemede değişir; uzun süre önbelleklenebilir.
-  <FilesMatch "^index\.html$">
+  <FilesMatch "^(index|paytr-gecis)\.html$">
     Header set Cache-Control "no-cache, no-store, must-revalidate"
   </FilesMatch>
 </IfModule>

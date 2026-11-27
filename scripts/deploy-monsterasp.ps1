@@ -288,6 +288,26 @@ if ([string]::IsNullOrWhiteSpace($env:SUKRAN_DB_CONNECTION) -or [string]::IsNull
         }
     }
 
+    # Robot doğrulaması anahtarları canlıdan taşınır (elle verilmiş değer önceliklidir);
+    # aksi hâlde her deploy giriş/kayıttaki doğrulamayı kapatırdı.
+    # R2 (görsel depolama) ve Redis (canlı bildirim backplane) ayarları da aynı şekilde taşınır.
+    $turnstileMap = [ordered]@{
+        'SUKRAN_TURNSTILE_SITE_KEY'   = 'Turnstile__SiteKey'
+        'SUKRAN_TURNSTILE_SECRET'     = 'SUKRAN_TURNSTILE_SECRET'
+        'SUKRAN_R2_ACCOUNT_ID'        = 'Storage__R2AccountId'
+        'SUKRAN_R2_BUCKET'            = 'Storage__R2Bucket'
+        'SUKRAN_R2_PUBLIC_URL'        = 'Storage__PublicBaseUrl'
+        'SUKRAN_R2_ACCESS_KEY_ID'     = 'SUKRAN_R2_ACCESS_KEY_ID'
+        'SUKRAN_R2_SECRET_ACCESS_KEY' = 'SUKRAN_R2_SECRET_ACCESS_KEY'
+        'SUKRAN_REDIS_CONNECTION'     = 'SUKRAN_REDIS_CONNECTION'
+    }
+    foreach ($envName in $turnstileMap.Keys) {
+        $liveName = $turnstileMap[$envName]
+        if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($envName)) -and $live.Contains($liveName)) {
+            Set-Item "env:$envName" $live[$liveName]
+        }
+    }
+
     if ($live['Email__Enabled'] -eq 'true') {
         $emailMap = [ordered]@{
             'SUKRAN_SMTP_PASSWORD'  = 'SUKRAN_SMTP_PASSWORD'
@@ -318,6 +338,11 @@ Write-Host "  E-posta       : $(if ($env:SUKRAN_SMTP_PASSWORD) { "açık (gönde
 $payTrReady = $env:SUKRAN_PAYTR_MERCHANT_ID -and $env:SUKRAN_PAYTR_MERCHANT_KEY -and $env:SUKRAN_PAYTR_MERCHANT_SALT
 $payTrTestText = if ($env:SUKRAN_PAYTR_TEST_MODE -eq 'false') { 'CANLI - gerçek para' } else { 'TEST modu' }
 $payTrTransferText = if ($env:SUKRAN_PAYTR_TRANSFERS -eq 'true') { 'açık' } else { 'kapalı' }
+$r2Ready = $env:SUKRAN_R2_ACCOUNT_ID -and $env:SUKRAN_R2_BUCKET -and $env:SUKRAN_R2_ACCESS_KEY_ID -and $env:SUKRAN_R2_SECRET_ACCESS_KEY
+$r2PublicText = if ($env:SUKRAN_R2_PUBLIC_URL -and $env:SUKRAN_R2_PUBLIC_URL -ne '-') { "doğrudan $env:SUKRAN_R2_PUBLIC_URL" } else { 'backend üzerinden sunuluyor' }
+Write-Host "  Görseller     : $(if ($r2Ready) { "Cloudflare R2 ($r2PublicText)" } else { 'sunucu diski (R2 ayarları eksik)' })"
+Write-Host "  Yük paylaşımı : $(if ($r2Ready -and $env:SUKRAN_REDIS_CONNECTION) { 'açık (Redis + R2: iki sunucu birlikte)' } else { 'kapalı (ana sunucu + yedek)' })"
+Write-Host "  Robot doğrul. : $(if ($env:SUKRAN_TURNSTILE_SITE_KEY -and $env:SUKRAN_TURNSTILE_SECRET) { 'açık (Cloudflare Turnstile)' } else { 'kapalı (Turnstile anahtarları yok)' })"
 Write-Host "  Kart ödemesi  : $(if ($payTrReady) { "PayTR ($payTrTestText, restoran transferi $payTrTransferText)" } else { 'kapalı (PayTR anahtarları yok)' })"
 Write-Host "  QR adresi     : $PublicAppUrl"
 

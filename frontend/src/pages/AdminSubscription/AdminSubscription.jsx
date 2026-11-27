@@ -17,6 +17,7 @@ import {
   readPaymentReturnParams,
   clearPaymentReturnParams,
   currentReturnPath,
+  toPaymentUrl,
 } from '../../api/paytr.js';
 
 function statusClass(status) {
@@ -81,7 +82,7 @@ export default function AdminSubscription() {
       returnPath: currentReturnPath(),
     });
     // PayTR'nin kendi sayfasına geçilir: kart ve 3D Secure orada girilir.
-    window.location.assign(started.paymentPageUrl);
+    window.location.assign(toPaymentUrl(started.paymentPageUrl));
   };
 
   useEffect(() => {

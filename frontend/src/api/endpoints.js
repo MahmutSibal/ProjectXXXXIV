@@ -11,6 +11,11 @@
  *   izlediği için kısa sürede hepsi aynı sunucuda buluşur — bu önemli, çünkü
  *   canlı sipariş bildirimi (SignalR) yalnızca aynı sunucuya bağlı ekranlara ulaşır.
  * - Geçiş kararı tahmine değil /api/health yoklamasına dayanır.
+ * - YÜK PAYLAŞIMI: Sunucular /api/health yanıtında "scaleOut: true" diyorsa (canlı bildirimler
+ *   Redis üzerinden iki sunucuya da dağıtılıyor ve görseller ortak depoda/R2'de), her tarayıcı
+ *   sunuculardan birini rastgele seçip ona bağlı kalır (localStorage). Böylece yük sunuculara
+ *   bölünür; "tercih edilen" sunucu ana sunucu değil, bu tarayıcının seçtiği sunucudur. Seçilen
+ *   düşerse diğerine geçilir ve 30 sn'de bir yoklanıp ayağa kalkınca geri dönülür.
  * - Veri DEĞİŞTİREN istekler (sipariş, ödeme...) bağlantı koptuğunda yedekte
  *   KENDİLİĞİNDEN tekrar gönderilmez: ana sunucu isteği işleyip yanıtı
  *   gönderemeden düşmüş olabilir; tekrar göndermek çift sipariş / çift ödeme
@@ -27,6 +32,9 @@ const FALLBACKS = (import.meta.env.VITE_API_FALLBACK_URLS ?? '')
 const BASES = [...new Set([PRIMARY, ...FALLBACKS].map((url) => url.replace(/\/+$/, '')))];
 
 const STORAGE_KEY = 'sukran_api_active';
+const AFFINITY_KEY = 'sukran_api_affinity';
+const SCALE_OUT_CACHE_KEY = 'sukran_api_scaleout';
+const SCALE_OUT_CACHE_MS = 10 * 60 * 1000;
 const HEALTH_TIMEOUT_MS = 5000;
 const REQUEST_TIMEOUT_MS = 20000;
 const PRIMARY_PROBE_INTERVAL_MS = 30000;
@@ -41,6 +49,8 @@ const GATEWAY_STATUSES = new Set([502, 503, 504]);
  */
 const SAFE_TO_RETRY_PATHS = new Set(['/auth/login', '/auth/refresh', '/auth/qr-session']);
 
+// Bu tarayıcının normalde kullandığı sunucu: yük paylaşımı kapalıyken ana sunucu (0).
+let preferredIndex = 0;
 let activeIndex = loadActiveIndex();
 let switching = null;
 let probeTimer = null;
@@ -72,7 +82,7 @@ function setActive(index) {
   activeIndex = index;
   try {
     // Yeni sekme açıldığında ölü sunucuyu bekleyip zaman kaybetmesin.
-    if (index === 0) localStorage.removeItem(STORAGE_KEY);
+    if (index === preferredIndex) localStorage.removeItem(STORAGE_KEY);
     else localStorage.setItem(STORAGE_KEY, BASES[index]);
   } catch {
     // Depolama kapalıysa geçiş yine bu sekmede geçerli.
@@ -95,7 +105,7 @@ async function isHealthy(base) {
 }
 
 function schedulePrimaryProbe() {
-  if (activeIndex === 0) {
+  if (activeIndex === preferredIndex) {
     clearInterval(probeTimer);
     probeTimer = null;
     return;
@@ -104,13 +114,67 @@ function schedulePrimaryProbe() {
   if (probeTimer) return;
 
   probeTimer = setInterval(async () => {
-    if (activeIndex !== 0 && (await isHealthy(BASES[0]))) {
-      setActive(0);
+    if (activeIndex !== preferredIndex && (await isHealthy(BASES[preferredIndex]))) {
+      setActive(preferredIndex);
     }
   }, PRIMARY_PROBE_INTERVAL_MS);
 }
 
 schedulePrimaryProbe();
+
+/** Sunucular yük paylaşımına hazır mı? (health yanıtındaki scaleOut; 10 dk önbellekli) */
+async function detectScaleOut() {
+  try {
+    const cached = JSON.parse(sessionStorage.getItem(SCALE_OUT_CACHE_KEY) ?? 'null');
+    if (cached && Date.now() - cached.at < SCALE_OUT_CACHE_MS) return cached.value;
+  } catch {
+    // Önbellek okunamazsa yeniden sorulur.
+  }
+
+  let value = false;
+  try {
+    const response = await fetch(`${getApiBase()}/health`, {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(HEALTH_TIMEOUT_MS),
+    });
+    value = response.ok && (await response.json())?.scaleOut === true;
+  } catch {
+    // Ulaşılamadıysa yük paylaşımı açılmaz; failover kuralları yine geçerli.
+  }
+
+  try {
+    sessionStorage.setItem(SCALE_OUT_CACHE_KEY, JSON.stringify({ value, at: Date.now() }));
+  } catch {
+    // Depolama kapalıysa her açılışta yeniden sorulur.
+  }
+  return value;
+}
+
+/** Bu tarayıcının bağlı kalacağı sunucu: bir kez rastgele seçilir ve saklanır. */
+function loadAffinity() {
+  try {
+    const saved = BASES.indexOf(localStorage.getItem(AFFINITY_KEY));
+    if (saved >= 0) return saved;
+    const picked = Math.floor(Math.random() * BASES.length);
+    localStorage.setItem(AFFINITY_KEY, BASES[picked]);
+    return picked;
+  } catch {
+    return Math.floor(Math.random() * BASES.length);
+  }
+}
+
+if (BASES.length > 1) {
+  detectScaleOut().then((scaleOut) => {
+    const nextPreferred = scaleOut ? loadAffinity() : 0;
+    if (nextPreferred === preferredIndex) return;
+
+    const wasOnPreferred = activeIndex === preferredIndex;
+    preferredIndex = nextPreferred;
+    // Arıza nedeniyle başka sunucuya geçilmiş değilse doğrudan tercih edilen sunucuya geç.
+    if (wasOnPreferred) setActive(preferredIndex);
+    schedulePrimaryProbe();
+  });
+}
 
 /**
  * Bir adres yanıt vermediğinde çağrılır: adresleri öncelik sırasıyla yoklar ve
@@ -127,7 +191,9 @@ export function reportFailure(failedBase) {
   if (!switching) {
     switching = (async () => {
       // Düşen adres de yoklanır: hata anlık olabilir, o zaman yerinde kalırız.
-      for (let index = 0; index < BASES.length; index += 1) {
+      // Önce tercih edilen sunucu, sonra diğerleri sırayla.
+      const order = [preferredIndex, ...BASES.keys()].filter((index, position, all) => all.indexOf(index) === position);
+      for (const index of order) {
         if (await isHealthy(BASES[index])) {
           setActive(index);
           return BASES[index];

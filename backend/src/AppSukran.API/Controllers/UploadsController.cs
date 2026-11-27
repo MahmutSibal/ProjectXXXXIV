@@ -1,3 +1,4 @@
+using AppSukran.API.Storage;
 using AppSukran.Application.Common.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -7,7 +8,7 @@ namespace AppSukran.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize(Roles = "SuperAdmin,RestaurantOwner")]
-public sealed class UploadsController(IWebHostEnvironment environment, IRestaurantAccessGuard restaurantAccessGuard) : ControllerBase
+public sealed class UploadsController(ImageStorage storage, IRestaurantAccessGuard restaurantAccessGuard) : ControllerBase
 {
     private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase) { ".png", ".jpg", ".jpeg", ".webp" };
     private const long MaxFileSizeBytes = 5 * 1024 * 1024;
@@ -39,22 +40,34 @@ public sealed class UploadsController(IWebHostEnvironment environment, IRestaura
             return BadRequest(new { error = "Only PNG, JPG and WEBP images are allowed." });
         }
 
-        var webRoot = string.IsNullOrEmpty(environment.WebRootPath)
-            ? Path.Combine(environment.ContentRootPath, "wwwroot")
-            : environment.WebRootPath;
-
-        var restaurantFolder = Path.Combine(webRoot, "uploads", restaurantId);
-        Directory.CreateDirectory(restaurantFolder);
-
-        var fileName = $"{Guid.NewGuid():N}{extension.ToLowerInvariant()}";
-        var filePath = Path.Combine(restaurantFolder, fileName);
-
-        await using (var stream = System.IO.File.Create(filePath))
+        // Restoran kimliği dosya yolunun parçası: yol dışına çıkmaya yarayacak karakter kabul edilmez.
+        if (restaurantId.IndexOfAny(['/', '\\', '.']) >= 0)
         {
-            await file.CopyToAsync(stream, cancellationToken);
+            return BadRequest(new { error = "Invalid restaurantId." });
         }
 
-        var url = $"{Request.Scheme}://{Request.Host}/uploads/{restaurantId}/{fileName}";
+        await using var content = new MemoryStream();
+        await file.CopyToAsync(content, cancellationToken);
+
+        // Uzantı değil içerik belirleyicidir: görsel gibi adlandırılmış başka bir dosya reddedilir.
+        if (!LooksLikeImage(content.GetBuffer().AsSpan(0, (int)content.Length), extension))
+        {
+            return BadRequest(new { error = "Only PNG, JPG and WEBP images are allowed." });
+        }
+        content.Position = 0;
+
+        var fileName = $"{Guid.NewGuid():N}{extension.ToLowerInvariant()}";
+        var url = await storage.SaveAsync(
+            content, $"{restaurantId}/{fileName}", ImageStorage.ContentTypeFor(extension),
+            $"{Request.Scheme}://{Request.Host}", cancellationToken);
         return Ok(new { url });
     }
+
+    private static bool LooksLikeImage(ReadOnlySpan<byte> data, string extension) => extension.ToLowerInvariant() switch
+    {
+        ".png" => data.StartsWith((ReadOnlySpan<byte>)[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]),
+        ".jpg" or ".jpeg" => data.StartsWith((ReadOnlySpan<byte>)[0xFF, 0xD8, 0xFF]),
+        ".webp" => data.Length >= 12 && data[..4].SequenceEqual("RIFF"u8) && data.Slice(8, 4).SequenceEqual("WEBP"u8),
+        _ => false,
+    };
 }

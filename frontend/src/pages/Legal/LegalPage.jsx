@@ -4,15 +4,11 @@ import { Link, useLocation } from 'react-router-dom';
 const company = {
   name: 'Şükran App',
   service: 'Sukran App',
-  taxOffice: 'Topçu Meydanı Vergi Dairesi',
-  taxNumber: '0440652208',
-  address: 'Şanlıurfa, Türkiye',
+  address: 'Eyüp Nebi Mahallesi, 3563. Sokak No: 33/1 Eyyübiye / Şanlıurfa',
 };
 
 const companyInformation =
   `Hizmet sağlayıcı ${company.name}. ` +
-  `Vergi dairesi ${company.taxOffice}. ` +
-  `Vergi numarası ${company.taxNumber}. ` +
   `Adres ${company.address}.`;
 
 const pages = {
@@ -187,30 +183,6 @@ const pages = {
       ],
     ],
   },
-
-  '/telif-hakki': {
-    title: 'Telif Hakkı ve Yazılım Künyesi',
-    intro:
-      'Sukran App platform yazılımının geliştiricisi ve yazarlık (telif) hakları hakkında bilgilendirme.',
-    sections: [
-      [
-        'Yazılımın geliştiricisi',
-        'Sukran App platformunun yazılımı (kaynak kod, arayüz tasarımı, veri modeli ve mimari dâhil) Mahmut Sibal tarafından geliştirilmiştir. Yazılımın kodlama ve geliştirme işi bu kişiye aittir; uygulama alt bilgisinde (footer) yer alan “Kodlama ve yazılım: Mahmut Sibal” künyesi bu yazarlığı belirtir.',
-      ],
-      [
-        'Telif hakkı',
-        'Yazılımın kaynak kodu üzerindeki eser sahipliğinden doğan manevi haklar, 5846 sayılı Fikir ve Sanat Eserleri Kanunu kapsamında eserin yazarı Mahmut Sibal’a aittir. Eser sahibinin adının eserde belirtilmesi (künye) ve kaynak gösterilmesi hakkı saklıdır. Yazılımın mali haklarının (kullanım, çoğaltma, yayma) kime ait olduğu, taraflar arasındaki yazılı sözleşmeye göre belirlenir.',
-      ],
-      [
-        'İzin ve kullanım',
-        'Bu yazılımın tamamının veya bir bölümünün izinsiz kopyalanması, çoğaltılması, dağıtılması veya türev çalışma oluşturulması, ilgili sözleşme ve yürürlükteki mevzuat kapsamında değerlendirilir. Künye bilgisinin kaldırılması ya da değiştirilmesi, eser sahibinin haklarına halel getirmez.',
-      ],
-      [
-        'İletişim',
-        'Telif hakkı, yazarlık veya lisans ile ilgili taleplerinizi platform üzerindeki iletişim kanallarından iletebilirsiniz. Bu metin genel bir bilgilendirmedir ve hukuki görüş niteliği taşımaz.',
-      ],
-    ],
-  },
 };
 
 export default function LegalPage() {
@@ -249,7 +221,6 @@ export default function LegalPage() {
         <div className="space-y-6 px-5 py-6 sm:px-9 sm:py-8">
           <div className="rounded-xl border border-[#DFE4E0] bg-[#F8F9FA] p-4 text-sm leading-7 text-[#404943]">
   <p className="font-bold text-[#002819]">{company.name}</p>
-  <p>{company.taxOffice} · VKN {company.taxNumber}</p>
   <address className="not-italic">{company.address}</address>
 </div>
 

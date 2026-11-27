@@ -180,7 +180,6 @@ export default function AppRouter() {
 <Route path="mesafeli-satis-sozlesmesi" element={<LegalPage />} />
 <Route path="iptal-ve-iade-politikasi" element={<LegalPage />} />
 <Route path="kampanya-bildirimleri" element={<LegalPage />} />
-<Route path="telif-hakki" element={<LegalPage />} />
 <Route path="kampanya-iptal" element={<CampaignUnsubscribe />} />
         </Route>
 

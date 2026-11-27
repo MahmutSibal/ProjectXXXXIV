@@ -166,23 +166,51 @@ garson, nakit alınan ödemeyi sisteme işler.
 > değerdir (uygulama TC kimlik toplamıyor). Üye iş yeri sözleşmenizin bu alanı
 > zorunlu kılıp kılmadığını iyzico ile teyit edin.
 
-## 1.2. Bot koruması (reCAPTCHA kaldırıldı)
+## 1.2. Bot koruması (Cloudflare Turnstile + hız sınırları)
 
-reCAPTCHA projeden **tamamen kaldırıldı** (backend doğrulayıcı, ayarlar, komut
-alanları; frontend betiği, bileşeni ve site anahtarı).
+reCAPTCHA kaldırıldı. Yerine **Cloudflare Turnstile** robot doğrulaması var:
+giriş (`/api/auth/login`), işletme kaydı (`/api/auth/register-business`) ve müşteri
+kaydı (`/api/auth/register`). Çoğu kullanıcıda kutu kendiliğinden geçer; şüpheli
+trafikte tek tık ister. Google'ın izleme çerezlerini kullanmaz.
 
-Yerine giriş ve kayıt uçlarına hız sınırı kondu — `AuthController`'da daha önce
-**hiç hız sınırı yoktu**, reCAPTCHA öylece silinseydi bu uçlar sınırsız parola
-denemesine ve toplu hesap açmaya açık kalırdı.
+- **İki anahtar da tanımlı değilse doğrulama KAPALIDIR**, uçlar eskisi gibi çalışır.
+- Site anahtarı `Turnstile__SiteKey`, gizli anahtar `SUKRAN_TURNSTILE_SECRET` olarak
+  backend'in web.config'ine yazılır. İlk kurulumda deploy'dan önce:
+  ```powershell
+  $env:SUKRAN_TURNSTILE_SITE_KEY = "0x4AAAA..."   # herkese açık
+  $env:SUKRAN_TURNSTILE_SECRET   = "0x4AAAA..."   # GİZLİ
+  ```
+  Sonraki deploy'larda canlıdan aynen taşınır.
+- Frontend anahtarı derlemeye gömülmez; `GET /api/auth/human-verification` ile
+  backend'den alır. Doğrulamanın açık olup olmadığının tek kaynağı backend'dir.
+- Jeton `X-Turnstile-Token` başlığıyla gider ve tek kullanımlıktır; başarısız denemede
+  kutu yenilenir.
+- Cloudflare'e ulaşılamazsa istek **geçirilir** (giriş kilitlenmesin); hız sınırları ve
+  hesap başına deneme sayacı yine çalışır.
+- **Mobil uygulama** giriş uçlarını kullanıyorsa Turnstile'ı desteklemeden doğrulamayı
+  açmayın: jetonsuz giriş 400 alır.
+
+Hız sınırları (IP başına bölümleme kasıtlıdır: tek bir sabit pencere paylaşılsaydı bir
+saldırgan kotayı doldurup bütün müşterilerin girişini engelleyebilirdi; gerçek istemci
+IP'si için `UseForwardedHeaders` hız sınırlayıcıdan önce çalışır):
 
 | Uç | Sınır | Bölümleme |
 |---|---|---|
-| `/api/auth/*` | 10 istek / 5 dakika | **IP başına** |
-| `/api/phone-verification/*` | 10 istek / 10 dakika | Genel |
+| Tüm istekler (genel sel koruması) | 1200 / dakika | IP başına — PayTR bildirimi, `/api/health`, `/hubs` hariç |
+| Sipariş, adisyon, iade uçları (`orders-write`) | 120 / dakika | Oturum (jeton) başına, jeton yoksa IP |
+| Ödeme başlatma (`payments-write`) | 20 / dakika | Oturum (jeton) başına, jeton yoksa IP |
+| `/api/auth/login` | 40 / 5 dakika | IP başına |
+| `/api/auth/*` (kayıt vb.) | 10 / 5 dakika | IP başına |
+| `/api/phone-verification/*` | 5 gönderim / 20 doğrulama / 10 dakika | IP başına |
 
-IP başına bölümleme kasıtlıdır: tek bir sabit pencere paylaşılsaydı bir saldırgan
-kotayı doldurup bütün müşterilerin girişini engelleyebilirdi. Gerçek istemci IP'si
-için `UseForwardedHeaders` hız sınırlayıcıdan önce çalışır.
+> `orders-write` ve `payments-write` eskiden bütün site için TEK sayaçtı (dakikada 30 / 20)
+> ve sipariş listeleme GET'lerini de kapsıyordu: yoğun saatte tüm restoranlar aynı kotayı
+> paylaşıp 429 alıyordu.
+
+Ayrıca: JSON yanıtları Brotli/Gzip ile sıkıştırılır (`/api/auth` ve `/hubs` hariç — jeton
+taşıyan yanıtlarda BREACH riskine karşı). Müşteri menüsü (ürünler + kategoriler) restoran
+başına 30 sn bellekte tutulur; menüyü değiştiren her istek ve yeni sipariş (stok) önbelleği
+siler (`AppSukran.API/Caching/MenuResponseCache.cs`).
 
 > Deneme sürümü kötüye kullanımına karşı asıl koruma, yenileme için saklı kart
 > zorunluluğudur; bot doğrulaması bunun yerini tutmaz.
@@ -872,6 +900,41 @@ süreç çökerse SQL Server kilidi kendiliğinden bırakır.
 2. Panelden ana siteyi **Stop** ile durdurun, frontend'de bir sayfayı yenileyin.
    Tarayıcının ağ sekmesinde isteklerin `mahmutapp.runasp.net`'e gittiğini görün.
 3. Ana siteyi **Start** ile başlatın; en geç ~30 sn sonra istekler ana sunucuya döner.
+
+## 4.2. Görseller R2'de, iki sunucu birlikte (yük paylaşımı)
+
+4.1'deki iki sınır (görseller tek sunucunun diskinde, canlı bildirim yalnızca aynı sunucuya)
+şu iki ayarla kalkar. İkisi de yoksa her şey 4.1'deki gibi çalışır.
+
+**Cloudflare R2 (görsel depolama).** Beşi de tanımlıysa yeni görseller R2'ye yüklenir ve
+Cloudflare'in ağından sunulur (`AppSukran.API/Storage/ImageStorage.cs`):
+
+| Ortam değişkeni (deploy oturumu) | web.config'e yazılan | Gizli mi |
+|---|---|---|
+| `SUKRAN_R2_ACCOUNT_ID` | `Storage__R2AccountId` | Hayır |
+| `SUKRAN_R2_BUCKET` | `Storage__R2Bucket` | Hayır |
+| `SUKRAN_R2_PUBLIC_URL` (ör. `https://pub-xxx.r2.dev`) | `Storage__PublicBaseUrl` | Hayır |
+| `SUKRAN_R2_ACCESS_KEY_ID` | aynı adla | **Evet** |
+| `SUKRAN_R2_SECRET_ACCESS_KEY` | aynı adla | **Evet** |
+
+- Sunucunun diskindeki eski görseller açılıştan ~30 sn sonra R2'ye bir kez kopyalanır
+  (`LocalUploadsToR2SyncWorker`; R2'de olan atlanır, her sunucu kendi diskini gönderir).
+- Veritabanındaki eski adresler (`https://mahmutapp.../uploads/...`) değişmez: dosya o
+  sunucunun diskinde yoksa istek R2'deki aynı yola yönlendirilir (302).
+- Yüklenen dosyanın içeriği de denetlenir (PNG/JPEG/WEBP imzası); uzantı yetmez.
+
+**Redis (canlı bildirim backplane).** `SUKRAN_REDIS_CONNECTION` (StackExchange.Redis biçimi,
+ör. Upstash: `xxx.upstash.io:6379,password=...,ssl=True,abortConnect=False`) tanımlıysa SignalR
+bildirimleri Redis üzerinden iki sunucuya da dağıtılır. Gizlidir.
+
+**Yük paylaşımı.** R2 ve Redis ikisi de açıksa `/api/health` `"scaleOut": true` döner. Frontend
+bunu görünce her tarayıcı sunuculardan birini rastgele seçip ona bağlı kalır (localStorage
+`sukran_api_affinity`); seçtiği düşerse diğerine geçer, 30 sn'de bir yoklayıp geri döner.
+Arka plan işleri zaten `sp_getapplock` ile korunur (4.1). Hız sınırları sunucu başınadır;
+paylaşımda bir IP'nin toplam hakkı en fazla iki katına çıkar.
+
+İlk kurulumda anahtarlar deploy'dan önce aynı PowerShell oturumunda tanımlanır; sonraki
+deploy'larda canlıdan taşınır (Turnstile ile aynı düzen).
 
 ## 5. HTTPS
 

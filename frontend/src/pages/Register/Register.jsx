@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../../context/AuthContext.jsx';
 import { ApiError } from '../../api/client.js';
 import PhoneVerificationDialog from '../../components/PhoneVerificationDialog.jsx';
+import HumanVerification from '../../components/HumanVerification.jsx';
 import { phoneVerificationApi } from '../../api/phoneVerification.js';
 import './Register.css';
 
@@ -93,6 +94,9 @@ function calculatePasswordStrength(password) {
 
 function Register() {
   const { registerBusiness } = useAuth();
+  // Robot doğrulaması: { required, token }. Kapalıysa required=false.
+  const [captcha, setCaptcha] = useState({ required: false, token: '' });
+  const captchaRef = useRef(null);
   const navigate = useNavigate();
   const [password, setPassword] = useState('');
 
@@ -238,7 +242,7 @@ function Register() {
     try {
       // Hesap, restoran ve 14 günlük ücretsiz deneme aboneliği tek adımda kurulur;
       // kullanıcı doğrudan yönetim paneline girer.
-      await registerBusiness({ ...payload, phoneVerificationTicket });
+      await registerBusiness({ ...payload, phoneVerificationTicket }, captcha.token);
 
       setPendingRegistration(null);
       setIsRegistrationSuccessful(true);
@@ -248,6 +252,8 @@ function Register() {
       }, 1200);
     } catch (error) {
       setPendingRegistration(null);
+      // Jeton tek kullanımlık: bir sonraki deneme için yenilenir.
+      captchaRef.current?.reset();
       setFormError(
         error instanceof ApiError
           ? error.message
@@ -279,7 +285,7 @@ function Register() {
               aria-label="Şükran App ana sayfa"
             >
               <img
-                src="/sukranapp.png?v=2"
+                src="/sukranapp.webp?v=3"
                 alt="Şükran App"
               />
 
@@ -361,7 +367,7 @@ function Register() {
               className="register-brand"
             >
               <img
-                src="/sukranapp.png?v=2"
+                src="/sukranapp.webp?v=3"
                 alt="Şükran App"
               />
 
@@ -689,10 +695,12 @@ function Register() {
                 </label>
               </div>
 
+              <HumanVerification ref={captchaRef} onChange={setCaptcha} />
+
               <button
                 type="submit"
                 className="register-submit"
-                disabled={!canSubmit}
+                disabled={!canSubmit || (captcha.required && !captcha.token)}
               >
                 {isSubmitting ? (
                   <>

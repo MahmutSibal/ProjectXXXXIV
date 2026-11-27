@@ -1,5 +1,5 @@
 // Vite derlemede dosyayı paketler; '/src/...' adresi canlıda çalışmaz.
-import managementScreen from '../../assets/img/screen.png';
+import managementScreen from '../../assets/img/screen.webp';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -267,7 +267,7 @@ function Services() {
               <div className="services-hero__visual-frame-border" />
 
               <img
-                src="/sukranapp.png?v=2"
+                src="/sukranapp.webp?v=3"
                 alt="Şükran App restoran teknolojileri"
               />
             </div>

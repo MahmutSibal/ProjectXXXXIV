@@ -12,7 +12,7 @@ namespace AppSukran.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [AllowAnonymous]
-public sealed class HealthController(AppSukranDbContext dbContext, IConfiguration configuration) : ControllerBase
+public sealed class HealthController(AppSukranDbContext dbContext, IConfiguration configuration, AppSukran.API.Storage.ImageStorage storage) : ControllerBase
 {
     /// <summary>
     /// Hafif canlılık kontrolü — veritabanına dokunmaz.
@@ -29,6 +29,11 @@ public sealed class HealthController(AppSukranDbContext dbContext, IConfiguratio
         // Ana/yedek ayrımı: frontend'in o an hangi sunucuya bağlı olduğunu
         // tarayıcıdan bakarak doğrulamak için (bkz. DEPLOYMENT.md, yedek sunucu).
         instance = configuration["Instance:Name"],
+        // Yük paylaşımı: canlı bildirimler Redis'ten (backplane) ve görseller ortak depodan (R2)
+        // geliyorsa iki sunucu da her isteği karşılayabilir. Frontend bunu görünce kullanıcıları
+        // iki sunucuya paylaştırır; değilse herkes ana sunucuyu kullanır (bkz. endpoints.js).
+        scaleOut = storage.IsRemote && !string.IsNullOrWhiteSpace(
+            Environment.GetEnvironmentVariable("SUKRAN_REDIS_CONNECTION") ?? configuration["Redis:Connection"]),
         utc = DateTime.UtcNow,
     });
 

@@ -17,8 +17,8 @@ import { OrderSessionStatus, OrderItemStatus, ORDER_ITEM_STATUS_LABEL, formatKur
 import { RefundMethod } from '../../api/refunds.js';
 import { toPage, MAX_PAGE_SIZE } from '../../api/pagination.js';
 import PayTrBadge from '../../components/PayTrBadge.jsx';
-import { CardPaymentStatus, waitForCardPayment, readPaymentReturnParams, clearPaymentReturnParams, currentReturnPath } from '../../api/paytr.js';
-import LOGO from '../../assets/img/sukranapp.png';
+import { CardPaymentStatus, waitForCardPayment, readPaymentReturnParams, clearPaymentReturnParams, currentReturnPath, toPaymentUrl } from '../../api/paytr.js';
+import LOGO from '../../assets/img/sukranapp.webp';
 
 const ALL = '__all__';
 const LOW_STOCK = 5;
@@ -1211,7 +1211,7 @@ function BillScreen({ header, session, restaurantId, tableNo, orders, ordersLoad
         phone: buyer.phone.trim(),
         returnPath: currentReturnPath(),
       });
-      window.location.assign(started.paymentPageUrl);
+      window.location.assign(toPaymentUrl(started.paymentPageUrl));
     } catch (err) {
       setError(err.message ?? 'Ödeme başlatılamadı.');
       setIsProcessing(false);

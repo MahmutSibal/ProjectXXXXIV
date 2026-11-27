@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <!--
+    PayTR güvenli ödeme sayfası: https://sukranapp.com/odeme (.htaccess bu adresi bu dosyaya eşler).
+    Uygulama PayTR'nin ödeme adresine doğrudan gitmek yerine buraya gelir; jeton adresin # kısmında
+    gelir, okunur okunmaz adres çubuğundan silinir ve PayTR formu Şükran App çerçevesi içinde
+    (PayTR iFrame API) açılır. Ödeme bitince PayTR kullanıcıyı merchant_ok_url / fail_url'e
+    (backend /api/paytr/return/...) gönderir, backend de uygulamadaki sayfasına döndürür.
+  -->
+  <meta name="referrer" content="origin" />
+  <meta name="theme-color" content="#06402b" />
+  <title>Güvenli Ödeme · Şükran App</title>
+  <link rel="icon" href="/favicon-96.png" />
+  <style>
+    :root { --brand: #06402b; --brand-soft: #b8efd0; --text: #1f2421; --muted: #5b625d; --bg: #f3f5f4; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+                 font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    header { background: var(--brand); color: #fff; }
+    .bar { max-width: 760px; margin: 0 auto; padding: 12px 16px; display: flex; align-items: center; gap: 12px; }
+    .bar img { width: 36px; height: 36px; border-radius: 8px; background: #fff; }
+    .brand { font-weight: 700; font-size: 17px; line-height: 1.1; }
+    .sub { font-size: 12px; opacity: .85; display: flex; align-items: center; gap: 4px; margin-top: 2px; }
+    .sub svg { width: 13px; height: 13px; }
+    main { max-width: 760px; margin: 0 auto; padding: 12px; }
+    .card { background: #fff; border-radius: 14px; box-shadow: 0 2px 12px rgba(0,0,0,.06); overflow: hidden; }
+    #msg { text-align: center; padding: 40px 16px; color: var(--muted); }
+    #paytriframe { width: 100%; min-height: 620px; border: 0; display: none; }
+    .note { margin: 12px 4px 0; font-size: 12.5px; color: var(--muted); line-height: 1.5;
+            display: flex; gap: 8px; align-items: flex-start; }
+    .note svg { flex: none; width: 16px; height: 16px; margin-top: 1px; color: var(--brand); }
+    .foot { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+            margin: 14px 4px 24px; font-size: 12.5px; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px;
+             border: 1px solid rgba(6,64,43,.25); color: var(--brand); }
+    .badge svg { width: 15px; height: 15px; }
+    .back { color: var(--muted); text-decoration: underline; background: none; border: 0; cursor: pointer;
+            font: inherit; padding: 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <img src="/icon-192.png" alt="" />
+      <div>
+        <div class="brand">Şükran App</div>
+        <div class="sub">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 1a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V11a2 2 0 0 0-2-2h-1V6a5 5 0 0 0-5-5Zm-3 8V6a3 3 0 1 1 6 0v3H9Z"/></svg>
+          Güvenli ödeme
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="card">
+      <p id="msg">Güvenli ödeme sayfası yükleniyor…</p>
+      <iframe id="paytriframe" title="PayTR güvenli ödeme" scrolling="no" allow="payment"></iframe>
+    </div>
+
+    <p class="note">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5l-8-3Zm-1.2 14.2-3.5-3.5 1.4-1.4 2.1 2.1 4.9-4.9 1.4 1.4-6.3 6.3Z"/></svg>
+      <span>Kart bilgileriniz lisanslı ödeme kuruluşu
+      PayTR'nin formunda, 3D Secure ile alınır; Şükran App kart bilgilerinizi görmez ve saklamaz.
+      Ödeme tamamlanınca otomatik olarak Şükran App'e dönersiniz.</span>
+    </p>
+
+    <div class="foot">
+      <span class="badge">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5l-8-3Z"/></svg>
+        <span><strong>PayTR</strong> ile güvenli ödeme · 3D Secure</span>
+      </span>
+      <button type="button" class="back" id="back">Vazgeç ve geri dön</button>
+    </div>
+  </main>
+
+  <script src="https://www.paytr.com/js/iframeResizer.min.js"></script>
+  <script>
+    (function () {
+      var KEY = 'sukran-paytr-token';
+      var valid = function (t) { return /^[A-Za-z0-9-]{10,300}$/.test(t || ''); };
+      var msg = document.getElementById('msg');
+
+      // Jeton adresin # kısmında gelir (sunucu loglarına yazılmaz). Okunur okunmaz adres
+      // çubuğundan silinir; sayfa yenilenirse diye yalnızca bu sekmenin geçici hafızasında tutulur.
+      var token = (window.location.hash || '').replace(/^#/, '');
+      try {
+        if (valid(token)) sessionStorage.setItem(KEY, token);
+        else token = sessionStorage.getItem(KEY) || '';
+      } catch (e) { /* gizli sekme vb.: hafıza yoksa yalnızca adresteki jeton kullanılır */ }
+      if (window.location.hash && window.history.replaceState) {
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+
+      document.getElementById('back').addEventListener('click', function () {
+        try { sessionStorage.removeItem(KEY); } catch (e) { /* yok say */ }
+        if (window.history.length > 1) window.history.back();
+        else window.location.href = '/';
+      });
+
+      // Yalnızca PayTR'nin ödeme sayfası açılır.
+      if (!valid(token)) {
+        msg.textContent = 'Ödeme bağlantısı geçersiz ya da süresi dolmuş. Lütfen Şükran App\'e dönüp ödemeyi yeniden başlatın.';
+        return;
+      }
+      var frame = document.getElementById('paytriframe');
+      frame.src = 'https://www.paytr.com/odeme/guvenli/' + token;
+      frame.style.display = 'block';
+      msg.style.display = 'none';
+      // PayTR'nin önerdiği yükseklik ayarı; betik yüklenemezse sabit yükseklik kalır.
+      if (typeof window.iFrameResize === 'function') {
+        window.iFrameResize({}, '#paytriframe');
+      }
+    })();
+  </script>
+</body>
+</html>

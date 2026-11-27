@@ -136,6 +136,37 @@ if (-not [string]::IsNullOrWhiteSpace($payTrId) -and -not [string]::IsNullOrWhit
     $vars['SUKRAN_PAYTR_MERCHANT_SALT'] = $payTrSalt.Trim()
 }
 
+# Robot doğrulaması (Cloudflare Turnstile). İki anahtar da tanımlıysa giriş ve kayıtta açılır.
+# Anahtarlar: Cloudflare paneli > Turnstile > site ekle (alan adı: sukranapp.com).
+$turnstileSite   = [Environment]::GetEnvironmentVariable('SUKRAN_TURNSTILE_SITE_KEY')
+$turnstileSecret = [Environment]::GetEnvironmentVariable('SUKRAN_TURNSTILE_SECRET')
+if (-not [string]::IsNullOrWhiteSpace($turnstileSite) -and -not [string]::IsNullOrWhiteSpace($turnstileSecret)) {
+    $vars['Turnstile__SiteKey']       = $turnstileSite.Trim()
+    $vars['SUKRAN_TURNSTILE_SECRET']  = $turnstileSecret.Trim()
+}
+
+# Görsel depolama (Cloudflare R2). Dördü de tanımlıysa yeni görseller R2'ye yüklenir.
+# SUKRAN_R2_PUBLIC_URL isteğe bağlı: R2'ye bağlı özel alan adı (ör. https://img.sukranapp.com).
+# Boşsa ya da "-" ise görseller backend üzerinden sunulur. r2.dev adresi Türkiye'de engelli: VERMEYİN.
+$r2 = [ordered]@{
+    'Storage__R2AccountId'        = [Environment]::GetEnvironmentVariable('SUKRAN_R2_ACCOUNT_ID')
+    'Storage__R2Bucket'           = [Environment]::GetEnvironmentVariable('SUKRAN_R2_BUCKET')
+    'SUKRAN_R2_ACCESS_KEY_ID'     = [Environment]::GetEnvironmentVariable('SUKRAN_R2_ACCESS_KEY_ID')
+    'SUKRAN_R2_SECRET_ACCESS_KEY' = [Environment]::GetEnvironmentVariable('SUKRAN_R2_SECRET_ACCESS_KEY')
+}
+if (@($r2.Values | Where-Object { [string]::IsNullOrWhiteSpace($_) }).Count -eq 0) {
+    foreach ($name in $r2.Keys) { $vars[$name] = $r2[$name].Trim() }
+    $r2Public = [Environment]::GetEnvironmentVariable('SUKRAN_R2_PUBLIC_URL')
+    if (-not [string]::IsNullOrWhiteSpace($r2Public) -and $r2Public.Trim() -ne '-') {
+        if ($r2Public -match '\.r2\.dev') { throw "SUKRAN_R2_PUBLIC_URL bir r2.dev adresi: Türkiye'de engelli, müşteriler görselleri göremez. Özel alan adı verin ya da '-' ile boş bırakın." }
+        $vars['Storage__PublicBaseUrl'] = $r2Public.Trim().TrimEnd('/')
+    }
+}
+
+# Canlı bildirimler için Redis (iki sunucu yük paylaşımı). Tanımlıysa SignalR backplane açılır.
+$redis = [Environment]::GetEnvironmentVariable('SUKRAN_REDIS_CONNECTION')
+if (-not [string]::IsNullOrWhiteSpace($redis)) { $vars['SUKRAN_REDIS_CONNECTION'] = $redis.Trim() }
+
 # CORS kaynakları dizidir; ASP.NET Core bunları Cors__AllowedOrigins__0, __1 ...
 # biçiminde okur. Tek bir değişkene virgülle yazmak ÇALIŞMAZ.
 for ($i = 0; $i -lt $FrontendOrigin.Count; $i++) {
