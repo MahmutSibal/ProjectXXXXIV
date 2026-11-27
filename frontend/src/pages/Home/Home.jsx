@@ -211,7 +211,7 @@ function Home() {
 
       <section className="home-hero">
         <img
-          src="/images/ana-sayfa-restoran.jpg"
+          src="/images/ana-sayfa-restoran.webp"
           alt=""
           className="home-hero__background"
         />

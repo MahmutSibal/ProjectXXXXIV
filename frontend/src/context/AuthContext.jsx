@@ -53,8 +53,8 @@ export function AuthProvider({ children }) {
     return onUnauthorized(() => setUser(null));
   }, [loadUser]);
 
-  const login = useCallback(async (email, password) => {
-    const tokens = await authApi.login(email, password);
+  const login = useCallback(async (email, password, captchaToken) => {
+    const tokens = await authApi.login(email, password, captchaToken);
     setTokens(tokens);
     const profile = await profileApi.getMe();
     setUser(profile);
@@ -62,8 +62,8 @@ export function AuthProvider({ children }) {
   }, []);
 
   // Müşteri üyeliği (QR menü). İşletme hesabı registerBusiness ile açılır.
-  const register = useCallback(async (payload) => {
-    const tokens = await authApi.register(payload);
+  const register = useCallback(async (payload, captchaToken) => {
+    const tokens = await authApi.register(payload, captchaToken);
     setTokens(tokens);
     const profile = await profileApi.getMe();
     setUser(profile);
@@ -71,8 +71,8 @@ export function AuthProvider({ children }) {
   }, []);
 
   /** Self-servis işletme kaydı: hesap, restoran ve deneme aboneliği tek adımda kurulur. */
-  const registerBusiness = useCallback(async (payload) => {
-    const tokens = await authApi.registerBusiness(payload);
+  const registerBusiness = useCallback(async (payload, captchaToken) => {
+    const tokens = await authApi.registerBusiness(payload, captchaToken);
     setTokens(tokens);
     const profile = await profileApi.getMe();
     setUser(profile);

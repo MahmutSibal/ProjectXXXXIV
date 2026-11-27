@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Mvc;
 
+using AppSukran.API.Caching;
+
 namespace AppSukran.API.Controllers;
 
 [ApiController]
@@ -33,7 +35,9 @@ public sealed class OrdersController(IMediator mediator) : ControllerBase
             new GetOrdersByRestaurantQuery(restaurantId, sessionStatus, page, pageSize, tableNo, createdFrom, createdTo),
             cancellationToken));
 
+    // Sipariş stok düşer: menüdeki stok/uygunluk bilgisi tazelensin.
     [HttpPost]
+    [InvalidatesMenuCache]
     public async Task<IActionResult> Create([FromBody] CreateOrderCommand request, CancellationToken cancellationToken)
         => Ok(await mediator.Send(request, cancellationToken));
 

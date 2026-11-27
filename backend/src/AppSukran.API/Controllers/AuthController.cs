@@ -1,5 +1,6 @@
 using AppSukran.Application.Authentication.Commands;
 using AppSukran.Application.Common.Models;
+using AppSukran.API.Security;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,11 +11,20 @@ namespace AppSukran.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [AllowAnonymous]
-// Kimlik doğrulama uçları herkese açıktır. reCAPTCHA kaldırıldığından kaba kuvvet
-// ve toplu hesap açmaya karşı tek koruma IP başına hız sınırıdır.
+// Kimlik doğrulama uçları herkese açıktır. Kaba kuvvet ve toplu hesap açmaya karşı IP başına
+// hız sınırı, giriş ve kayıtta ayrıca robot doğrulaması (Turnstile, ayarlıysa) vardır.
 [EnableRateLimiting("auth")]
-public sealed class AuthController(IMediator mediator) : ControllerBase
+public sealed class AuthController(IMediator mediator, TurnstileVerifier turnstile) : ControllerBase
 {
+    /// <summary>
+    /// Robot doğrulaması açık mı, açıksa site anahtarı. Frontend giriş/kayıt ekranında
+    /// doğrulama kutusunu buna göre gösterir. Site anahtarı gizli değildir.
+    /// </summary>
+    [HttpGet("human-verification")]
+    [EnableRateLimiting("token-refresh")]
+    public ActionResult<HumanVerificationResponse> HumanVerification()
+        => Ok(new HumanVerificationResponse(turnstile.IsEnabled, turnstile.SiteKey));
+
     // Restoranın Wi-Fi'ındaki bütün misafirler aynı IP'den QR okutur; giriş/kayıt
     // sınırını paylaşsaydı 11. misafir menüyü açamazdı.
     [HttpPost("qr-session")]
@@ -27,6 +37,7 @@ public sealed class AuthController(IMediator mediator) : ControllerBase
 
 
     [HttpPost("register")]
+    [RequireHumanVerification]
     public async Task<ActionResult<TokenResponse>> Register([FromBody] RegisterUserRequest request, CancellationToken cancellationToken)
     {
         var result = await mediator.Send(
@@ -41,6 +52,7 @@ public sealed class AuthController(IMediator mediator) : ControllerBase
     /// tek adımda oluşturulur. Kullanıcı doğrudan yönetim paneline girer.
     /// </summary>
     [HttpPost("register-business")]
+    [RequireHumanVerification]
     public async Task<ActionResult<TokenResponse>> RegisterBusiness([FromBody] RegisterBusinessRequest request, CancellationToken cancellationToken)
     {
         var result = await mediator.Send(
@@ -56,6 +68,7 @@ public sealed class AuthController(IMediator mediator) : ControllerBase
     // Kaba kuvvete karşı asıl koruma hesap + IP başına deneme sayacıdır (ILoginAttemptGuard);
     // IP sınırı aynı ağdaki personelin vardiya başında birlikte girebileceği kadar geniştir.
     [HttpPost("login")]
+    [RequireHumanVerification]
     [EnableRateLimiting("login")]
     public async Task<ActionResult<TokenResponse>> Login([FromBody] LoginUserRequest request, CancellationToken cancellationToken)
     {
@@ -154,3 +167,5 @@ public sealed record ForgotPasswordRequest(string? Email);
 public sealed record ResetPasswordRequest(string? Token, string? NewPassword);
 public sealed record RefreshTokenRequest(string RefreshToken);
 public sealed record CreateQrSessionRequest(string RestaurantId, int TableNo, string QrToken);
+
+public sealed record HumanVerificationResponse(bool Enabled, string? SiteKey);

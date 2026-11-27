@@ -45,7 +45,7 @@ function PublicLayout() {
             aria-label="Şükran App ana sayfa"
           >
             <img
-              src="/sukranapp.png?v=2"
+              src="/sukranapp.webp?v=3"
               alt="Şükran App logosu"
               className="public-brand__logo"
             />
@@ -174,7 +174,7 @@ function PublicLayout() {
                 aria-label="Şükran App ana sayfa"
               >
                 <img
-                  src="/sukranapp.png?v=2"
+                  src="/sukranapp.webp?v=3"
                   alt="Şükran App logosu"
                   className="public-footer__logo"
                 />

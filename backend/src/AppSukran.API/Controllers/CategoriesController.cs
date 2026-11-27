@@ -5,15 +5,19 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+using AppSukran.API.Caching;
+
 namespace AppSukran.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public sealed class CategoriesController(IMediator mediator) : ControllerBase
+[InvalidatesMenuCache]
+public sealed class CategoriesController(IMediator mediator, MenuResponseCache menuCache) : ControllerBase
 {
     [HttpGet("restaurant/{restaurantId}")]
     public async Task<ActionResult<IReadOnlyCollection<CategoryResponse>>> GetByRestaurant(string restaurantId, CancellationToken cancellationToken)
-        => Ok(await mediator.Send(new GetCategoriesByRestaurantQuery(restaurantId), cancellationToken));
+        => Ok(await menuCache.GetOrCreateAsync("categories", restaurantId,
+            () => mediator.Send(new GetCategoriesByRestaurantQuery(restaurantId), cancellationToken)));
 
     [HttpPost]
     [Authorize(Roles = "RestaurantOwner")]

@@ -4,6 +4,7 @@ import { useAuth, homePathForRole } from '../../context/AuthContext.jsx';
 import { authApi } from '../../api/auth.js';
 import { ApiError } from '../../api/client.js';
 import { EMAIL_PATTERN, loginErrorMessage } from './loginErrors.js';
+import HumanVerification from '../../components/HumanVerification.jsx';
 import './Login.css';
 
 const loginFeatures = [
@@ -39,6 +40,9 @@ export default function Login({ recovery = false, resetPassword = false }) {
   // State güncellemesi bir sonraki çizime kadar gecikir; Enter'a ya da düğmeye çok hızlı
   // art arda basılırsa ikinci istek de giderdi. Ref anında değişir, çift gönderimi keser.
   const submittingRef = useRef(false);
+  // Robot doğrulaması: { required, token }. Kapalıysa required=false.
+  const [captcha, setCaptcha] = useState({ required: false, token: '' });
+  const captchaRef = useRef(null);
   const slowTimerRef = useRef(null);
 
   useEffect(() => () => clearTimeout(slowTimerRef.current), []);
@@ -69,6 +73,11 @@ export default function Login({ recovery = false, resetPassword = false }) {
       return;
     }
 
+    if (captcha.required && !captcha.token) {
+      setFormError('Lütfen robot doğrulamasının tamamlanmasını bekleyin.');
+      return;
+    }
+
     submittingRef.current = true;
     setIsSubmitting(true);
     setIsSlow(false);
@@ -76,7 +85,7 @@ export default function Login({ recovery = false, resetPassword = false }) {
     slowTimerRef.current = setTimeout(() => setIsSlow(true), SLOW_LOGIN_MS);
 
     try {
-      const profile = await login(normalizedEmail, password);
+      const profile = await login(normalizedEmail, password, captcha.token);
       // Başarılıysa düğme kilitli kalır: yönlendirme bitene kadar tekrar basılamaz.
       setIsLoginSuccessful(true);
       const redirectTo = location.state?.from?.pathname ?? homePathForRole(profile.role);
@@ -84,6 +93,8 @@ export default function Login({ recovery = false, resetPassword = false }) {
     } catch (error) {
       submittingRef.current = false;
       setFormError(loginErrorMessage(error));
+      // Jeton tek kullanımlık: bir sonraki deneme için yenilenir.
+      captchaRef.current?.reset();
     } finally {
       clearTimeout(slowTimerRef.current);
       setIsSlow(false);
@@ -106,7 +117,7 @@ export default function Login({ recovery = false, resetPassword = false }) {
         <div className="login-showcase__content">
           <div className="login-showcase__top">
             <Link className="login-brand" to="/" aria-label="Şükran ana sayfa">
-              <img src="/sukranapp.png?v=2" alt="Şükran App" />
+              <img src="/sukranapp.webp?v=3" alt="Şükran App" />
               <span>Şükran App</span>
             </Link>
 
@@ -170,7 +181,7 @@ export default function Login({ recovery = false, resetPassword = false }) {
         <div className="login-form-wrapper">
           <div className="login-mobile-brand">
             <Link className="login-brand" to="/">
-              <img src="/sukranapp.png?v=2" alt="Şükran App" />
+              <img src="/sukranapp.webp?v=3" alt="Şükran App" />
               <span>Şükran App</span>
             </Link>
           </div>
@@ -347,10 +358,12 @@ export default function Login({ recovery = false, resetPassword = false }) {
                 </Link>
               </div>
 
+              <HumanVerification ref={captchaRef} onChange={setCaptcha} />
+
               <button
                 className="login-submit"
                 type="submit"
-                disabled={!isFormValid || isBusy}
+                disabled={!isFormValid || isBusy || (captcha.required && !captcha.token)}
                 aria-live="polite"
               >
                 {isLoginSuccessful ? (
